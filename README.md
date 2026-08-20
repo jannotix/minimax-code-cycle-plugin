@@ -1,4 +1,4 @@
-# CyCle for MiniMax Code
+# Cycle for MiniMax Code
 
 Evidence-gated multi-role delivery for MiniMax Code. Adds a `Cycle` agent, five
 isolated specialist agents, an AST knowledge graph, a hash-chained audit ledger,
