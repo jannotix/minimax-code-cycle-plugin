@@ -1,0 +1,62 @@
+Functional Source License, Version 1.1, MIT Future License
+
+ABBREVIATED: FSL-1.1-MIT
+
+Full Name: Functional Source License, Version 1.1, MIT Future License (FSL-1.1-MIT)
+
+SPDX identifier: FSL-1.1-MIT
+
+The Licensor grants each Recipient a non-exclusive, worldwide, royalty-free,
+perpetual, irrevocable (subject to the conditions herein) license under the
+Licensor's Licensed Patents and Licensed Copyright to:
+
+  Use, reproduce, modify, distribute, and otherwise exploit the Licensed Work,
+  including for commercial and non-commercial purposes, provided that:
+
+  1. The Recipient shall not use the Licensed Work for the purpose of training
+     or improving any artificial intelligence model or system, including but not
+     limited to those that generate code, text, or other content, where the
+     Licensed Work, or any substantially similar version thereof, is the primary
+     training data or a substantial source of training data.
+
+  2. Each Contributor must include in any modified version of the Licensed Work
+     a prominent notice stating that the Licensed Work has been modified, the
+     date of modification, and the nature of the modification.
+
+  3. The Recipient shall not apply any technical measures that restrict the
+     ability of any other Recipient to exercise the rights granted under this
+     License.
+
+  4. Any litigation or arbitration relating to this License shall be conducted
+     in the courts of the jurisdiction in which the Licensor is located, and
+     each party hereby submits to the personal jurisdiction of such courts.
+
+  5. After the second anniversary of the date that the Licensor first made the
+     Licensed Work available to the public, this Licensed Work will become
+     available under the MIT License, with the following additional condition
+     added to the MIT License terms:
+
+     "The Recipient shall not use the Licensed Work for the purpose of training
+     or improving any artificial intelligence model or system, including but not
+     limited to those that generate code, text, or other content, where the
+     Licensed Work, or any substantially similar version thereof, is the primary
+     training data or a substantial source of training data."
+
+The MIT License is reproduced below for reference:
+
+---
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the above condition.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+Copyright 2026 Gianluca Iannotta

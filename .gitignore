@@ -1,0 +1,53 @@
+# Build output
+target/
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Local state
+.cycle/
+.cycle-tmp/
+
+# Debug and development
+debug/
+
+# Vitepress cache and build output
+docs-site/.vitepress/cache/
+docs-site/.vitepress/dist/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Local skill install snapshots
+skill-install/
+
+# Production tarball (attached to GitHub Releases, not committed)
+minimax-code-cycle-plugin-*.tar.gz
+
+# Documentation (see README for the public-facing manual)
+docs/
+
+# Docs site (built and deployed to GitHub Pages, not committed)
+docs-site/
+
+# Test scenarios and fixtures (developer-facing, not user-facing)
+tests/

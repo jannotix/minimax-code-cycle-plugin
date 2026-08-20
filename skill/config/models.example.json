@@ -1,0 +1,16 @@
+{
+  "$schema": "https://example.invalid/cycle/models.schema.json",
+  "_comment": "Example per-role model configuration for minimax-code-cycle-plugin. Copy to ~/.mavis/cycle/config.json and adjust. Each user picks their own model and provider. The plugin is model-agnostic. The model is the string the host accepts in its agent configuration (typically 'provider/model-id').",
+  "architect": "anthropic/claude-opus-4-1",
+  "executor": "anthropic/claude-sonnet-4-5",
+  "functional_reviewer": "anthropic/claude-haiku-4-5",
+  "security_reviewer": "anthropic/claude-sonnet-4-5",
+  "arbiter": "anthropic/claude-opus-4-1",
+  "_roles_explained": {
+    "architect": "Strong reasoning, long context, careful planning. Heavy cost, used once per workflow.",
+    "executor": "Strong code generation, fast iteration, good at following scoped tasks. The workhorse.",
+    "functional_reviewer": "Fast, careful, good at end-to-end consistency checks. Used for cross-layer completeness.",
+    "security_reviewer": "Strong at adversarial thinking, dependency risk, architecture integrity. Should match or exceed executor's reasoning.",
+    "arbiter": "The most careful reasoner. The only role that can approve. Errs on the side of 'one more check'."
+  }
+}
