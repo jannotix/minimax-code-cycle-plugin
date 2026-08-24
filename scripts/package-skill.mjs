@@ -11,10 +11,10 @@ import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 
 const INCLUDE_TOP = [
+  "plugin.json",
+  "mcp.json",
   "skills",
   "mcp",
-  "mcp.json",
-  ".minimax-plugin",
   "scripts",
   "README.md",
   "LICENSE",

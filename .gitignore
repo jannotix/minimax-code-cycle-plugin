@@ -40,6 +40,9 @@ yarn-error.log*
 # Local skill install snapshots
 skill-install/
 
+# Old plugin format (v1.0/v1.1) - renamed to .removed during v1.1.1 migration
+.minimax-plugin.removed/
+
 # Production tarball (attached to GitHub Releases, not committed)
 minimax-code-cycle-plugin-*.tar.gz
 

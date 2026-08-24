@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "minimax-code-cycle-plugin",
+  "version": "1.1.1",
+  "description": "Evidence-gated multi-role delivery for MiniMax Code. Adds a Cycle skill plus an MCP server that exposes audit verification, candidate freeze, AST knowledge graph, and scoped graph queries.",
+  "author": {
+    "name": "Gianluca Iannotta",
+    "email": "giannotta@tublat.com",
+    "url": "https://github.com/jannotix"
+  },
+  "homepage": "https://github.com/jannotix/minimax-code-cycle-plugin",
+  "repository": "https://github.com/jannotix/minimax-code-cycle-plugin",
+  "license": "FSL-1.1-MIT",
+  "keywords": [
+    "evidence",
+    "audit",
+    "code-review",
+    "graph",
+    "ast",
+    "verification",
+    "planning",
+    "skill",
+    "mcp"
+  ]
+}

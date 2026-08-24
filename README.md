@@ -40,21 +40,25 @@ must be on the system PATH for the MCP server to start.
 
 ## Install locally (full 5-role architecture)
 
+The local install mirrors what the marketplace installer does, plus the
+optional 5-agent registration for structural session isolation.
+
 ```sh
-# 1. install the skill
-cp -R skills/cycle/ ~/.mavis/skills/cycle/
+# 1. drop the plugin into the Mavis plugins directory
+#    (the marketplace layout is flat: plugin.json at the root)
+PLUGIN_DIR=~/.mavis/plugins/cycle
+mkdir -p "$PLUGIN_DIR"
+cp plugin.json      "$PLUGIN_DIR/"
+cp mcp.json         "$PLUGIN_DIR/"
+cp -R skills/cycle/ "$PLUGIN_DIR/skills/"
+cp -R mcp/           "$PLUGIN_DIR/mcp/"
+cp -R scripts/       "$PLUGIN_DIR/scripts/"
 
-# 2. install the MCP server (referenced by mcp.json)
-mkdir -p ~/.mavis/skills/cycle/mcp
-cp mcp/cycle-server.mjs ~/.mavis/skills/cycle/mcp/cycle-server.mjs
-cp mcp.json ~/.mavis/skills/cycle/mcp.json
-chmod +x ~/.mavis/skills/cycle/mcp/cycle-server.mjs
+# 2. also expose the Skill via the built-in skills location (Mavis reads both)
+mkdir -p ~/.mavis/.builtin-skills/cycle
+cp -R skills/cycle/* ~/.mavis/.builtin-skills/cycle/
 
-# 3. install the CLI tools (optional)
-mkdir -p ~/.mavis/skills/cycle/scripts
-cp scripts/*.mjs ~/.mavis/skills/cycle/scripts/
-
-# 4. register the five role agents (only for the full 5-role architecture)
+# 3. register the five role agents (only for the full 5-role architecture)
 for f in agents/cycle-*.md; do
   mavis agent create --from "$f"
 done
@@ -72,7 +76,8 @@ Open a project in MiniMax Code, select the Cycle skill, and run:
 
 ```sh
 # remove the local install
-rm -rf ~/.mavis/skills/cycle/
+rm -rf ~/.mavis/plugins/cycle/
+rm -rf ~/.mavis/.builtin-skills/cycle/
 for name in cycle-architect cycle-executor cycle-functional-reviewer \
             cycle-security-reviewer cycle-arbiter; do
   mavis agent delete --name "$name"
