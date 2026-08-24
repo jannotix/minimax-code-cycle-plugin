@@ -1,11 +1,11 @@
 ---
 name: cycle
-description: Evidence-gated multi-role delivery. Coordinates an architect, an executor, two independent reviewers, and an independent final arbiter. No self-approval, real verification, hash-chained audit.
+description: Evidence-gated multi-role delivery for MiniMax Code. Plan a feature, implement it with bounded tasks, run the two reviewers, and let an independent arbiter approve. No self-approval, real verification, hash-chained audit. Dispatch by describing what you want in plain language; the Agent follows the Cycle skill and invokes the cycle-tools MCP server for evidence, freeze, and graph queries.
 when_to_use:
-  - User expresses implementation intent and the change is non-trivial
-  - User wants planning without implementation
-  - User wants to invoke a single specialist role on demand
-  - A paused workflow needs to be resumed
+  - User asks to plan a feature, design a system, or decompose a request
+  - User asks to implement, build, fix, or change non-trivial code
+  - User wants end-to-end review or security review of recent changes
+  - User wants to verify a cycle audit ledger, freeze a candidate, or query the graph index
 do_not_use_for:
   - One-line typo fixes
   - Pure reading or explanation
@@ -22,6 +22,42 @@ and (optionally) its own model.
 
 This file is the entry point. Everything else in `skill/` is reference
 material that the workflow reads as needed.
+
+## How to use Cycle from Mavis
+
+The Agent Plugins 1.0 format exposes Skills and MCP servers. There is no
+plugin-level command surface, so Cycle is invoked by describing what you
+want in plain language. The Agent reads this skill, chooses the right role
+mode, and dispatches the work.
+
+| You describe | The Agent does |
+|---|---|
+| "Plan a multi-tenant SaaS for time tracking" | Architect role: produces a requirement matrix and a task DAG, no code |
+| "Implement the subscription endpoint, with auth and a real-DB test" | Executor role: bounded implementation, runs verification, captures evidence |
+| "Review the last 200 lines for completeness" | Functional reviewer role: end-to-end check |
+| "Check whether the subscription change is safe to ship" | Security reviewer role: triage checklist, auth and trust boundaries |
+| "Run /cycle run" (legacy phrasing) | Dispatch to executor + reviewers + arbiter, end to end |
+| "Verify .cycle/audit.jsonl" | Invokes `cycle_verify_audit` MCP tool, reports chain status |
+| "Freeze the current changes against main" | Invokes `cycle_freeze_candidate` MCP tool, produces a manifest |
+| "Build the AST index for this project" | Invokes `cycle_graph_index` MCP tool |
+
+The five role modes are:
+
+- **Architect**: read-only planning, no edits, no shell.
+- **Executor**: bounded task in the assigned `write_scopes`, runs the
+  project's verification commands, captures the evidence.
+- **Functional reviewer**: reads the frozen candidate and the
+  evidence, produces a verdict. Does not edit.
+- **Security reviewer**: walks the mandatory triage checklist. Does
+  not edit.
+- **Arbiter**: the only role that can produce an `approved`
+  decision. Receives the original request, the candidate, the
+  evidence, and both reviews.
+
+The skill explains the role procedures in `roles/*.md`. The protocol
+schemas and event names are in `PROTOCOL.md`. The evidence rules and
+the triage checklist are in `evidence/gates.md` and
+`roles/security-reviewer.md`.
 
 ## Operating principles
 
