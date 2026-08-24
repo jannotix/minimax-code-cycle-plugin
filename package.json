@@ -1,0 +1,25 @@
+{
+  "name": "minimax-code-cycle-plugin",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Evidence-gated multi-role delivery for MiniMax Code. A Cycle Skill plus an MCP server that exposes audit verification, candidate freeze, AST knowledge graph, and scoped graph queries.",
+  "type": "module",
+  "author": "Gianluca Iannotta",
+  "license": "FSL-1.1-MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jannotix/minimax-code-cycle-plugin.git"
+  },
+  "homepage": "https://github.com/jannotix/minimax-code-cycle-plugin",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "verify-audit": "node scripts/verify-audit.mjs",
+    "inspect-ledger": "node scripts/inspect-ledger.mjs",
+    "freeze-candidate": "node scripts/freeze-candidate.mjs",
+    "graph-index": "node scripts/graph-index.mjs",
+    "graph-query": "node scripts/graph-query.mjs",
+    "package-skill": "node scripts/package-skill.mjs"
+  }
+}

@@ -1,9 +1,8 @@
 # Cycle for MiniMax Code
 
-Evidence-gated multi-role delivery for MiniMax Code. Adds a `Cycle` agent, five
-isolated specialist agents, an AST knowledge graph, a hash-chained audit ledger,
-plan mode integration, goal mode, and a managed browser QA path. No web UI, no
-cloud account, no telemetry. Native to MiniMax Code only.
+Evidence-gated multi-role delivery for MiniMax Code. A `Cycle` skill plus an
+MCP server that exposes audit verification, candidate freeze, AST knowledge
+graph, and scoped graph queries. No web UI, no cloud account, no telemetry.
 
 ## Why use it
 
@@ -11,96 +10,124 @@ A single MiniMax Code session often interprets a request, implements it, and
 approves the result with the same context. That structural pattern produces
 incomplete deliveries: backend without UI, UI without tests, migrations that
 were never run, security controls that work in one path and are bypassed in
-another. This plugin separates those responsibilities and requires real
-evidence before any candidate is approved.
+another.
 
-The workflow coordinates five isolated sessions, each with its own prompt,
-tools, and (optionally) its own model:
+Cycle separates the responsibilities of planning, implementation, end-to-end
+review, security review, and final approval. The arbiter evaluates the
+immutable original user request, not the architect's interpretation of it.
+Every action is recorded in a hash-chained audit ledger. Real verification
+commands produce the evidence the workflow advances on.
 
-| Role | Purpose | Can edit? |
-|---|---|---|
-| `cycle-architect` | Requirement matrix, risk analysis, acyclic task plan | no |
-| `cycle-executor` | Implements one bounded task at a time, captures evidence | yes |
-| `cycle-functional-reviewer` | End-to-end completeness across all layers | no |
-| `cycle-security-reviewer` | Security, trust boundaries, architecture integrity | no |
-| `cycle-arbiter` | Final approval against the immutable original request | no |
+The plugin ships in two layers:
 
-The arbiter never sees only the architect's interpretation. It receives the
-exact original user request, the frozen candidate manifest, raw verification
-evidence, and both finalized independent reviews.
+- **Marketplace layer** (Skill + MCP server): a portable Skill that the Agent
+  follows, and an MCP server that exposes the evidence, freeze, and graph
+  tools. This layer conforms to the MiniMax Code plugin contract and
+  publishes to the official Plugin Marketplace.
+- **Local full-fidelity layer** (5 custom Mavis agents + 6 CLI tools):
+  the marketplace layer, plus five isolated Mavis agents (architect,
+  executor, two reviewers, arbiter) and a set of Node CLI tools for ad-hoc
+  verification, graph inspection, and production packaging. This layer
+  gives structural session isolation between the five roles and is the
+  recommended install for a personal MiniMax Code setup.
 
-## Install
+## Install from the Plugin Marketplace
 
-```text
+The marketplace layer installs with one click from the Plugin Marketplace UI
+inside MiniMax Code. Browse to "Cycle" and install. MiniMax Code reads
+`plugin.json` and loads the Skill and the MCP server automatically. `node`
+must be on the system PATH for the MCP server to start.
+
+## Install locally (full 5-role architecture)
+
+```sh
 # 1. install the skill
-cp -R skill/ ~/.mavis/skills/cycle/
+cp -R skills/cycle/ ~/.mavis/skills/cycle/
 
-# 2. register the five role agents (one-time)
+# 2. install the MCP server (referenced by mcp.json)
+mkdir -p ~/.mavis/skills/cycle/mcp
+cp mcp/cycle-server.mjs ~/.mavis/skills/cycle/mcp/cycle-server.mjs
+cp mcp.json ~/.mavis/skills/cycle/mcp.json
+chmod +x ~/.mavis/skills/cycle/mcp/cycle-server.mjs
+
+# 3. install the CLI tools (optional)
+mkdir -p ~/.mavis/skills/cycle/scripts
+cp scripts/*.mjs ~/.mavis/skills/cycle/scripts/
+
+# 4. register the five role agents (only for the full 5-role architecture)
 for f in agents/cycle-*.md; do
   mavis agent create --from "$f"
 done
+```
 
-# 3. open a project, select the Cycle agent
+Open a project in MiniMax Code, select the Cycle skill, and run:
+
+```
 /cycle setup
 /cycle doctor
 /cycle run auto
 ```
 
-The `setup` command configures the per-role model assignments. Every
-installation is model-agnostic: each user picks the model for each of the five
-roles in their own environment. There is no required model, no required
-provider, no required subscription.
-
-The CLI tools under `scripts/` are optional. They provide ad-hoc verification
-(`node scripts/verify-audit.mjs .cycle/audit.jsonl`), ad-hoc graph queries
-(`node scripts/graph-query.mjs . declarations --kind class`), and production
-packaging (`node scripts/package-skill.mjs . --version 1.0.0`).
-
 ## Uninstall
 
-```text
-# 1. remove the role agents
-for name in cycle-architect cycle-executor cycle-functional-reviewer cycle-security-reviewer cycle-arbiter; do
+```sh
+# remove the local install
+rm -rf ~/.mavis/skills/cycle/
+for name in cycle-architect cycle-executor cycle-functional-reviewer \
+            cycle-security-reviewer cycle-arbiter; do
   mavis agent delete --name "$name"
 done
-
-# 2. remove the skill
-rm -rf ~/.mavis/skills/cycle/
-
-# 3. remove the audit ledger and the project state (per project)
 rm -rf .cycle/
+
+# uninstall from the marketplace UI: Settings -> Plugins -> Cycle -> Uninstall
 ```
 
 Application updates never touch plugin state because all durable data lives
 outside the MiniMax Code install directory. After uninstall the MiniMax Code
 install is back to its pre-install state.
 
-## Commands
+## What the plugin provides
 
-| Command | Purpose |
+### Skill (always loaded when installed)
+
+The Cycle skill teaches the Agent the evidence-gated workflow. The Agent
+follows the skill's plan, executes verification commands, freezes a
+candidate, runs reviewers, and produces an arbitration decision. The
+skill is the only entry point for the Agent.
+
+### MCP server (always loaded when installed)
+
+Four MCP tools, all under the `cycle-tools` server name:
+
+| Tool | What it does |
 |---|---|
-| `/cycle setup` | First-run configuration and compatibility checks |
-| `/cycle run [auto\|quick\|full]` | Arm the next request with a routing preference |
-| `/cycle plan` | Architect only, read-only planning |
-| `/cycle execute` | Executor only, bounded task |
-| `/cycle review` | Run the two independent reviewers on a candidate |
-| `/cycle arbitrate` | Arbiter only, on existing reviews |
-| `/cycle status` | Current workflow state, mode, candidate, repair budget |
-| `/cycle tasks` | Durable task identifiers and states |
-| `/cycle evidence` | Recorded candidate gates |
-| `/cycle:resume` | Resume a paused or interrupted workflow |
-| `/cycle pause` | Pause at next safe boundary |
-| `/cycle cancel --confirm` | Cancel authorized work |
-| `/cycle retry` | Retry classified failure |
-| `/cycle history` | Query project audit events |
-| `/cycle history verify` | Verify the hash chain |
-| `/cycle memory search\|explain\|remove` | Project memory operations |
-| `/cycle models [role] [provider/model]` | Inspect or assign per-role model |
-| `/cycle permissions` | Inspect role boundaries and active preset |
-| `/cycle limits` | Inspect admission and repair limits |
-| `/cycle export --confirm` | Export workflow state, ledger, or evidence |
-| `/cycle doctor` | Read-only installation and project diagnostics |
-| `/cycle help` | Command reference |
+| `cycle_verify_audit` | Verify a `.cycle/audit.jsonl` hash chain. Returns ok or fails with the broken line. |
+| `cycle_freeze_candidate` | Produce a `cycle.candidate.v1` manifest from a worktree and a base revision. |
+| `cycle_graph_index` | Build or update the local AST knowledge graph. |
+| `cycle_graph_query` | Run a scoped query against the graph index (declarations, imports, dependents, types, signature, callers, callees, path). |
+
+The server is a single Node script at `mcp/cycle-server.mjs` with no
+external dependencies. It spawns the CLI tools as child processes and
+forwards their output as MCP tool results.
+
+### CLI tools (local install only)
+
+Six Node scripts under `scripts/` for ad-hoc operations:
+
+```sh
+node scripts/verify-audit.mjs .cycle/audit.jsonl
+node scripts/inspect-ledger.mjs tail .cycle/audit.jsonl --n 50
+node scripts/inspect-ledger.mjs plan .cycle/audit.jsonl
+node scripts/freeze-candidate.mjs . --base HEAD~1
+node scripts/graph-index.mjs . --workers 8
+node scripts/graph-query.mjs . declarations --name "*User*" --path "src/**"
+```
+
+### Custom agents (local install only)
+
+Five Mavis custom agents with isolated prompts and per-role model
+configuration. The full 5-role architecture gives structural session
+isolation that the marketplace layer cannot provide.
 
 ## Design principles
 
@@ -113,9 +140,10 @@ install is back to its pre-install state.
 
 ## Compatibility
 
-Targets MiniMax Code Desktop 1.18.16 and 1.18.18. macOS Desktop is untested
-in this release. Application updates never touch plugin state because all
-durable data lives outside the MiniMax Code install directory.
+Targets MiniMax Code Desktop 1.18.16 and 1.18.18. The MCP server requires
+Node.js 20 or later on the system PATH. macOS Desktop is untested in this
+release. Application updates never touch plugin state because all durable
+data lives outside the MiniMax Code install directory.
 
 ## License
 

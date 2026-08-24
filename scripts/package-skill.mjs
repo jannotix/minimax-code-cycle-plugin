@@ -10,7 +10,16 @@ import { resolve, join, relative, sep } from "node:path";
 import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 
-const INCLUDE_TOP = ["skill", "agents", "scripts", "README.md", "LICENSE", "NOTICE"];
+const INCLUDE_TOP = [
+  "skills",
+  "mcp",
+  "mcp.json",
+  ".minimax-plugin",
+  "scripts",
+  "README.md",
+  "LICENSE",
+  "NOTICE",
+];
 const SCRIPT_HEADER = "#!/usr/bin/env node\n";
 
 function usage() {
