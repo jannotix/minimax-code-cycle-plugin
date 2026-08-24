@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Build a production tarball of the Cycle skill. The tarball contains
-// only the production artifacts (skill/, agents/, scripts/, README,
-// LICENSE, NOTICE). Documentation, tests, debug notes, and the docs
-// site are excluded.
+// only the production artifacts (skills/, mcp/, scripts/, assets/,
+// README, LICENSE, NOTICE). Documentation, tests, debug notes, and the
+// docs site are excluded.
 
 import { createReadStream, createWriteStream } from "node:fs";
 import { stat, readFile, mkdir, readdir, rm } from "node:fs/promises";
@@ -16,6 +16,7 @@ const INCLUDE_TOP = [
   "skills",
   "mcp",
   "scripts",
+  "assets",
   "README.md",
   "LICENSE",
   "NOTICE",

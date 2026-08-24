@@ -1,5 +1,9 @@
 # Cycle for MiniMax Code
 
+<p align="center">
+  <img src="assets/logo.svg" width="160" alt="Cycle logo">
+</p>
+
 Evidence-gated multi-role delivery for MiniMax Code. A `Cycle` skill plus an
 MCP server that exposes audit verification, candidate freeze, AST knowledge
 graph, and scoped graph queries. No web UI, no cloud account, no telemetry.
