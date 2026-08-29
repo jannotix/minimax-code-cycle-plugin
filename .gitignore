@@ -52,5 +52,6 @@ docs/
 # Docs site (built and deployed to GitHub Pages, not committed)
 docs-site/
 
-# Test scenarios and fixtures (developer-facing, not user-facing)
-tests/
+# Legacy Markdown scenarios and fixtures remain untracked. Contract and production tests are tracked.
+tests/*
+!tests/contract.test.mjs

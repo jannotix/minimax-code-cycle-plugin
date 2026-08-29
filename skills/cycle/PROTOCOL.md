@@ -1,9 +1,11 @@
 # Protocol
 
-The Cycle protocol is the contract between the entry agent, the five role
-agents, the audit ledger, and the persistent stores. This file is normative
-for the v1.0.0 release. Changes to the protocol require a major version
-bump.
+> Legacy design input. This document is not the active runtime contract for `2.0.0-alpha.1`.
+> See `../../PRODUCTION_RELEASE_PLAN.md`. No workflow state described below may be
+> reported as implemented until its production task and exact-revision evidence are complete.
+
+The text below records the intended v1 workflow and remains useful as a migration input. It is not
+normative for the current MiniMax Agent Plugin.
 
 ## States
 

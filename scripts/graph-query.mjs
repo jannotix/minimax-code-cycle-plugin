@@ -8,14 +8,13 @@ import { resolve, join } from "node:path";
 const QUERIES = new Set([
   "declarations",
   "signature",
-  "callers",
-  "callees",
   "imports",
   "importers",
   "types",
   "dependents",
-  "path",
 ]);
+
+const UNSUPPORTED_QUERIES = new Set(["callers", "callees", "path"]);
 
 const DEFAULT_LIMIT = 200;
 const HARD_LIMIT = 10000;
@@ -24,8 +23,8 @@ const HARD_TIMEOUT_MS = 5000;
 function usage() {
   process.stderr.write(
     "usage: graph-query <project-root> <query> [args]\n" +
-      "  queries: declarations | signature | callers | callees | imports | importers | types | dependents | path\n" +
-      "  filters: --name <glob> --kind <list> --path <glob> --limit <n> --since <hours>\n",
+      "  queries: declarations | signature | imports | importers | types | dependents\n" +
+      "  filters: --name <glob> --kind <list> --path <glob> --limit <n>\n",
   );
   process.exit(2);
 }
@@ -138,16 +137,6 @@ function queryDependents(manifest, flags) {
   return queryImporters(manifest, flags);
 }
 
-function queryCallers(manifest, flags) {
-  // v1: the call graph is not yet extracted in the structural pass.
-  // We surface a placeholder so callers get a deterministic response.
-  return [];
-}
-
-function queryCallees(manifest, flags) {
-  return [];
-}
-
 function queryTypes(manifest, flags) {
   if (flags.path === undefined) usage();
   const file = findFile(manifest, flags.path);
@@ -157,16 +146,18 @@ function queryTypes(manifest, flags) {
     .map((imp) => ({ kind: "type_ref", path: file.path, name: null, line: imp.line }));
 }
 
-function queryPath() {
-  return [];
-}
-
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const projectRoot = args._[0];
   const query = args._[1];
   if (projectRoot === undefined || query === undefined) usage();
+  if (UNSUPPORTED_QUERIES.has(query)) {
+    throw new Error(`query '${query}' is not implemented in 2.0.0-alpha.1`);
+  }
   if (!QUERIES.has(query)) usage();
+  if (args.flags.since !== undefined) {
+    throw new Error("--since is not implemented in 2.0.0-alpha.1");
+  }
 
   const absRoot = resolve(projectRoot);
   const start = Date.now();
@@ -179,10 +170,7 @@ async function main() {
     case "imports":      results = queryImports(manifest, args.flags);      break;
     case "importers":    results = queryImporters(manifest, args.flags);    break;
     case "dependents":   results = queryDependents(manifest, args.flags);   break;
-    case "callers":      results = queryCallers(manifest, args.flags);      break;
-    case "callees":      results = queryCallees(manifest, args.flags);      break;
     case "types":        results = queryTypes(manifest, args.flags);        break;
-    case "path":         results = queryPath();                              break;
   }
 
   const elapsed = Date.now() - start;

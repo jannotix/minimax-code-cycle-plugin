@@ -1,220 +1,77 @@
 ---
 name: cycle
-description: Evidence-gated multi-role delivery for MiniMax Code. Plan a feature, implement it with bounded tasks, run the two reviewers, and let an independent arbiter approve. No self-approval, real verification, hash-chained audit. Dispatch by describing what you want in plain language; the Agent follows the Cycle skill and invokes the cycle-tools MCP server for evidence, freeze, and graph queries.
-when_to_use:
-  - User asks to plan a feature, design a system, or decompose a request
-  - User asks to implement, build, fix, or change non-trivial code
-  - User wants end-to-end review or security review of recent changes
-  - User wants to verify a cycle audit ledger, freeze a candidate, or query the graph index
-do_not_use_for:
-  - One-line typo fixes
-  - Pure reading or explanation
-  - Pure conversation about a code area
+description: Inspect the Cycle for MiniMax Code 2.0 development line and use its four local MCP utilities for audit-chain consistency, legacy candidate diagnostics, or lightweight structural indexing. Use when the user explicitly mentions Cycle for MiniMax Code, asks to verify a Cycle ledger, requests a diagnostic candidate manifest, or asks to build or query the current lightweight index. Do not claim that the alpha runs a governed five-role delivery workflow.
+license: FSL-1.1-MIT
+compatibility: Requires MiniMax Code with Agent Plugins 1.0 support and Node.js 22 or later on PATH. The 2.0 development line is not production-ready.
 ---
 
-# Cycle
+# Cycle for MiniMax Code
 
-Cycle is the evidence-gated delivery workflow for MiniMax Code. It separates
-the responsibilities that a single session cannot separate: interpretation,
-implementation, end-to-end review, security review, and final approval. Each
-of those runs in its own isolated session with its own prompt, its own tools,
-and (optionally) its own model.
+This is the entry point for the `2.0.0-alpha.1` development line. MiniMax Code loads this Skill and
+the `cycle-tools` MCP server. It does not load the repository's legacy custom-agent files or create
+a command namespace.
 
-This file is the entry point. Everything else in `skill/` is reference
-material that the workflow reads as needed.
+## Release boundary
 
-## How to use Cycle from Mavis
+The production rebuild is incomplete. Do not state or imply that the current alpha provides:
 
-The Agent Plugins 1.0 format exposes Skills and MCP servers. There is no
-plugin-level command surface, so Cycle is invoked by describing what you
-want in plain language. The Agent reads this skill, chooses the right role
-mode, and dispatches the work.
+- an autonomous five-role workflow;
+- isolated architect, executor, reviewers, or arbiter sessions;
+- evidence-bound approval or delivery;
+- signed history checkpoints;
+- incremental AST code intelligence;
+- setup, doctor, resume, Goal Mode, memory, or browser QA.
 
-| You describe | The Agent does |
-|---|---|
-| "Plan a multi-tenant SaaS for time tracking" | Architect role: produces a requirement matrix and a task DAG, no code |
-| "Implement the subscription endpoint, with auth and a real-DB test" | Executor role: bounded implementation, runs verification, captures evidence |
-| "Review the last 200 lines for completeness" | Functional reviewer role: end-to-end check |
-| "Check whether the subscription change is safe to ship" | Security reviewer role: triage checklist, auth and trust boundaries |
-| "Run /cycle run" (legacy phrasing) | Dispatch to executor + reviewers + arbiter, end to end |
-| "Verify .cycle/audit.jsonl" | Invokes `cycle_verify_audit` MCP tool, reports chain status |
-| "Freeze the current changes against main" | Invokes `cycle_freeze_candidate` MCP tool, produces a manifest |
-| "Build the AST index for this project" | Invokes `cycle_graph_index` MCP tool |
+If a user asks to run a governed implementation cycle, explain that the control plane and native
+Mavis-agent setup have not reached their production gate. Do not substitute a single-session
+implementation and call it Cycle.
 
-The five role modes are:
+## Available MCP operations
 
-- **Architect**: read-only planning, no edits, no shell.
-- **Executor**: bounded task in the assigned `write_scopes`, runs the
-  project's verification commands, captures the evidence.
-- **Functional reviewer**: reads the frozen candidate and the
-  evidence, produces a verdict. Does not edit.
-- **Security reviewer**: walks the mandatory triage checklist. Does
-  not edit.
-- **Arbiter**: the only role that can produce an `approved`
-  decision. Receives the original request, the candidate, the
-  evidence, and both reviews.
+### Verify a legacy audit chain
 
-The skill explains the role procedures in `roles/*.md`. The protocol
-schemas and event names are in `PROTOCOL.md`. The evidence rules and
-the triage checklist are in `evidence/gates.md` and
-`roles/security-reviewer.md`.
+Use `cycle_verify_audit` with the ledger path. Report only that the JSONL sequence, previous-hash
+links, and entry hashes are internally consistent or where they break. Internal consistency is not
+origin authentication: the current verifier has no signed checkpoint.
 
-## Operating principles
+### Produce a diagnostic candidate manifest
 
-1. Preserve user intent. The exact original request is the only acceptance
-   source. The arbiter does not judge the architect's interpretation, it
-   judges the user's request.
-2. Prove completion. A workflow terminates `approved` only when deterministic
-   evidence is attached to a frozen candidate. Narration is not evidence.
-3. Keep simple work simple. A `quick` route exists for low-risk narrow changes.
-4. Separate powers. Five sessions, five prompts, five model configurations.
-   No role approves its own work. No role sees the other's review before
-   finalizing.
-5. Stay locally controlled. All state lives in `.cycle/` (project) or
-   `~/.mavis/cycle/` (user). Application updates never touch plugin state.
-6. Preserve accountability. Every action is recorded in a hash-chained
-   JSONL audit ledger. Anyone with read access can verify the chain.
+Use `cycle_freeze_candidate` only when the user explicitly requests a diagnostic manifest. State
+that it compares `base_revision..HEAD` and is not an immutable production freeze. It must never be
+used as evidence for approval or delivery.
 
-## When to start a workflow
+### Build the lightweight structural index
 
-The Cycle entry agent (the user-facing one) must distinguish three cases:
+Use `cycle_graph_index` with an explicit project root. The operation writes
+`.cycle/graph/manifest.json` in that project. It performs a full rebuild and uses regular
+expressions, not Tree-sitter.
 
-| Case | User signal | Response |
-|---|---|---|
-| Discussion | "explain", "how does", "what if", "should we" | Read-only answer, no workflow start |
-| Plan only | "plan a SaaS", "design the API for", "let's think about" | `/cycle plan` — Architect only |
-| Implement | "implement", "build", "fix", "change", "add", "refactor" | `/cycle run [auto\|quick\|full]` |
+### Query the lightweight index
 
-`auto` selects the route from deterministic risk signals defined in
-`routing/risk-signals.md`. `quick` is the bounded, reduced-governance path.
-`full` runs every gate. `/cycle run` without a mode argument is `auto`.
+Use `cycle_graph_query` with one of these implemented query kinds:
 
-## Commands
+- `declarations`
+- `signature` (the stored declaration record, not a typed source signature)
+- `imports`
+- `importers`
+- `dependents` (currently equivalent to importers)
+- `types` (heuristic references found on import lines)
 
-Run any of these through the native MiniMax Code command surface, with the
-skill's `cycle` command registered. Each command is documented under
-`docs/COMMANDS.md` and is a single source of truth for behavior, preconditions,
-and automatic equivalents.
+Callers, callees, path traversal, time-based filtering, tags, and index-version scoping are not
+implemented. Do not emulate missing graph facts or return an empty result as proof that no
+relationship exists.
 
-| Command | Mode | Default? |
-|---|---|---|
-| `/cycle setup` | configuration | first run only |
-| `/cycle doctor` | diagnostic | optional |
-| `/cycle plan` | read-only | on demand |
-| `/cycle execute` | bounded | on demand |
-| `/cycle review` | reviewer-only | on demand |
-| `/cycle arbitrate` | arbiter-only | on demand |
-| `/cycle run [auto\|quick\|full]` | full workflow | on user intent |
-| `/cycle:resume` | resume | on pause or restart |
-| `/cycle status` | inspect | on demand |
-| `/cycle tasks` | inspect | on demand |
-| `/cycle evidence` | inspect | on demand |
-| `/cycle pause` | control | on demand |
-| `/cycle cancel --confirm` | destructive | on demand |
-| `/cycle retry` | recovery | on failure |
-| `/cycle history [verify]` | inspect | on demand |
-| `/cycle memory search\|explain\|remove` | memory | on demand |
-| `/cycle models [role] [provider/model]` | configure | on demand |
-| `/cycle permissions` | inspect | on demand |
-| `/cycle limits` | inspect | on demand |
-| `/cycle export --confirm` | destructive | on demand |
-| `/cycle help` | reference | always available |
+## Safety
 
-## Workflow lifecycle
+- Use an explicit project root and show it to the user before an operation that writes `.cycle/`.
+- Do not pass an output directory outside the project for the diagnostic manifest.
+- Do not treat a tool exit code as evidence for behavior the tool does not implement.
+- Do not create agents, hooks, or persistent profile configuration until the user explicitly asks
+  to set up Cycle and the production setup task has been delivered.
+- Keep credentials, private configuration, raw prompts, and absolute user paths out of reports.
 
-```
-intake -> architecture -> execution -> verification -> independent_reviews -> arbitration -> delivery
-                                  \-> repair (max 5) <-/
-                                  \-> replan   <-/
-```
+## Source of truth
 
-Each transition writes an event to the audit ledger. State transitions that
-require approval (`repair` returning to `execution` and `arbitration` approving
-to `delivery`) include the artifact that authorized the transition. There is
-no implicit trust in any agent's self-report.
-
-## Per-role model configuration
-
-The five role agents (`cycle-architect`, `cycle-executor`,
-`cycle-functional-reviewer`, `cycle-security-reviewer`, `cycle-arbiter`) each
-read their own model from their own Mavis agent configuration. The Cycle
-entry agent does not pass a model override to the role; it dispatches with
-whatever model the role agent was configured with. The user configures models
-once during `setup` and changes them later with `/cycle models`.
-
-The plugin is fully model-agnostic. No model is required, no provider is
-required, no subscription is bundled. The five role files in `agents/` are
-shipped with the model field left to the installer's choice.
-
-## Memory and graph
-
-The workflow maintains two persistent stores outside the MiniMax Code
-install:
-
-- `.cycle/memory/` — cross-session project memory. Searchable, with
-  provenance and confidence. See `memory/layer.md`.
-- `.cycle/graph/` — local AST knowledge graph of the project. Deterministic,
-  no vector store, scoped queries only. See `graph/indexer.md`.
-
-Both stores are opt-in by file. They are never created in a project unless
-the user runs `/cycle setup` for that project.
-
-## Audit ledger
-
-Every workflow action writes one line to `.cycle/audit.jsonl` with the
-preceding line's hash. `scripts/verify-audit.mjs` re-computes the chain and
-exits non-zero on any break. The chain is signed at the workflow boundary so
-that a partial chain can be detected after a crash. The ledger format is
-defined in `docs/PROTOCOL.md`.
-
-## Browser QA
-
-For changes that touch user-visible behavior, the executor opens a managed
-browser session, performs the change, captures a screenshot and a DOM
-snapshot, closes the session, and attaches both as evidence. The reviewers
-read the artifacts. They never drive the browser themselves. See
-`browser/qa-protocol.md`.
-
-## Boundaries
-
-The Cycle skill does not modify the MiniMax Code install. It does not read
-or write the host's `opencode.json` (Mavis equivalent), provider credentials,
-or session logs. It does not perform network calls outside the user's
-explicit approval (browser QA is the only path that may contact a URL,
-and the user confirms the origin first). It does not collect telemetry.
-
-## Failure and recovery
-
-A workflow that fails a verification gate is repaired by the executor with
-the failing evidence as feedback. A workflow that fails an arbitration gate
-is either repaired or replanned. After five repair cycles the workflow is
-`blocked`. The user can `/cycle retry` after addressing the underlying cause,
-or `/cycle cancel` to discard.
-
-A workflow that crashes mid-run leaves the audit chain intact up to the last
-recorded event. `/cycle:resume` starts a new workflow from the last
-recorded state, re-admitting the same evidence where possible.
-
-## Limits
-
-- Maximum concurrent workflows per project: 100
-- Maximum repair cycles per workflow: 5
-- Maximum file size ingested by the graph indexer: 4 MiB
-- Maximum candidate manifest size: 16 MiB
-- Maximum number of role agents: 5 (fixed)
-
-The defaults are tunable in `~/.mavis/cycle/config.json` but the maximum
-concurrent workflows is a hard ceiling enforced by the scheduler.
-
-## Reading order
-
-For a new user, the recommended reading order is:
-
-1. `docs/USER_MANUAL.md` — what the user does
-2. `skill/PROTOCOL.md` — what the workflow does
-3. `skill/roles/architect.md` — how the architect thinks
-4. `skill/roles/executor.md` — how the executor works
-5. `skill/roles/functional-reviewer.md`, `skill/roles/security-reviewer.md`
-6. `skill/roles/arbiter.md` — how final approval works
-7. `docs/ARCHITECTURE.md` — how the components fit together
-8. `docs/THREAT_MODEL.md` — what this plugin does and does not protect against
+Read `../../PRODUCTION_RELEASE_PLAN.md` for the task sequence and release gates. The
+legacy `PROTOCOL.md` and role documents are design inputs only until their production tasks replace
+them.

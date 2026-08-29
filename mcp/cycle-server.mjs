@@ -6,7 +6,7 @@
 // Tools:
 //   - cycle_verify_audit(path)            verify a .cycle/audit.jsonl
 //   - cycle_freeze_candidate(root, base)  freeze a candidate manifest
-//   - cycle_graph_index(root)             build the AST knowledge graph
+//   - cycle_graph_index(root)             build the lightweight structural index
 //   - cycle_graph_query(root, query)       run a scoped graph query
 //
 // Logs are written to stderr; only JSON-RPC messages go to stdout.
@@ -21,15 +21,14 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = resolve(HERE, "..", "scripts");
 const PROTOCOL_VERSION = "2024-11-05";
 const SERVER_NAME = "cycle-tools";
-const SERVER_VERSION = "1.0.0";
+const SERVER_VERSION = "2.0.0-alpha.1";
 
 const TOOLS = [
   {
     name: "cycle_verify_audit",
     description:
-      "Verify a Cycle audit JSONL ledger by recomputing the SHA-256 " +
-      "hash chain. Returns a text summary. Exits non-zero on any break " +
-      "in the chain (reported as an MCP error).",
+      "Check the internal sequence and SHA-256 links of a legacy Cycle audit JSONL ledger. " +
+      "This checks consistency, not origin authenticity; the alpha has no signed checkpoint.",
     inputSchema: {
       type: "object",
       properties: {
@@ -44,9 +43,8 @@ const TOOLS = [
   {
     name: "cycle_freeze_candidate",
     description:
-      "Freeze a candidate from a worktree at a given git base revision. " +
-      "Produces a cycle.candidate.v1 manifest under .cycle/candidates/<id>/ " +
-      "and returns the manifest JSON.",
+      "Produce a legacy diagnostic candidate manifest from base_revision..HEAD and current " +
+      "worktree bytes. This is not an immutable production freeze and cannot authorize delivery.",
     inputSchema: {
       type: "object",
       properties: {
@@ -69,9 +67,8 @@ const TOOLS = [
   {
     name: "cycle_graph_index",
     description:
-      "Build or update the Cycle AST knowledge graph for a project. " +
-      "Deterministic, incremental, content-addressed. Outputs the index " +
-      "manifest to .cycle/graph/manifest.json.",
+      "Build the alpha's lightweight full-rebuild structural index. It uses regular expressions, " +
+      "not an AST parser, and writes .cycle/graph/manifest.json in the project.",
     inputSchema: {
       type: "object",
       properties: {
@@ -95,9 +92,8 @@ const TOOLS = [
   {
     name: "cycle_graph_query",
     description:
-      "Run a scoped query against the Cycle graph index. Returns one " +
-      "JSON object per line. Query kinds: declarations, signature, imports, " +
-      "importers, dependents, callers, callees, types, path.",
+      "Query the alpha's lightweight structural index. Implemented kinds: declarations, " +
+      "signature, imports, importers, dependents, and types. Results are JSON Lines.",
     inputSchema: {
       type: "object",
       properties: {
@@ -107,13 +103,13 @@ const TOOLS = [
         },
         query: {
           type: "string",
-          description: "One of: declarations, signature, imports, importers, dependents, callers, callees, types, path.",
+          enum: ["declarations", "signature", "imports", "importers", "dependents", "types"],
+          description: "Implemented query kind.",
         },
         name: { type: "string", description: "Optional. Glob for the declaration name." },
         kind: { type: "string", description: "Optional. Comma-separated kinds to include." },
         path: { type: "string", description: "Optional. Glob for the file path." },
         limit: { type: "number", description: "Optional. Max results (default 200, hard 10000)." },
-        since: { type: "number", description: "Optional. Restrict to files changed in the last N hours." },
       },
       required: ["project_root", "query"],
     },
