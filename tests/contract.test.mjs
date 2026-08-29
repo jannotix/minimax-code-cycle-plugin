@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.2";
+const VERSION = "2.0.0-alpha.3";
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");
@@ -63,10 +63,13 @@ function mcpExchange(messages) {
 
 test("every active version surface identifies the same alpha", async () => {
   const packageJson = JSON.parse(await text("package.json"));
+  const packageLock = JSON.parse(await text("package-lock.json"));
   const pluginJson = JSON.parse(await text("plugin.json"));
   const server = await text("src/version.ts");
 
   assert.equal(packageJson.version, VERSION);
+  assert.equal(packageLock.version, VERSION);
+  assert.equal(packageLock.packages[""].version, VERSION);
   assert.equal(pluginJson.version, VERSION);
   assert.match(server, new RegExp(`VERSION = ${JSON.stringify(VERSION)}`));
   assert.equal(packageJson.license, "FSL-1.1-MIT");
@@ -106,7 +109,7 @@ test("unsupported graph operations fail explicitly", async () => {
       "main",
     ]);
     assert.equal(unsupported.code, 1);
-    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.2/u);
+    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.3/u);
 
     const since = await run(process.execPath, [
       join(ROOT, "scripts", "graph-query.mjs"),
@@ -201,4 +204,10 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
     "types",
   ]);
   assert.equal(graph.inputSchema.properties.since, undefined);
+  const workflow = listed.result.tools.find((tool) => tool.name === "cycle_workflow");
+  assert.ok(workflow.inputSchema.properties.operation.enum.includes("freeze_candidate"));
+  assert.ok(workflow.inputSchema.properties.operation.enum.includes("verify"));
+  assert.ok(workflow.inputSchema.properties.operation.enum.includes("arbitrate"));
+  assert.ok(workflow.inputSchema.properties.operation.enum.includes("deliver"));
+  assert.ok(workflow.inputSchema.properties.operation.enum.includes("reconcile"));
 });

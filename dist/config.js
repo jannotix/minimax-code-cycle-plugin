@@ -3,9 +3,29 @@ export function readConfiguration(environment = process.env) {
     const invalid = [];
     return {
         dataDirectory: option(environment, "DATA_DIR") || undefined,
+        gateStrictness: readStrictness(environment, invalid),
         invalid,
         maxRepairCycles: readRepairCycles(environment, invalid),
+        securityProofs: readSecurityProofs(environment, invalid),
     };
+}
+function readStrictness(environment, invalid) {
+    const value = option(environment, "GATE_STRICTNESS").toLowerCase();
+    if (!value)
+        return "standard";
+    if (value === "advisory" || value === "standard" || value === "strict")
+        return value;
+    invalid.push("CYCLE_GATE_STRICTNESS must be advisory, standard, or strict");
+    return "standard";
+}
+function readSecurityProofs(environment, invalid) {
+    const value = option(environment, "SECURITY_PROOFS").toLowerCase();
+    if (!value || value === "off")
+        return false;
+    if (value === "on")
+        return true;
+    invalid.push("CYCLE_SECURITY_PROOFS must be on or off");
+    return false;
 }
 function option(environment, key) {
     return (environment[`${PREFIX}${key}`] ?? "").trim();

@@ -2,6 +2,25 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.3] - Unreleased
+
+### Added
+
+- Exact candidate manifests binding Git base, diff, changed paths, dependencies, configuration,
+  environment, file digests, and bounded approved-byte payloads.
+- Deterministic gate discovery and safe command execution without a shell, with timeout and output
+  caps whose digest covers the complete output.
+- Candidate integrity, secret scan, required-layer, design, browser/accessibility, and proof evidence.
+- Strict plan and verdict schemas with evidence-id and requirement coverage validation.
+- Independent review and arbitration transitions that cannot approve without mandatory evidence.
+- Journaled, atomic, idempotent delivery, commit, and crash recovery.
+- Rename-aware manifests that deliver the added destination and deleted origin together.
+
+### Security
+
+- Candidate reads, proof copies, and delivery writes reject traversal, symlinks, and junctions.
+- Linked Git worktrees use `git rev-parse --git-path` to detect in-progress operations.
+
 ## [2.0.0-alpha.2] - Unreleased
 
 ### Added

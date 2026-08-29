@@ -8,7 +8,7 @@ import { serve } from "./mcp.js";
 import { Runtime } from "./runtime.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { readHistory, verifyHistory } from "./store/history.js";
-import { amendWorkflow, controlWorkflow, requireProjectWorkflow, startWorkflow, workflowStatus, } from "./workflow/service.js";
+import { amendWorkflow, arbitrateWorkflow, candidateEvidence, controlWorkflow, deliverWorkflowCandidate, freezeWorkflowCandidate, reconcileWorkflow, reportTask, requireProjectWorkflow, startWorkflow, submitBrowserEvidence, submitPlan, submitReviewVerdict, submitSecurityProof, verifyWorkflowCandidate, workflowStatus, } from "./workflow/service.js";
 import { VERSION } from "./version.js";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPTS = join(ROOT, "scripts");
@@ -25,10 +25,27 @@ const tools = [
     },
     {
         name: "cycle_workflow",
-        description: "Start, inspect, amend, pause, resume, retry, or cancel a durable Cycle workflow. " +
+        description: "Drive a durable evidence-gated workflow through planning, scoped execution reports, exact " +
+            "candidate freeze, verification, reviews, arbitration, delivery, recovery, and controls. " +
             "Only state-machine-legal transitions are accepted.",
         inputSchema: objectSchema({
-            operation: enumSchema(["start", "status", "amend", "control"]),
+            operation: enumSchema([
+                "start",
+                "status",
+                "amend",
+                "control",
+                "submit_plan",
+                "report_task",
+                "freeze_candidate",
+                "verify",
+                "evidence",
+                "submit_review",
+                "submit_browser_evidence",
+                "run_proof",
+                "arbitrate",
+                "deliver",
+                "reconcile",
+            ]),
             project_root: stringSchema("Absolute project directory."),
             workflow_id: stringSchema("Workflow identifier for non-start operations."),
             request: stringSchema("Exact original user request for start."),
@@ -39,8 +56,21 @@ const tools = [
             confirm: { type: "boolean" },
             additional_cycles: { minimum: 1, type: "integer" },
             reason: stringSchema("Optional pause or cancellation reason."),
+            plan: { type: "object" },
+            task_key: stringSchema("Plan task key."),
+            task_status: enumSchema(["blocked", "completed", "plan_defect"]),
+            summary: stringSchema("Bounded executor task summary."),
+            role: enumSchema(["functional_reviewer", "security_reviewer"]),
+            verdict: { type: "object" },
+            snapshot: { type: "object" },
+            capture_token: stringSchema("One-use reviewer capture capability."),
+            vulnerability_class: stringSchema("Stable vulnerability class."),
+            rationale: stringSchema("Why the proof may demonstrate the vulnerability."),
+            interpreter: stringSchema("Interpreter for an inline proof script."),
+            script: stringSchema("Inline proof source."),
+            command: stringSchema("Safe proof command when no inline script is supplied."),
         }, ["operation", "project_root"]),
-        run: (args) => workflowOperation(args),
+        run: async (args) => await workflowOperation(args),
     },
     {
         name: "cycle_history",
@@ -156,7 +186,7 @@ const tools = [
 ];
 serve({ name: "cycle-control-plane-minimax", version: VERSION }, tools);
 process.on("exit", () => runtime.close());
-function workflowOperation(args) {
+async function workflowOperation(args) {
     const operation = requiredString(args, "operation");
     const root = projectRoot(args);
     switch (operation) {
@@ -180,6 +210,38 @@ function workflowOperation(args) {
                 ...(reason === undefined ? {} : { reason }),
             });
         }
+        case "submit_plan":
+            return submitPlan(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "plan"));
+        case "report_task":
+            return await reportTask(runtime, root, requiredString(args, "workflow_id"), requiredString(args, "task_key"), oneOf(args, "task_status", ["blocked", "completed", "plan_defect"]), requiredString(args, "summary"));
+        case "freeze_candidate":
+            return await freezeWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"));
+        case "verify":
+            return await verifyWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"));
+        case "evidence":
+            return candidateEvidence(runtime, root, requiredString(args, "workflow_id"));
+        case "submit_review":
+            return submitReviewVerdict(runtime, root, requiredString(args, "workflow_id"), oneOf(args, "role", ["functional_reviewer", "security_reviewer"]), requiredRecord(args, "verdict"));
+        case "submit_browser_evidence":
+            return submitBrowserEvidence(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "snapshot"), optionalString(args, "capture_token") ?? null);
+        case "run_proof": {
+            const command = optionalString(args, "command");
+            const interpreter = optionalString(args, "interpreter");
+            const script = optionalString(args, "script");
+            return await submitSecurityProof(runtime, root, requiredString(args, "workflow_id"), {
+                ...(command === undefined ? {} : { command }),
+                ...(interpreter === undefined ? {} : { interpreter }),
+                rationale: requiredString(args, "rationale"),
+                ...(script === undefined ? {} : { script }),
+                vulnerabilityClass: requiredString(args, "vulnerability_class"),
+            });
+        }
+        case "arbitrate":
+            return arbitrateWorkflow(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "verdict"));
+        case "deliver":
+            return await deliverWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"));
+        case "reconcile":
+            return await reconcileWorkflow(runtime, root, optionalString(args, "workflow_id"));
         default:
             throw new Error(`unknown workflow operation: ${operation}`);
     }
@@ -251,6 +313,13 @@ function optionalString(args, key) {
         throw new Error(`${key} must be a string`);
     if (Buffer.byteLength(value, "utf8") > 64 * 1024)
         throw new Error(`${key} is too large`);
+    return value;
+}
+function requiredRecord(args, key) {
+    const value = args[key];
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        throw new Error(`${key} must be an object`);
+    }
     return value;
 }
 function optionalInteger(args, key) {

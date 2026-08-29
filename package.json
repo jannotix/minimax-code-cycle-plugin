@@ -1,8 +1,8 @@
 {
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "private": true,
-  "description": "Development preview for MiniMax Code with a durable multi-project MCP control-plane foundation and legacy diagnostic utilities.",
+  "description": "Development preview for MiniMax Code with durable workflows, evidence-gated candidates, verdict validation, and recoverable delivery.",
   "type": "module",
   "author": "Gianluca Iannotta",
   "license": "FSL-1.1-MIT",

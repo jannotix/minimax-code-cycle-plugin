@@ -7,10 +7,14 @@ export type Role =
   | "coordinator"
   | "system"
 
+export type GateStrictness = "advisory" | "standard" | "strict"
+
 export interface Configuration {
   readonly dataDirectory: string | undefined
+  readonly gateStrictness: GateStrictness
   readonly invalid: readonly string[]
   readonly maxRepairCycles: number
+  readonly securityProofs: boolean
 }
 
 const PREFIX = "CYCLE_"
@@ -19,9 +23,27 @@ export function readConfiguration(environment: NodeJS.ProcessEnv = process.env):
   const invalid: string[] = []
   return {
     dataDirectory: option(environment, "DATA_DIR") || undefined,
+    gateStrictness: readStrictness(environment, invalid),
     invalid,
     maxRepairCycles: readRepairCycles(environment, invalid),
+    securityProofs: readSecurityProofs(environment, invalid),
   }
+}
+
+function readStrictness(environment: NodeJS.ProcessEnv, invalid: string[]): GateStrictness {
+  const value = option(environment, "GATE_STRICTNESS").toLowerCase()
+  if (!value) return "standard"
+  if (value === "advisory" || value === "standard" || value === "strict") return value
+  invalid.push("CYCLE_GATE_STRICTNESS must be advisory, standard, or strict")
+  return "standard"
+}
+
+function readSecurityProofs(environment: NodeJS.ProcessEnv, invalid: string[]): boolean {
+  const value = option(environment, "SECURITY_PROOFS").toLowerCase()
+  if (!value || value === "off") return false
+  if (value === "on") return true
+  invalid.push("CYCLE_SECURITY_PROOFS must be on or off")
+  return false
 }
 
 function option(environment: NodeJS.ProcessEnv, key: string): string {

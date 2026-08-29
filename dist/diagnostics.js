@@ -86,8 +86,10 @@ export async function diagnose(runtime, projectRoot, version) {
 function report(runtime, projectId, version, findings, store) {
     return {
         configuration: {
+            gateStrictness: runtime.configuration.gateStrictness,
             invalid: runtime.configuration.invalid,
             maxRepairCycles: runtime.configuration.maxRepairCycles,
+            securityProofs: runtime.configuration.securityProofs,
         },
         findings,
         ok: !findings.some((finding) => finding.severity === "error"),

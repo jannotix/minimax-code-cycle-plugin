@@ -1,13 +1,13 @@
 ---
 name: cycle
-description: Inspect the Cycle for MiniMax Code 2.0 development line and operate its durable workflow, history, diagnostics, resource-admission, legacy candidate, audit-chain, and lightweight index MCP tools. Use when the user explicitly mentions Cycle for MiniMax Code or asks to inspect its local control-plane state. Do not claim that the alpha runs a governed five-role delivery workflow.
+description: Inspect the Cycle for MiniMax Code 2.0 development line and operate its durable workflow, exact candidate, evidence, review, arbitration, delivery, history, diagnostics, and resource-admission MCP tools. Use when the user explicitly mentions Cycle for MiniMax Code or asks to inspect its local control-plane state. Native five-role dispatch is not yet production-ready.
 license: FSL-1.1-MIT
 compatibility: Requires MiniMax Code with Agent Plugins 1.0 support and Node.js 22 or later on PATH. The 2.0 development line is not production-ready.
 ---
 
 # Cycle for MiniMax Code
 
-This is the entry point for the `2.0.0-alpha.2` development line. MiniMax Code loads this Skill and
+This is the entry point for the `2.0.0-alpha.3` development line. MiniMax Code loads this Skill and
 the `cycle-tools` MCP server. It does not load the repository's legacy custom-agent files or create
 a command namespace.
 
@@ -17,7 +17,6 @@ The production rebuild is incomplete. Do not state or imply that the current alp
 
 - an autonomous five-role workflow;
 - isolated architect, executor, reviewers, or arbiter sessions;
-- evidence-bound approval or delivery;
 - incremental AST code intelligence;
 - setup, doctor, resume, Goal Mode, memory, or browser QA.
 
@@ -25,7 +24,7 @@ If a user asks to run a governed implementation cycle, explain that the control 
 Mavis-agent setup have not reached their production gate. Do not substitute a single-session
 implementation and call it Cycle.
 
-## T01 control-plane operations
+## T02 control-plane operations
 
 All control-plane calls require an explicit absolute `project_root`. Never substitute the plugin
 directory or its process working directory.
@@ -38,10 +37,14 @@ production pass; errors stop the workflow.
 
 ### Operate durable workflow state
 
-Use `cycle_workflow` for `start`, `status`, `amend`, and `control`. Start captures the exact request,
-deduplicates an active retry, routes it, and persists every transition. Control currently supports
-pause, resume, retry from repair/blocked, and confirmation-gated cancellation. Candidate and review
-transitions remain unavailable until T02.
+Use `cycle_workflow` for `start`, `status`, `amend`, `submit_plan`, `report_task`,
+`freeze_candidate`, `verify`, `evidence`, `submit_review`, `submit_browser_evidence`, `run_proof`,
+`arbitrate`, `deliver`, `reconcile`, and `control`. Every transition is state-validated. Delivery
+writes and commits only the approved bytes and recovery resumes the journaled delivery.
+
+The coordinator must not synthesize role verdicts. Until T04/T05 creates and drives independent
+Mavis sessions, use these operations for deterministic testing and inspection, not as proof that a
+five-role production cycle ran.
 
 ### Inspect or sign history
 

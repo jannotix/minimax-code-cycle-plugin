@@ -161,3 +161,25 @@ test("workflow operations refuse a durable data directory inside the project", a
     rmSync(scratch, { force: true, recursive: true })
   }
 })
+
+test("a history write failure rolls the state transition back atomically", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "cycle-minimax-transition-"))
+  const project = join(scratch, "project")
+  mkdirSync(project)
+  const runtime = new Runtime({ ...process.env, CYCLE_DATA_DIR: join(scratch, "data") })
+  try {
+    const started = startWorkflow(runtime, { projectRoot: project, request: "small change" }).workflow
+    runtime.requireStore().run(`
+      create trigger reject_history_insert before insert on history
+      begin select raise(abort, 'history blocked'); end
+    `)
+    assert.throws(
+      () => controlWorkflow(runtime, project, started.id, "pause"),
+      /history blocked/u,
+    )
+    assert.equal(workflowStatus(runtime, project, started.id)?.workflow.state, "quick_execution")
+  } finally {
+    runtime.close()
+    rmSync(scratch, { force: true, recursive: true })
+  }
+})

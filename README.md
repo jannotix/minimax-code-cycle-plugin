@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.2` — production release is blocked.
+> Development line: `2.0.0-alpha.3` — production release is blocked.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -17,7 +17,7 @@ from `mcp.json`. The server currently exposes eight local tools:
 | Tool | Current guarantee |
 |---|---|
 | `cycle_doctor` | Diagnoses project identity, Node, configuration, SQLite schema, history, checkpoints, and key permissions. |
-| `cycle_workflow` | Starts, deduplicates, inspects, amends, pauses, resumes, retries, or cancels a durable workflow through a legal state machine. |
+| `cycle_workflow` | Drives durable planning, scoped task reconciliation, exact candidate freeze, verification, reviews, arbitration, delivery, and recovery. |
 | `cycle_history` | Lists project-scoped history, verifies the global append-only chain and checkpoints, and signs the current head with Ed25519. |
 | `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
 | `cycle_verify_audit` | Checks internal SHA-256 chain consistency in an existing JSONL ledger. It does not authenticate the ledger's origin. |
@@ -34,8 +34,6 @@ The following capabilities remain release blockers and are not advertised as wor
 
 - five isolated MiniMax role agents;
 - runtime tool-boundary hooks;
-- evidence collection and evidence-bound arbitration;
-- immutable candidate capture, atomic delivery, and crash recovery;
 - incremental Tree-sitter code intelligence;
 - project memory, Goal Mode, and resource admission;
 - production packaging and live MiniMax Code certification.
@@ -84,8 +82,8 @@ node --check scripts/graph-query.mjs
 node --check scripts/package-skill.mjs
 ```
 
-Passing these checks proves the T01 control-plane foundation and legacy utility contract. It does
-not certify the future evidence/delivery layers or the MiniMax Code Desktop integration.
+Passing these checks proves the T02 control-plane, candidate, evidence, verdict, and delivery
+foundation. It does not certify native Mavis role dispatch or MiniMax Code Desktop integration.
 
 ## Compatibility target
 
