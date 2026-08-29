@@ -1,14 +1,37 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process"
-import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { release } from "./admission.ts"
 import { diagnose } from "./diagnostics.ts"
+import {
+  abort as abortGoal,
+  advance as advanceGoal,
+  amend as amendGoal,
+  approveCompletion,
+  currentPlan,
+  extend as extendGoal,
+  focus as focusGoal,
+  goals,
+  link as linkGoal,
+  newGoal,
+  pause as pauseGoal,
+  plan as planGoal,
+  requestCompletion,
+  resume as resumeGoal,
+  status as goalStatus,
+} from "./goals.ts"
+import { indexProject } from "./intel/indexer.ts"
+import { ParsePool } from "./intel/pool.ts"
+import { findSymbol, impactOf, neighboursOf, scopeBundle } from "./intel/query.ts"
+import { chainOf, explain, forget, recall } from "./memory.ts"
 import { serve, type ToolDefinition } from "./mcp.ts"
+import { pressure } from "./resources.ts"
 import { Runtime } from "./runtime.ts"
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.ts"
+import { graphSize } from "./store/graph.ts"
 import { readHistory, verifyHistory } from "./store/history.ts"
 import {
   amendWorkflow,
@@ -173,66 +196,83 @@ const tools: readonly ToolDefinition[] = [
   {
     name: "cycle_graph_index",
     description:
-      "Build the alpha's lightweight full-rebuild regular-expression structural index in an " +
-      "explicit project root.",
+      "Build or refresh the bounded Tree-sitter WASM code graph. Unchanged files are not read or " +
+      "reparsed, unsafe links are skipped, and verification work preempts indexing.",
     inputSchema: objectSchema(
       {
         project_root: stringSchema("Absolute project directory."),
-        workers: { minimum: 1, type: "integer" },
-        languages: stringSchema("Comma-separated extensions, for example .ts,.tsx,.md."),
+        workers: { maximum: 8, minimum: 1, type: "integer" },
       },
       ["project_root"],
     ),
-    run: async (args) => {
-      const scriptArgs = [projectRoot(args)]
-      const workers = boundedInteger(args, "workers", 1, 256)
-      if (workers !== undefined) scriptArgs.push("--workers", String(workers))
-      const languages = optionalString(args, "languages")
-      if (languages !== undefined) scriptArgs.push("--languages", languages)
-      const result = await runScript("graph-index.mjs", scriptArgs, 300_000)
-      return { summary: result.stdout.trim() }
-    },
+    run: async (args) => await graphIndexOperation(args),
   },
   {
     name: "cycle_graph_query",
     description:
-      "Query the alpha structural index. Implemented kinds: declarations, signature, imports, " +
-      "importers, dependents, and types.",
+      "Query the durable code graph without reading project files: symbol lookup, bounded " +
+      "neighbour and impact traversal, budgeted scope bundles, or graph status.",
     inputSchema: objectSchema(
       {
         project_root: stringSchema("Absolute project directory."),
-        query: enumSchema([
-          "declarations",
-          "signature",
-          "imports",
-          "importers",
-          "dependents",
-          "types",
-        ]),
-        name: stringSchema("Optional name glob."),
-        kind: stringSchema("Optional comma-separated declaration kinds."),
-        path: stringSchema("Optional project-relative path glob."),
-        limit: { maximum: 10000, minimum: 1, type: "integer" },
+        operation: enumSchema(["status", "symbol", "neighbours", "impact", "scope"]),
+        name: stringSchema("Exact symbol name for symbol or neighbours.", 256),
+        paths: arraySchema("Project-relative paths for impact or scope.", 200),
+        depth: { maximum: 4, minimum: 1, type: "integer" },
+        budget_bytes: { maximum: 1000000, minimum: 1000, type: "integer" },
       },
-      ["project_root", "query"],
+      ["operation", "project_root"],
     ),
-    run: async (args) => {
-      const scriptArgs = [projectRoot(args), requiredString(args, "query")]
-      for (const key of ["name", "kind", "path"] as const) {
-        const value = optionalString(args, key)
-        if (value !== undefined) scriptArgs.push(`--${key}`, value)
-      }
-      const limit = boundedInteger(args, "limit", 1, 10000)
-      if (limit !== undefined) scriptArgs.push("--limit", String(limit))
-      const result = await runScript("graph-query.mjs", scriptArgs, 10_000)
-      return {
-        results: result.stdout
-          .split(/\r?\n/u)
-          .filter(Boolean)
-          .map((line) => JSON.parse(line) as unknown),
-        warning: result.stderr.trim() || null,
-      }
-    },
+    run: (args) => graphQueryOperation(args),
+  },
+  {
+    name: "cycle_memory",
+    description:
+      "Search compact project knowledge, explain selected entries with provenance, inspect a " +
+      "supersession chain, or explicitly revoke an entry without deleting its audit record.",
+    inputSchema: objectSchema(
+      {
+        project_root: stringSchema("Absolute project directory."),
+        operation: enumSchema(["search", "explain", "chain", "forget"]),
+        query: stringSchema("Bounded full-text search query.", 4_096),
+        paths: arraySchema("Project-relative paths used for applicability recall.", 200),
+        ids: arraySchema("Memory identifiers to explain.", 20),
+        memory_id: stringSchema("Memory identifier for chain or forget.", 64),
+        limit: { maximum: 50, minimum: 1, type: "integer" },
+        confirm: { type: "boolean" },
+      },
+      ["operation", "project_root"],
+    ),
+    run: (args) => memoryOperation(args),
+  },
+  {
+    name: "cycle_goal",
+    description:
+      "Manage a durable project objective above evidence-gated workflows. Objectives are immutable, " +
+      "plans are versioned, continuation is bounded, and completion requires explicit approval.",
+    inputSchema: objectSchema(
+      {
+        project_root: stringSchema("Absolute project directory."),
+        operation: enumSchema([
+          "new", "list", "focus", "plan", "link", "amend", "status", "advance",
+          "extend", "pause", "resume", "complete", "approve", "abort",
+        ]),
+        goal_id: stringSchema("Goal identifier for non-new operations.", 64),
+        objective: stringSchema("Immutable goal objective.", 8_192),
+        success_criteria: arraySchema("Observable completion criteria.", 50),
+        constraints: arraySchema("Goal constraints.", 50),
+        non_goals: arraySchema("Explicitly excluded outcomes.", 50),
+        max_continuations: { maximum: 50, minimum: 1, type: "integer" },
+        content: stringSchema("Versioned goal plan content.", 8_192),
+        milestone: stringSchema("Milestone name.", 200),
+        workflow_id: stringSchema("Evidence-gated workflow linked to a milestone.", 64),
+        clarification: stringSchema("Append-only clarification.", 8_192),
+        additional: { maximum: 50, minimum: 1, type: "integer" },
+        confirm: { type: "boolean" },
+      },
+      ["operation", "project_root"],
+    ),
+    run: (args) => goalOperation(args),
   },
 ]
 
@@ -389,6 +429,178 @@ async function limitsOperation(args: Record<string, unknown>): Promise<unknown> 
   }
 }
 
+async function graphIndexOperation(args: Record<string, unknown>): Promise<unknown> {
+  const project = runtime.project(projectRoot(args))
+  const database = runtime.requireStore()
+  const resources = await runtime.resources()
+  const blocked = pressure(resources, runtime.admission.limits.reserves)
+  if (blocked !== null) return { deferred: true, reason: blocked, resources }
+
+  const workers = boundedInteger(args, "workers", 1, 8)
+  const pool = workers === undefined ? undefined : new ParsePool(workers)
+  const started = Date.now()
+  try {
+    const report = await indexProject(database, project.id, project.path, {
+      ...(pool === undefined ? {} : { pool }),
+      shouldYield: () => verificationPending(database, project.id),
+    })
+    return {
+      ...report,
+      deferred: false,
+      durationMs: Date.now() - started,
+      projectId: project.id,
+    }
+  } finally {
+    await pool?.dispose()
+  }
+}
+
+function graphQueryOperation(args: Record<string, unknown>): unknown {
+  const project = runtime.project(projectRoot(args))
+  const database = runtime.requireStore()
+  const operation = requiredString(args, "operation")
+  const paths = projectPaths(args, "paths", 200)
+  const depth = boundedInteger(args, "depth", 1, 4) ?? 2
+  switch (operation) {
+    case "status":
+      return graphSize(database, project.id)
+    case "symbol":
+      return { nodes: findSymbol(database, project.id, requiredBoundedString(args, "name", 256)) }
+    case "neighbours": {
+      const [node] = findSymbol(database, project.id, requiredBoundedString(args, "name", 256))
+      if (node === undefined) return { edges: [], found: false, visited: [] }
+      return { ...neighboursOf(database, node.id, depth), found: true, node }
+    }
+    case "impact":
+      requirePaths(paths, operation)
+      return { nodes: impactOf(database, project.id, paths, depth) }
+    case "scope":
+      requirePaths(paths, operation)
+      return scopeBundle(
+        database,
+        project.id,
+        paths,
+        boundedInteger(args, "budget_bytes", 1_000, 1_000_000),
+      )
+    default:
+      throw new Error(`unknown graph operation: ${operation}`)
+  }
+}
+
+function memoryOperation(args: Record<string, unknown>): unknown {
+  const project = runtime.project(projectRoot(args))
+  const context = { database: runtime.requireStore(), projectId: project.id }
+  const operation = requiredString(args, "operation")
+  switch (operation) {
+    case "search":
+      return {
+        memories: recall(
+          context,
+          optionalBoundedString(args, "query", 4_096) ?? "",
+          projectPaths(args, "paths", 200, true),
+          boundedInteger(args, "limit", 1, 50),
+        ),
+      }
+    case "explain":
+      return { memories: explain(context, identifiers(args, "ids", 20)) }
+    case "chain":
+      return { chain: chainOf(context, requiredBoundedString(args, "memory_id", 64)) }
+    case "forget":
+      if (args["confirm"] !== true) throw new Error("forget requires confirm: true")
+      return forget(context, requiredBoundedString(args, "memory_id", 64))
+    default:
+      throw new Error(`unknown memory operation: ${operation}`)
+  }
+}
+
+function goalOperation(args: Record<string, unknown>): unknown {
+  const project = runtime.project(projectRoot(args))
+  const context = { database: runtime.requireStore(), projectId: project.id }
+  const operation = requiredString(args, "operation")
+  const goalId = () => requiredBoundedString(args, "goal_id", 64)
+  switch (operation) {
+    case "new":
+      const maxContinuations = boundedInteger(args, "max_continuations", 1, 50)
+      return newGoal(context, {
+        constraints: identifiers(args, "constraints", 50, 8_000),
+        ...(maxContinuations === undefined ? {} : { maxContinuations }),
+        nonGoals: identifiers(args, "non_goals", 50, 8_000),
+        objective: requiredBoundedString(args, "objective", 8_192),
+        successCriteria: identifiers(args, "success_criteria", 50, 8_000),
+      })
+    case "list": return goals(context)
+    case "focus": return focusGoal(context, goalId())
+    case "plan": {
+      const content = optionalBoundedString(args, "content", 8_192)
+      return content === undefined ? currentPlan(context, goalId()) : planGoal(context, goalId(), content)
+    }
+    case "link":
+      return linkGoal(
+        context,
+        goalId(),
+        requiredBoundedString(args, "milestone", 200),
+        optionalBoundedString(args, "workflow_id", 64) ?? null,
+      )
+    case "amend": return amendGoal(context, goalId(), requiredBoundedString(args, "clarification", 8_192))
+    case "status": return goalStatus(context, optionalBoundedString(args, "goal_id", 64))
+    case "advance": return advanceGoal(context, goalId())
+    case "extend": return extendGoal(context, goalId(), boundedInteger(args, "additional", 1, 50) ?? 1)
+    case "pause": return pauseGoal(context, goalId())
+    case "resume": return resumeGoal(context, goalId())
+    case "complete": return requestCompletion(context, goalId())
+    case "approve": return approveCompletion(context, goalId(), args["confirm"] === true)
+    case "abort": return abortGoal(context, goalId(), args["confirm"] === true)
+    default:
+      throw new Error(`unknown goal operation: ${operation}`)
+  }
+}
+
+function verificationPending(database: ReturnType<typeof runtime.requireStore>, projectId: string): boolean {
+  const row = database.get<{ total: number }>(
+    "select count(*) as total from workflows where project_id = ? and state = 'verification'",
+    projectId,
+  )
+  return Number(row?.total ?? 0) > 0
+}
+
+function requirePaths(paths: readonly string[], operation: string): void {
+  if (paths.length === 0) throw new Error(`${operation} requires at least one path`)
+}
+
+function projectPaths(
+  args: Record<string, unknown>,
+  key: string,
+  maximum: number,
+  allowRoot = false,
+): string[] {
+  return identifiers(args, key, maximum, 4_096).map((value) => {
+    const normalized = value.replaceAll("\\", "/")
+    if (allowRoot && normalized === ".") return normalized
+    const parts = normalized.split("/")
+    if (
+      isAbsolute(value) ||
+      win32.isAbsolute(value) ||
+      parts.some((part) => !part || part === "." || part === "..")
+    ) {
+      throw new Error(`${key} must contain only safe project-relative paths`)
+    }
+    return normalized
+  })
+}
+
+function identifiers(
+  args: Record<string, unknown>,
+  key: string,
+  maximum: number,
+  maximumBytes = 256,
+): string[] {
+  const values = optionalStrings(args, key)
+  if (values.length > maximum || values.some((value) => Buffer.byteLength(value, "utf8") > maximumBytes)) {
+    throw new Error(`${key} exceeds its size limit`)
+  }
+  return values
+}
+
 function projectRoot(args: Record<string, unknown>): string {
   return runtime.project(requiredString(args, "project_root")).path
 }
@@ -407,11 +619,35 @@ function requiredString(args: Record<string, unknown>, key: string): string {
   return value
 }
 
+function requiredBoundedString(
+  args: Record<string, unknown>,
+  key: string,
+  maximumBytes: number,
+): string {
+  const value = requiredString(args, key)
+  if (Buffer.byteLength(value, "utf8") > maximumBytes) {
+    throw new Error(`${key} exceeds the ${maximumBytes}-byte limit`)
+  }
+  return value
+}
+
 function optionalString(args: Record<string, unknown>, key: string): string | undefined {
   const value = args[key]
   if (value === undefined || value === null || value === "") return undefined
   if (typeof value !== "string") throw new Error(`${key} must be a string`)
   if (Buffer.byteLength(value, "utf8") > 64 * 1024) throw new Error(`${key} is too large`)
+  return value
+}
+
+function optionalBoundedString(
+  args: Record<string, unknown>,
+  key: string,
+  maximumBytes: number,
+): string | undefined {
+  const value = optionalString(args, key)
+  if (value !== undefined && Buffer.byteLength(value, "utf8") > maximumBytes) {
+    throw new Error(`${key} exceeds the ${maximumBytes}-byte limit`)
+  }
   return value
 }
 
@@ -473,16 +709,21 @@ function objectSchema(
   return { additionalProperties: false, properties, required, type: "object" }
 }
 
-function stringSchema(description: string): Record<string, unknown> {
-  return { description, type: "string" }
+function stringSchema(description: string, maxLength?: number): Record<string, unknown> {
+  return { description, ...(maxLength === undefined ? {} : { maxLength }), type: "string" }
 }
 
 function enumSchema(values: readonly string[]): Record<string, unknown> {
   return { enum: values, type: "string" }
 }
 
-function arraySchema(description: string): Record<string, unknown> {
-  return { description, items: { type: "string" }, type: "array" }
+function arraySchema(description: string, maxItems?: number): Record<string, unknown> {
+  return {
+    description,
+    items: { type: "string" },
+    ...(maxItems === undefined ? {} : { maxItems }),
+    type: "array",
+  }
 }
 
 interface ScriptResult {

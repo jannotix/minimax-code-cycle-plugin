@@ -8,6 +8,7 @@ import {
   digestContainedFile,
   readContainedFile,
   safeWritePath,
+  statContainedFile,
   UnsafeWorkspacePath,
 } from "../src/filesystem.ts"
 
@@ -26,6 +27,7 @@ test("candidate reads and delivery writes refuse traversal, symlinks, and juncti
     assert.match(await digestContainedFile(root, "regular.txt") ?? "", /^[a-f0-9]{64}$/u)
     assert.equal(await readContainedFile(root, "linked/secret.txt", 100), null)
     assert.equal(await digestContainedFile(root, "linked/secret.txt"), null)
+    assert.equal(await statContainedFile(root, "linked/secret.txt", 100), null)
     await assert.rejects(() => safeWritePath(root, "linked/secret.txt"), UnsafeWorkspacePath)
     await assert.rejects(() => safeWritePath(root, "../escape.txt"), UnsafeWorkspacePath)
     await assert.rejects(() => safeWritePath(root, join(outside, "secret.txt")), UnsafeWorkspacePath)

@@ -1,0 +1,2 @@
+vendor/**/*.wasm -diff -text
+vendor/runtime/tree-sitter.cjs -diff -text

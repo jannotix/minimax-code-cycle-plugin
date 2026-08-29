@@ -1,8 +1,8 @@
 {
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.3",
+  "version": "2.0.0-alpha.4",
   "private": true,
-  "description": "Development preview for MiniMax Code with durable workflows, evidence-gated candidates, verdict validation, and recoverable delivery.",
+  "description": "Development preview for MiniMax Code with evidence-gated delivery, incremental code intelligence, durable memory, and goals.",
   "type": "module",
   "author": "Gianluca Iannotta",
   "license": "FSL-1.1-MIT",
@@ -22,9 +22,7 @@
     "typecheck": "tsc -p tsconfig.tests.json --pretty false",
     "verify-audit": "node scripts/verify-audit.mjs",
     "inspect-ledger": "node scripts/inspect-ledger.mjs",
-    "freeze-candidate": "node scripts/freeze-candidate.mjs",
-    "graph-index": "node scripts/graph-index.mjs",
-    "graph-query": "node scripts/graph-query.mjs"
+    "freeze-candidate": "node scripts/freeze-candidate.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

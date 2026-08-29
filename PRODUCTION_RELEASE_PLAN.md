@@ -2,7 +2,7 @@
 
 Status: **BLOCKED — implementation and certification in progress**
 
-Development version: `2.0.0-alpha.3`
+Development version: `2.0.0-alpha.4`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -66,11 +66,11 @@ history.
 
 ## 3. Capability matrix
 
-| Capability | Claude reference | Alpha at T00 | Production requirement |
+| Capability | Claude reference | Current development line | Production requirement |
 |---|---:|---:|---|
 | Agent Plugin manifest | yes | yes | schema-validated |
 | Natural-language Skill | commands plus Skills | limited | coordinator with fail-closed setup check |
-| MCP server | full control plane | T02 core plus four legacy utilities | full control plane |
+| MCP server | full control plane | T03 core plus two legacy diagnostic utilities | full control plane |
 | Persistent state machine | yes | yes at T01 | SQLite, migrations, legal transitions |
 | Five isolated roles | plugin agents | no | native Mavis agents created on explicit setup |
 | Tool boundaries | declarations plus hook | no | agent hooks plus post-task reconciliation |
@@ -78,10 +78,10 @@ history.
 | Candidate integrity | byte snapshot | yes at T02 | exact base and approved-byte snapshot |
 | Atomic delivery | journaled | yes at T02 | fail-closed, recoverable, idempotent |
 | Signed history | Ed25519 checkpoints | yes at T01 | append-only chain plus protected checkpoints |
-| Code intelligence | Tree-sitter incremental | regex full rebuild | Tree-sitter WASM, incremental, bounded queries |
-| Memory and goals | yes | no | provenance, scopes, confirmation gates |
+| Code intelligence | Tree-sitter incremental | yes at T03 | Tree-sitter WASM, incremental, bounded queries |
+| Memory and goals | yes | yes at T03 | provenance, scopes, confirmation gates |
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
-| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T02 suites | requirement-mapped suite |
+| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T03 suites | requirement-mapped suite |
 | CI and packaging | yes | no | OS matrix, allowlist, SBOM, checksums, provenance |
 | Live MiniMax receipt | n/a | no | clean install and behavioral matrix |
 
@@ -172,6 +172,10 @@ binaries and dynamic downloads out of the package.
 Exit evidence includes all supported languages, unchanged-file no-read behavior, one-file delta,
 delete/rename, bounded query truncation, restart, 100 registered workflows, resource pressure, and
 the controlled 500,000-file benchmark if the public claim remains.
+
+The development line makes no 500,000-file performance claim, so that conditional benchmark is not
+an exit gate. T03 instead records bounded incremental behavior and defers scale claims until a
+controlled benchmark is specified and executed.
 
 ### T04 — Native Mavis agent and hook setup
 

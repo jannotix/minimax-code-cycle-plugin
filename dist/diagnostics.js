@@ -1,6 +1,7 @@
 import { isAbsolute, relative } from "node:path";
 import { identifyProject } from "./project.js";
 import { keyPermissions, verifyCheckpoints } from "./store/checkpoints.js";
+import { graphSize } from "./store/graph.js";
 import { verifyHistory } from "./store/history.js";
 import { CURRENT_SCHEMA_VERSION } from "./store/migrations.js";
 export async function diagnose(runtime, projectRoot, version) {
@@ -74,11 +75,26 @@ export async function diagnose(runtime, projectRoot, version) {
             severity: "warn",
         });
     }
+    const resources = await runtime.resources();
+    const admission = runtime.admission.report(database, project.id, resources);
+    if (admission.pressure !== null) {
+        findings.push({ code: "admission.pressure", message: admission.pressure, severity: "warn" });
+    }
+    const memoryRow = database.get(`select count(*) as total,
+            sum(case when state = 'current' then 1 else 0 end) as current
+       from memory where project_id = ?`, project.id);
+    const goalRow = database.get(`select count(*) as total,
+            sum(case when state not in ('aborted', 'completed') then 1 else 0 end) as active
+       from goals where project_id = ?`, project.id);
     return report(runtime, project.id, version, findings, {
+        admission,
         chain,
         checkpoints,
+        goals: { active: Number(goalRow?.active ?? 0), total: Number(goalRow?.total ?? 0) },
+        graph: graphSize(database, project.id),
         historyEntries: entries,
         keyPermissions: permissions,
+        memory: { current: Number(memoryRow?.current ?? 0), total: Number(memoryRow?.total ?? 0) },
         mode: database.mode,
         schemaVersion: database.schemaVersion,
     });

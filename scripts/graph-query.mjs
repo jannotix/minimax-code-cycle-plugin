@@ -152,11 +152,11 @@ async function main() {
   const query = args._[1];
   if (projectRoot === undefined || query === undefined) usage();
   if (UNSUPPORTED_QUERIES.has(query)) {
-    throw new Error(`query '${query}' is not implemented in 2.0.0-alpha.3`);
+    throw new Error(`query '${query}' is not implemented in 2.0.0-alpha.4`);
   }
   if (!QUERIES.has(query)) usage();
   if (args.flags.since !== undefined) {
-    throw new Error("--since is not implemented in 2.0.0-alpha.3");
+    throw new Error("--since is not implemented in 2.0.0-alpha.4");
   }
 
   const absRoot = resolve(projectRoot);

@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.3` — production release is blocked.
+> Development line: `2.0.0-alpha.4` — production release is blocked.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -12,7 +12,7 @@ not be presented as a complete five-role autonomous cycle.
 ## Current, verified surface
 
 MiniMax Code discovers one Skill at `skills/cycle/SKILL.md` and one dependency-free stdio MCP server
-from `mcp.json`. The server currently exposes eight local tools:
+from `mcp.json`. The server currently exposes ten local tools:
 
 | Tool | Current guarantee |
 |---|---|
@@ -22,8 +22,10 @@ from `mcp.json`. The server currently exposes eight local tools:
 | `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
 | `cycle_verify_audit` | Checks internal SHA-256 chain consistency in an existing JSONL ledger. It does not authenticate the ledger's origin. |
 | `cycle_freeze_candidate` | Produces a legacy diagnostic manifest. It is not an immutable production candidate and must not authorize delivery. |
-| `cycle_graph_index` | Builds a lightweight, full-rebuild structural index using deterministic regular expressions. It is not an AST index. |
-| `cycle_graph_query` | Queries declarations, basic declaration records, imports, importers, dependents, and heuristic type references. |
+| `cycle_graph_index` | Incrementally indexes supported source with bundled Tree-sitter WASM grammars; unchanged files are not read and unsafe links are skipped. |
+| `cycle_graph_query` | Provides exact symbol lookup, confidence-tagged neighbours, impact traversal, bounded scope bundles, and graph status. |
+| `cycle_memory` | Recalls compact project knowledge, explains evidence provenance, walks supersession chains, and explicitly revokes without deletion. |
+| `cycle_goal` | Manages immutable objectives, versioned plans, workflow milestones, bounded continuations, pause/resume, and explicit completion approval. |
 
 The MCP server requires Node.js 22 or later on `PATH`. It makes no network calls and has no runtime
 package dependencies.
@@ -34,8 +36,8 @@ The following capabilities remain release blockers and are not advertised as wor
 
 - five isolated MiniMax role agents;
 - runtime tool-boundary hooks;
-- incremental Tree-sitter code intelligence;
-- project memory, Goal Mode, and resource admission;
+- the native Mavis setup and production coordinator Skill;
+- automatic browser driving from independent reviewer sessions;
 - production packaging and live MiniMax Code certification.
 
 The top-level `agents/`, ignored `docs/`, and ignored Markdown scenarios are legacy design inputs.
@@ -82,8 +84,9 @@ node --check scripts/graph-query.mjs
 node --check scripts/package-skill.mjs
 ```
 
-Passing these checks proves the T02 control-plane, candidate, evidence, verdict, and delivery
-foundation. It does not certify native Mavis role dispatch or MiniMax Code Desktop integration.
+Passing these checks proves the T03 control-plane, candidate delivery, incremental graph, durable
+memory, Goal Mode, and measured admission foundation. It does not certify native Mavis role dispatch
+or MiniMax Code Desktop integration.
 
 ## Compatibility target
 

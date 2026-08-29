@@ -2,6 +2,29 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.4] - Unreleased
+
+### Added
+
+- Bundled, MIT-licensed Tree-sitter WASM runtime and twelve grammar artifacts with a byte-exact
+  allowlist, SHA-256 manifest, third-party notices, and no native binary or dynamic download path.
+- Incremental project code graph with stat-cache no-read behavior for unchanged files, one-file
+  deltas, delete/rename cleanup, confidence-tagged edges, verification preemption, and bounded
+  queries that report truncation.
+- Durable, project-scoped memory with evidence provenance, progressive retrieval, supersession,
+  explicit revocation, and cross-project isolation.
+- Goal Mode with immutable objectives, versioned plans, workflow milestones, bounded continuation,
+  pause/resume, and explicit completion or abort confirmation.
+- Workflow integration that links focused goals, records verified delivery memory, remembers failed
+  approaches at terminal repair exhaustion, and survives process restart.
+- Full measured-admission tests including resource pressure, fair leases, expiry, recovery
+  throttling, and 100 registered workflows.
+
+### Security
+
+- Code indexing and worker parsing reject traversal, symlink, and NTFS junction boundaries.
+- Memory explain, chain, and revocation operations reveal no cross-project records.
+
 ## [2.0.0-alpha.3] - Unreleased
 
 ### Added

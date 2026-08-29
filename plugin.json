@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.3",
-  "description": "Development preview for MiniMax Code with durable workflows, evidence-gated candidates, verdict validation, and recoverable delivery.",
+  "version": "2.0.0-alpha.4",
+  "description": "Development preview for MiniMax Code with evidence-gated delivery, incremental code intelligence, durable memory, and goals.",
   "author": {
     "name": "Gianluca Iannotta",
     "email": "giannotta@tublat.com",
@@ -17,6 +17,9 @@
     "code-review",
     "graph",
     "ast",
+    "tree-sitter",
+    "memory",
+    "goals",
     "verification",
     "planning",
     "skill",

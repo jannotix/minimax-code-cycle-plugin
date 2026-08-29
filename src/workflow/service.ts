@@ -13,17 +13,21 @@ import { verify as verifyEvidence } from "../evidence/engine.ts"
 import type { VerificationOutcome } from "../evidence/gates.ts"
 import { proofEvidence, proofGateName } from "../evidence/proof-evidence.ts"
 import { runProof, type ProofRequest } from "../evidence/proof.ts"
+import { advanceGoalOfWorkflow, linkStartedWorkflow } from "../goals.ts"
+import { captureBlocked, captureDelivery } from "../memory.ts"
 import type { Runtime } from "../runtime.ts"
 import { issueCaptureCapabilities, redeemCaptureCapability } from "../store/capabilities.ts"
 import { signCheckpoint } from "../store/checkpoints.ts"
 import type { Database } from "../store/database.ts"
 import { loadEvidence, recordEvidence } from "../store/evidence.ts"
+import { goalOfWorkflow } from "../store/goals.ts"
 import { appendHistory } from "../store/history.ts"
 import { newId } from "../store/ids.ts"
 import {
   activeWorkflowForRequest,
   candidateManifest,
   createWorkflow,
+  frozenFiles,
   lastRefusal,
   latestWorkflow,
   loadPlan,
@@ -55,6 +59,7 @@ export interface StartInput {
 
 export interface WorkflowView {
   readonly deduplicated: boolean
+  readonly goalId: string | null
   readonly lastRefusal: ReturnType<typeof lastRefusal>
   readonly request: ReturnType<typeof loadRequest>
   readonly routing?: RoutingDecision
@@ -108,7 +113,16 @@ export function startWorkflow(
       now,
     )
     let workflow = requireWorkflow(database, project.id, created.id)
-    record(database, workflow, "workflow.started", { requestDigest: created.requestDigest }, now)
+    const goalId = linkStartedWorkflow(
+      { database, projectId: project.id },
+      workflow.id,
+      input.request,
+      now,
+    )
+    record(database, workflow, "workflow.started", {
+      ...(goalId === null ? {} : { goalId }),
+      requestDigest: created.requestDigest,
+    }, now)
     workflow = transition(database, workflow, { type: "complete_intake" }, now)
     const decision = route(input.request, input.affectedPaths ?? [], preference)
     workflow = transition(database, workflow, { mode: decision.mode, type: "route" }, now, {
@@ -320,14 +334,17 @@ export async function verifyWorkflowCandidate(
     strictness: runtime.configuration.gateStrictness,
     taskCommands: loadTasks(database, workflow.id).flatMap((task) => task.verificationCommands),
   })
-  record(database, workflow, "verification.completed", {
-    mandatoryPassed: String(outcome.mandatoryPassed),
-    reason: outcome.reason,
-  }, now)
-  const next = outcome.mandatoryPassed
-    ? transition(database, workflow, { type: "verification_passed" }, now)
-    : transition(database, workflow, { target: "execution", type: "verification_failed" }, now)
-  return { ...outcome, state: next.state }
+  return database.transaction(() => {
+    record(database, workflow, "verification.completed", {
+      mandatoryPassed: String(outcome.mandatoryPassed),
+      reason: outcome.reason,
+    }, now)
+    const next = outcome.mandatoryPassed
+      ? transition(database, workflow, { type: "verification_passed" }, now)
+      : transition(database, workflow, { target: "execution", type: "verification_failed" }, now)
+    const memoryId = rememberIfBlocked(database, next, workflow.candidateId, now)
+    return { ...outcome, memoryId, state: next.state }
+  })
 }
 
 export function candidateEvidence(
@@ -488,36 +505,41 @@ export function arbitrateWorkflow(
       throw new WorkflowError("arbitration cannot approve while a reviewer rejected the candidate")
     }
   }
-  const receiptDigest = recordArbitration(database, workflow.id, candidateId, verdict, now)
-  let next: StoredWorkflow
-  let refusal: string | null = null
-  if (verdict.decision === "approved") {
-    try {
-      next = transition(
-        database,
-        workflow,
-        { mandatoryGatesPassed: mandatoryGatesPassed(runtime, project.path, workflow.id), type: "approve" },
-        now,
-      )
-    } catch (error) {
-      if (!(error instanceof TransitionError) || error.code !== "gates_not_passed") throw error
-      refusal = error.message
-      next = transition(database, workflow, { target: "execution", type: "reject" }, now)
+  return database.transaction(() => {
+    const receiptDigest = recordArbitration(database, workflow.id, candidateId, verdict, now)
+    let next: StoredWorkflow
+    let refusal: string | null = null
+    if (verdict.decision === "approved") {
+      try {
+        next = transition(
+          database,
+          workflow,
+          { mandatoryGatesPassed: mandatoryGatesPassed(runtime, project.path, workflow.id), type: "approve" },
+          now,
+        )
+      } catch (error) {
+        if (!(error instanceof TransitionError) || error.code !== "gates_not_passed") throw error
+        refusal = error.message
+        next = transition(database, workflow, { target: "execution", type: "reject" }, now)
+      }
+    } else {
+      next = transition(database, workflow, { target: verdict.repairTarget ?? "execution", type: "reject" }, now)
     }
-  } else {
-    next = transition(database, workflow, { target: verdict.repairTarget ?? "execution", type: "reject" }, now)
-  }
-  record(database, next, `arbitration.${refusal === null ? verdict.decision : "refused"}`, {
-    receiptDigest,
-    ...(refusal === null ? {} : { refusal }),
-  }, now, "arbiter")
-  return {
-    decision: verdict.decision,
-    receiptDigest,
-    refusal,
-    repair: { max: next.maxRepairCycles, used: next.repairCycles },
-    state: next.state,
-  }
+    const memoryId = rememberIfBlocked(database, next, candidateId, now)
+    record(database, next, `arbitration.${refusal === null ? verdict.decision : "refused"}`, {
+      receiptDigest,
+      ...(memoryId === null ? {} : { memoryId }),
+      ...(refusal === null ? {} : { refusal }),
+    }, now, "arbiter")
+    return {
+      decision: verdict.decision,
+      memoryId,
+      receiptDigest,
+      refusal,
+      repair: { max: next.maxRepairCycles, used: next.repairCycles },
+      state: next.state,
+    }
+  })
 }
 
 export async function deliverWorkflowCandidate(
@@ -548,14 +570,31 @@ export async function deliverWorkflowCandidate(
     record(database, workflow, "delivery.aborted", { reason: error.message }, now)
     return { aborted: error.message, state: workflow.state }
   }
-  const next = transition(database, workflow, { type: "deliver" }, now)
-  record(database, next, "delivery.completed", {
-    files: String(outcome.delivered.length),
-    revision: outcome.revision,
-    verifiedOnly: String(outcome.verifiedOnly.length),
-  }, now)
+  const { goal, learned, next } = database.transaction(() => {
+    const next = transition(database, workflow, { type: "deliver" }, now)
+    const learned = captureDelivery(
+      { database, projectId: project.id },
+      {
+        candidateId,
+        files: outcome.delivered,
+        request: loadRequest(database, workflow.id)?.originalText ?? "",
+        revision: outcome.revision,
+        workflowId: workflow.id,
+      },
+      now,
+    )
+    const goal = advanceGoalOfWorkflow({ database, projectId: project.id }, workflow.id, now)
+    record(database, next, "delivery.completed", {
+      files: String(outcome.delivered.length),
+      ...(goal === null ? {} : { goalId: goal.goalId, goalBlocked: String(goal.blocked) }),
+      memories: String(learned.length),
+      revision: outcome.revision,
+      verifiedOnly: String(outcome.verifiedOnly.length),
+    }, now)
+    return { goal, learned, next }
+  })
   signCheckpoint(database, runtime.dataDirectory, now)
-  return { ...outcome, state: next.state }
+  return { ...outcome, goal, memories: learned, state: next.state }
 }
 
 export async function reconcileWorkflow(
@@ -581,13 +620,30 @@ export async function reconcileWorkflow(
       now,
     )
     if (recovered !== null) {
-      const next = transition(database, workflow, { type: "deliver" }, now)
-      record(database, next, "delivery.recovered", {
-        files: String(recovered.delivered.length),
-        revision: recovered.revision,
-      }, now)
+      const { goal, learned, next } = database.transaction(() => {
+        const next = transition(database, workflow, { type: "deliver" }, now)
+        const learned = captureDelivery(
+          { database, projectId: project.id },
+          {
+            candidateId,
+            files: recovered.delivered,
+            request: loadRequest(database, workflow.id)?.originalText ?? "",
+            revision: recovered.revision,
+            workflowId: workflow.id,
+          },
+          now,
+        )
+        const goal = advanceGoalOfWorkflow({ database, projectId: project.id }, workflow.id, now)
+        record(database, next, "delivery.recovered", {
+          files: String(recovered.delivered.length),
+          ...(goal === null ? {} : { goalId: goal.goalId, goalBlocked: String(goal.blocked) }),
+          memories: String(learned.length),
+          revision: recovered.revision,
+        }, now)
+        return { goal, learned, next }
+      })
       signCheckpoint(database, runtime.dataDirectory, now)
-      return { found: true, recovered, state: next.state }
+      return { found: true, goal, memories: learned, recovered, state: next.state }
     }
   }
   return { found: true, state: workflow.state, workflowId: workflow.id }
@@ -677,6 +733,26 @@ function deliveryMessage(database: Database, workflow: StoredWorkflow, candidate
   return commitMessage(request, manifest, workflow.id)
 }
 
+function rememberIfBlocked(
+  database: Database,
+  workflow: StoredWorkflow,
+  candidateId: string | null,
+  now: number,
+): string | null {
+  if (workflow.state !== "blocked" || candidateId === null) return null
+  return captureBlocked(
+    { database, projectId: workflow.projectId },
+    {
+      candidateId,
+      cycles: workflow.repairCycles,
+      files: frozenFiles(database, candidateId).map((file) => file.path),
+      request: loadRequest(database, workflow.id)?.originalText ?? "",
+      workflowId: workflow.id,
+    },
+    now,
+  )
+}
+
 function transition(
   database: Database,
   workflow: StoredWorkflow,
@@ -736,6 +812,7 @@ function record(
 function view(database: Database, workflow: StoredWorkflow, deduplicated: boolean): WorkflowView {
   return {
     deduplicated,
+    goalId: goalOfWorkflow(database, workflow.id) ?? null,
     lastRefusal: lastRefusal(database, workflow.id),
     request: loadRequest(database, workflow.id),
     tasks: loadTasks(database, workflow.id),

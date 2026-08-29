@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
@@ -92,6 +92,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
   const environment = { ...process.env, CYCLE_DATA_DIR: join(scratch, "data") }
 
   const first = new McpClient(environment)
+  let expectedIndexedFiles = 0
   let workflowId = ""
   try {
     const parse = await first.raw("{not json")
@@ -113,7 +114,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.3")
+    assert.equal(identity.serverInfo.version, "2.0.0-alpha.4")
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
@@ -126,7 +127,48 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       "cycle_freeze_candidate",
       "cycle_graph_index",
       "cycle_graph_query",
+      "cycle_memory",
+      "cycle_goal",
     ])
+
+    const goal = toolBody(await first.call("tools/call", {
+      arguments: {
+        objective: "ship the authorization flow",
+        operation: "new",
+        project_root: projectA,
+        success_criteria: ["authorization survives restart"],
+      },
+      name: "cycle_goal",
+    })) as { goalId: string }
+
+    writeFileSync(join(projectA, "index.ts"), "export function indexed() { return 1 }\n")
+    const indexed = toolBody(await first.call("tools/call", {
+      arguments: { project_root: projectA, workers: 1 },
+      name: "cycle_graph_index",
+    })) as { deferred: boolean; files?: number; reason?: string }
+    if (indexed.deferred) assert.ok(indexed.reason)
+    else {
+      assert.equal(indexed.files, 1)
+      expectedIndexedFiles = 1
+    }
+
+    const graph = toolBody(await first.call("tools/call", {
+      arguments: { operation: "status", project_root: projectA },
+      name: "cycle_graph_query",
+    })) as { files: number }
+    assert.equal(graph.files, expectedIndexedFiles)
+
+    const oversizedSymbol = await first.call("tools/call", {
+      arguments: { name: "x".repeat(257), operation: "symbol", project_root: projectA },
+      name: "cycle_graph_query",
+    })
+    assert.equal((oversizedSymbol.result as { isError?: boolean }).isError, true)
+
+    const emptyMemory = toolBody(await first.call("tools/call", {
+      arguments: { operation: "search", project_root: projectA, query: "nothing yet" },
+      name: "cycle_memory",
+    })) as { memories: unknown[] }
+    assert.deepEqual(emptyMemory.memories, [])
 
     const started = toolBody(await first.call("tools/call", {
       arguments: {
@@ -136,8 +178,9 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
         request: "Implement payment authorization",
       },
       name: "cycle_workflow",
-    })) as { workflow: { id: string; mode: string; state: string } }
+    })) as { goalId: string | null; workflow: { id: string; mode: string; state: string } }
     workflowId = started.workflow.id
+    assert.equal(started.goalId, goal.goalId)
     assert.equal(started.workflow.mode, "full")
     assert.equal(started.workflow.state, "architecture")
 
@@ -152,6 +195,12 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       name: "cycle_workflow",
     })
     assert.equal((crossProject.result as { isError?: boolean }).isError, true)
+
+    const hiddenGoal = toolBody(await first.call("tools/call", {
+      arguments: { goal_id: goal.goalId, operation: "status", project_root: projectB },
+      name: "cycle_goal",
+    })) as { found: boolean }
+    assert.equal(hiddenGoal.found, false)
 
     const invalidLimit = await first.call("tools/call", {
       arguments: { limit: 0, operation: "list", project_root: projectA },
@@ -177,12 +226,32 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     assert.equal(restored.workflow.id, workflowId)
     assert.equal(restored.workflow.state, "architecture")
 
+    const rememberedGoal = toolBody(await second.call("tools/call", {
+      arguments: { operation: "status", project_root: projectA },
+      name: "cycle_goal",
+    })) as { found: boolean; milestones: { workflowId: string }[] }
+    assert.equal(rememberedGoal.found, true)
+    assert.deepEqual(rememberedGoal.milestones.map((entry) => entry.workflowId), [workflowId])
+
     const doctor = toolBody(await second.call("tools/call", {
       arguments: { project_root: projectA },
       name: "cycle_doctor",
-    })) as { ok: boolean; store: { schemaVersion: number } }
+    })) as {
+      ok: boolean
+      store: {
+        admission: { resources: { cpuLoad: number | null } }
+        goals: { total: number }
+        graph: { files: number }
+        memory: { total: number }
+        schemaVersion: number
+      }
+    }
     assert.equal(doctor.ok, true)
     assert.equal(doctor.store.schemaVersion, 7)
+    assert.equal(doctor.store.goals.total, 1)
+    assert.equal(doctor.store.graph.files, expectedIndexedFiles)
+    assert.equal(doctor.store.memory.total, 0)
+    assert.ok(doctor.store.admission.resources.cpuLoad === null || doctor.store.admission.resources.cpuLoad >= 0)
   } finally {
     await second.stop()
     rmSync(scratch, { force: true, recursive: true })

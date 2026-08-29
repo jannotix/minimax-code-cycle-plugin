@@ -49,6 +49,27 @@ export async function readContainedFile(
   }
 }
 
+export async function statContainedFile(
+  root: string,
+  path: string,
+  maximumBytes: number,
+): Promise<{ modifiedAt: number; size: number } | null> {
+  let handle
+  try {
+    const absolute = await safeExistingFile(root, path)
+    const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0
+    handle = await open(absolute, constants.O_RDONLY | noFollow)
+    const info = await handle.stat()
+    if (!info.isFile() || info.size > maximumBytes) return null
+    await assertStillContained(root, path, absolute)
+    return { modifiedAt: Math.floor(info.mtimeMs), size: info.size }
+  } catch {
+    return null
+  } finally {
+    await handle?.close().catch(() => undefined)
+  }
+}
+
 /** Resolve a candidate delivery path while refusing every existing symlink or junction component. */
 export async function safeWritePath(root: string, path: string): Promise<string> {
   const { absolute, rootReal, segments } = await lexical(root, path)
