@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.1` — production release is blocked.
+> Development line: `2.0.0-alpha.2` — production release is blocked.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -12,10 +12,14 @@ not be presented as a complete five-role autonomous cycle.
 ## Current, verified surface
 
 MiniMax Code discovers one Skill at `skills/cycle/SKILL.md` and one dependency-free stdio MCP server
-from `mcp.json`. The server currently exposes four local tools:
+from `mcp.json`. The server currently exposes eight local tools:
 
 | Tool | Current guarantee |
 |---|---|
+| `cycle_doctor` | Diagnoses project identity, Node, configuration, SQLite schema, history, checkpoints, and key permissions. |
+| `cycle_workflow` | Starts, deduplicates, inspects, amends, pauses, resumes, retries, or cancels a durable workflow through a legal state machine. |
+| `cycle_history` | Lists project-scoped history, verifies the global append-only chain and checkpoints, and signs the current head with Ed25519. |
+| `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
 | `cycle_verify_audit` | Checks internal SHA-256 chain consistency in an existing JSONL ledger. It does not authenticate the ledger's origin. |
 | `cycle_freeze_candidate` | Produces a legacy diagnostic manifest. It is not an immutable production candidate and must not authorize delivery. |
 | `cycle_graph_index` | Builds a lightweight, full-rebuild structural index using deterministic regular expressions. It is not an AST index. |
@@ -26,14 +30,12 @@ package dependencies.
 
 ## Not available in this alpha
 
-The following capabilities are release blockers and are not advertised as working:
+The following capabilities remain release blockers and are not advertised as working:
 
-- persistent workflow state and transitions;
 - five isolated MiniMax role agents;
 - runtime tool-boundary hooks;
 - evidence collection and evidence-bound arbitration;
 - immutable candidate capture, atomic delivery, and crash recovery;
-- signed history checkpoints;
 - incremental Tree-sitter code intelligence;
 - project memory, Goal Mode, and resource admission;
 - production packaging and live MiniMax Code certification.
@@ -71,7 +73,9 @@ artifact pipeline.
 
 ```sh
 npm test
-node --check mcp/cycle-server.mjs
+npm run typecheck
+npm run build
+node --check dist/server.js
 node --check scripts/verify-audit.mjs
 node --check scripts/inspect-ledger.mjs
 node --check scripts/freeze-candidate.mjs
@@ -80,8 +84,8 @@ node --check scripts/graph-query.mjs
 node --check scripts/package-skill.mjs
 ```
 
-Passing these checks proves only the alpha contract and the current utilities. It does not certify
-the future control plane or the MiniMax Code Desktop integration.
+Passing these checks proves the T01 control-plane foundation and legacy utility contract. It does
+not certify the future evidence/delivery layers or the MiniMax Code Desktop integration.
 
 ## Compatibility target
 

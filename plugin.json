@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.1",
-  "description": "Development preview for MiniMax Code: a Cycle skill plus local MCP utilities while the evidence-gated control plane is rebuilt.",
+  "version": "2.0.0-alpha.2",
+  "description": "Development preview for MiniMax Code with a durable multi-project MCP control-plane foundation and local diagnostic utilities.",
   "author": {
     "name": "Gianluca Iannotta",
     "email": "giannotta@tublat.com",

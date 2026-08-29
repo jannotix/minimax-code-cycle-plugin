@@ -1,8 +1,8 @@
 {
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.0-alpha.2",
   "private": true,
-  "description": "Development preview for MiniMax Code: a Cycle Skill plus local MCP utilities while the evidence-gated control plane is rebuilt.",
+  "description": "Development preview for MiniMax Code with a durable multi-project MCP control-plane foundation and legacy diagnostic utilities.",
   "type": "module",
   "author": "Gianluca Iannotta",
   "license": "FSL-1.1-MIT",
@@ -15,12 +15,19 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "check": "npm test",
-    "test": "node --test tests/contract.test.mjs",
+    "build": "tsc",
+    "check": "npm run typecheck && npm test",
+    "pretest": "npm run build",
+    "test": "node --test \"tests/*.test.mjs\" \"tests/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.tests.json --pretty false",
     "verify-audit": "node scripts/verify-audit.mjs",
     "inspect-ledger": "node scripts/inspect-ledger.mjs",
     "freeze-candidate": "node scripts/freeze-candidate.mjs",
     "graph-index": "node scripts/graph-index.mjs",
     "graph-query": "node scripts/graph-query.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "typescript": "^5.9.0"
   }
 }

@@ -1,13 +1,13 @@
 ---
 name: cycle
-description: Inspect the Cycle for MiniMax Code 2.0 development line and use its four local MCP utilities for audit-chain consistency, legacy candidate diagnostics, or lightweight structural indexing. Use when the user explicitly mentions Cycle for MiniMax Code, asks to verify a Cycle ledger, requests a diagnostic candidate manifest, or asks to build or query the current lightweight index. Do not claim that the alpha runs a governed five-role delivery workflow.
+description: Inspect the Cycle for MiniMax Code 2.0 development line and operate its durable workflow, history, diagnostics, resource-admission, legacy candidate, audit-chain, and lightweight index MCP tools. Use when the user explicitly mentions Cycle for MiniMax Code or asks to inspect its local control-plane state. Do not claim that the alpha runs a governed five-role delivery workflow.
 license: FSL-1.1-MIT
 compatibility: Requires MiniMax Code with Agent Plugins 1.0 support and Node.js 22 or later on PATH. The 2.0 development line is not production-ready.
 ---
 
 # Cycle for MiniMax Code
 
-This is the entry point for the `2.0.0-alpha.1` development line. MiniMax Code loads this Skill and
+This is the entry point for the `2.0.0-alpha.2` development line. MiniMax Code loads this Skill and
 the `cycle-tools` MCP server. It does not load the repository's legacy custom-agent files or create
 a command namespace.
 
@@ -18,7 +18,6 @@ The production rebuild is incomplete. Do not state or imply that the current alp
 - an autonomous five-role workflow;
 - isolated architect, executor, reviewers, or arbiter sessions;
 - evidence-bound approval or delivery;
-- signed history checkpoints;
 - incremental AST code intelligence;
 - setup, doctor, resume, Goal Mode, memory, or browser QA.
 
@@ -26,7 +25,35 @@ If a user asks to run a governed implementation cycle, explain that the control 
 Mavis-agent setup have not reached their production gate. Do not substitute a single-session
 implementation and call it Cycle.
 
-## Available MCP operations
+## T01 control-plane operations
+
+All control-plane calls require an explicit absolute `project_root`. Never substitute the plugin
+directory or its process working directory.
+
+### Diagnose the control plane
+
+Use `cycle_doctor` to inspect the project identity, durable SQLite store, schema version, history
+chain, Ed25519 checkpoints, key permissions, configuration, and Node runtime. Warnings are not a
+production pass; errors stop the workflow.
+
+### Operate durable workflow state
+
+Use `cycle_workflow` for `start`, `status`, `amend`, and `control`. Start captures the exact request,
+deduplicates an active retry, routes it, and persists every transition. Control currently supports
+pause, resume, retry from repair/blocked, and confirmation-gated cancellation. Candidate and review
+transitions remain unavailable until T02.
+
+### Inspect or sign history
+
+Use `cycle_history` for project-scoped listing, global chain/checkpoint verification, or signing the
+current head. A chain with entries but no checkpoint is unsigned, not authenticated.
+
+### Govern resource admission
+
+Use `cycle_limits` to inspect measured CPU, memory, and disk pressure or manage expiring workflow
+leases. Unknown resource metrics defer admission rather than being assumed safe.
+
+## Legacy diagnostic operations
 
 ### Verify a legacy audit chain
 

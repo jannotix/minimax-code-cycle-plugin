@@ -1,6 +1,5 @@
 # Build output
 target/
-dist/
 build/
 *.tsbuildinfo
 
@@ -54,4 +53,5 @@ docs-site/
 
 # Legacy Markdown scenarios and fixtures remain untracked. Contract and production tests are tracked.
 tests/*
-!tests/contract.test.mjs
+!tests/*.test.mjs
+!tests/*.test.ts

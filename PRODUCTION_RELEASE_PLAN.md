@@ -2,7 +2,7 @@
 
 Status: **BLOCKED — implementation and certification in progress**
 
-Development version: `2.0.0-alpha.1`
+Development version: `2.0.0-alpha.2`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -70,18 +70,18 @@ history.
 |---|---:|---:|---|
 | Agent Plugin manifest | yes | yes | schema-validated |
 | Natural-language Skill | commands plus Skills | limited | coordinator with fail-closed setup check |
-| MCP server | full control plane | four utilities | full control plane |
-| Persistent state machine | yes | no | SQLite, migrations, legal transitions |
+| MCP server | full control plane | T01 foundation plus four legacy utilities | full control plane |
+| Persistent state machine | yes | yes at T01 | SQLite, migrations, legal transitions |
 | Five isolated roles | plugin agents | no | native Mavis agents created on explicit setup |
 | Tool boundaries | declarations plus hook | no | agent hooks plus post-task reconciliation |
 | Evidence engine | yes | no | discovery, execution, timeout, cap, secret scan |
 | Candidate integrity | byte snapshot | diagnostic only | exact base and approved-byte snapshot |
 | Atomic delivery | journaled | no | fail-closed, recoverable, idempotent |
-| Signed history | Ed25519 checkpoints | no | append-only chain plus protected checkpoints |
+| Signed history | Ed25519 checkpoints | yes at T01 | append-only chain plus protected checkpoints |
 | Code intelligence | Tree-sitter incremental | regex full rebuild | Tree-sitter WASM, incremental, bounded queries |
 | Memory and goals | yes | no | provenance, scopes, confirmation gates |
-| Resource admission | yes | no | measured reserves and fair leases |
-| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00 contract tests | requirement-mapped suite |
+| Resource admission | yes | yes at T01 | measured reserves and fair leases |
+| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00 and T01 suites | requirement-mapped suite |
 | CI and packaging | yes | no | OS matrix, allowlist, SBOM, checksums, provenance |
 | Live MiniMax receipt | n/a | no | clean install and behavioral matrix |
 

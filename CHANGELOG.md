@@ -2,6 +2,23 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.2] - Unreleased
+
+### Added
+
+- Explicit multi-project identity and durable per-user data paths.
+- SQLite store with forward-only migrations and safe read-only handling of newer schemas.
+- Concurrent first-open migration coordination across multiple MCP processes.
+- Durable workflow start, routing, deduplication, amendments, pause/resume/retry/cancel, and restart.
+- Append-only, secret-redacted history with Ed25519 checkpoints and permission diagnostics.
+- Measured resource admission with fair, expiring leases.
+- Strict MCP parsing plus workflow, history, limits, and doctor tools.
+
+### Changed
+
+- Raised the Node.js runtime floor to 22 for the built-in SQLite API.
+- Replaced the legacy MCP entry point with the compiled TypeScript control plane.
+
 ## [2.0.0-alpha.1] - Unreleased
 
 ### Changed

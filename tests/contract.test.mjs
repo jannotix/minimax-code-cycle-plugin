@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.1";
+const VERSION = "2.0.0-alpha.2";
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");
@@ -31,7 +31,7 @@ function run(program, args, options = {}) {
 
 function mcpExchange(messages) {
   return new Promise((resolveResult, reject) => {
-    const child = spawn(process.execPath, [join(ROOT, "mcp", "cycle-server.mjs")], {
+    const child = spawn(process.execPath, [join(ROOT, "dist", "server.js")], {
       cwd: ROOT,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -64,11 +64,11 @@ function mcpExchange(messages) {
 test("every active version surface identifies the same alpha", async () => {
   const packageJson = JSON.parse(await text("package.json"));
   const pluginJson = JSON.parse(await text("plugin.json"));
-  const server = await text("mcp/cycle-server.mjs");
+  const server = await text("src/version.ts");
 
   assert.equal(packageJson.version, VERSION);
   assert.equal(pluginJson.version, VERSION);
-  assert.match(server, new RegExp(`SERVER_VERSION = ${JSON.stringify(VERSION)}`));
+  assert.match(server, new RegExp(`VERSION = ${JSON.stringify(VERSION)}`));
   assert.equal(packageJson.license, "FSL-1.1-MIT");
   assert.equal(pluginJson.license, "FSL-1.1-MIT");
 });
@@ -106,7 +106,7 @@ test("unsupported graph operations fail explicitly", async () => {
       "main",
     ]);
     assert.equal(unsupported.code, 1);
-    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.1/u);
+    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.2/u);
 
     const since = await run(process.execPath, [
       join(ROOT, "scripts", "graph-query.mjs"),
@@ -129,6 +129,7 @@ test("the malformed legacy packager fails closed", async () => {
 });
 
 test("the Agent Plugin manifests remain parseable and expose only the portable component roots", async () => {
+  const packageJson = JSON.parse(await text("package.json"));
   const pluginJson = JSON.parse(await text("plugin.json"));
   const mcpJson = JSON.parse(await text("mcp.json"));
   const allowedPluginFields = new Set([
@@ -148,6 +149,13 @@ test("the Agent Plugin manifests remain parseable and expose only the portable c
   assert.ok(Object.keys(pluginJson).every((key) => allowedPluginFields.has(key)));
   assert.equal(mcpJson.$schema, "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json");
   assert.deepEqual(Object.keys(mcpJson.mcpServers), ["cycle-tools"]);
+  assert.deepEqual(mcpJson.mcpServers["cycle-tools"], {
+    args: ["./dist/server.js"],
+    command: "node",
+    type: "stdio",
+  });
+  assert.equal(packageJson.dependencies, undefined);
+  assert.match(await text("dist/server.js"), /cycle-control-plane-minimax/u);
 
   const skill = await text("skills/cycle/SKILL.md");
   const description = skill.match(/^description:\s*(.+)$/mu)?.[1]?.trim();
@@ -173,10 +181,16 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   ]);
 
   assert.equal(initialized.result.serverInfo.version, VERSION);
-  assert.deepEqual(
-    listed.result.tools.map((tool) => tool.name),
-    ["cycle_verify_audit", "cycle_freeze_candidate", "cycle_graph_index", "cycle_graph_query"],
-  );
+  assert.deepEqual(listed.result.tools.map((tool) => tool.name), [
+    "cycle_doctor",
+    "cycle_workflow",
+    "cycle_history",
+    "cycle_limits",
+    "cycle_verify_audit",
+    "cycle_freeze_candidate",
+    "cycle_graph_index",
+    "cycle_graph_query",
+  ]);
   const graph = listed.result.tools.find((tool) => tool.name === "cycle_graph_query");
   assert.deepEqual(graph.inputSchema.properties.query.enum, [
     "declarations",
