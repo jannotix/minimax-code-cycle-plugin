@@ -17,6 +17,8 @@ import { captureCandidate, CandidateRefused } from "../src/evidence/candidate.ts
 import { changedFiles, parseStatus } from "../src/evidence/changes.ts"
 import { candidateManifest } from "../src/store/workflows.ts"
 import { verifyCheckpoints } from "../src/store/checkpoints.ts"
+import { readHistory } from "../src/store/history.ts"
+import { roleSessions } from "../src/store/role-sessions.ts"
 import {
   arbitrateWorkflow,
   candidateEvidence,
@@ -113,7 +115,7 @@ async function quickToDelivery(item: Fixture, path = "src/app.js") {
     request: "change the fixture",
   }).workflow
   item.write(path, "export const answer = 42\n")
-  await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "done")
+  await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "done", "mvs-executor")
   const frozen = await freezeWorkflowCandidate(item.runtime, item.root, workflow.id) as {
     candidateId: string
   }
@@ -123,7 +125,7 @@ async function quickToDelivery(item: Fixture, path = "src/app.js") {
   }
   assert.equal(verified.mandatoryPassed, true)
   assert.equal(verified.state, "arbitration")
-  const arbitration = arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], [])) as {
+  const arbitration = arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []), "mvs-arbiter") as {
     state: string
   }
   assert.equal(arbitration.state, "delivery")
@@ -182,13 +184,13 @@ test("renames, deletions, and untracked files remain exact through freeze and de
       projectRoot: item.root,
       request: "rename and clean up files",
     }).workflow
-    await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "done")
+    await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "done", "mvs-executor")
     await freezeWorkflowCandidate(item.runtime, item.root, workflow.id)
     const verified = await verifyWorkflowCandidate(item.runtime, item.root, workflow.id) as {
       mandatoryPassed: boolean
     }
     assert.equal(verified.mandatoryPassed, true)
-    arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []))
+    arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []), "mvs-arbiter")
     const delivered = await deliverWorkflowCandidate(item.runtime, item.root, workflow.id) as {
       aborted?: string
       state: string
@@ -235,9 +237,9 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
       projectRoot: item.root,
       request: "Implement payment processing",
     }).workflow
-    submitPlan(item.runtime, item.root, workflow.id, plan())
+    submitPlan(item.runtime, item.root, workflow.id, plan(), "mvs-architect")
     item.write("src/payment.js", "export const paid = true\n")
-    await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "implemented")
+    await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "implemented", "mvs-executor")
     await freezeWorkflowCandidate(item.runtime, item.root, workflow.id)
     const verified = await verifyWorkflowCandidate(item.runtime, item.root, workflow.id) as {
       mandatoryPassed: boolean
@@ -258,6 +260,7 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
       workflow.id,
       "functional_reviewer",
       verdict,
+      "mvs-functional",
     ) as { reviewsReady: boolean }
     assert.equal(first.reviewsReady, false)
     const second = submitReviewVerdict(
@@ -266,13 +269,39 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
       workflow.id,
       "security_reviewer",
       verdict,
+      "mvs-security",
     ) as { reviewsReady: boolean; state: string }
     assert.equal(second.reviewsReady, true)
     assert.equal(second.state, "arbitration")
-    const arbitration = arbitrateWorkflow(item.runtime, item.root, workflow.id, verdict) as {
+    const arbitration = arbitrateWorkflow(item.runtime, item.root, workflow.id, verdict, "mvs-arbiter") as {
       state: string
     }
     assert.equal(arbitration.state, "delivery")
+    assert.deepEqual(
+      roleSessions(item.runtime.requireStore(), workflow.id).map((entry) => [entry.role, entry.sessionId]),
+      [
+        ["architect", "mvs-architect"],
+        ["executor", "mvs-executor"],
+        ["functional_reviewer", "mvs-functional"],
+        ["security_reviewer", "mvs-security"],
+        ["arbiter", "mvs-arbiter"],
+      ],
+    )
+    const history = readHistory(
+      item.runtime.requireStore(),
+      item.runtime.project(item.root).id,
+      null,
+      1_000,
+    )
+    for (const sessionId of [
+      "mvs-architect",
+      "mvs-executor",
+      "mvs-functional",
+      "mvs-security",
+      "mvs-arbiter",
+    ]) {
+      assert.ok(history.some((entry) => entry.sessionId === sessionId), sessionId)
+    }
     const delivered = await deliverWorkflowCandidate(item.runtime, item.root, workflow.id) as {
       state: string
     }
@@ -290,7 +319,7 @@ test("scope reconciliation rejects writes outside the current or completed task 
       projectRoot: item.root,
       request: "Implement payment processing",
     }).workflow
-    submitPlan(item.runtime, item.root, workflow.id, plan())
+    submitPlan(item.runtime, item.root, workflow.id, plan(), "mvs-architect")
     item.write("outside.txt", "not authorized\n")
     const result = await reportTask(
       item.runtime,
@@ -299,6 +328,7 @@ test("scope reconciliation rejects writes outside the current or completed task 
       "task-1",
       "completed",
       "done",
+      "mvs-executor",
     ) as { outOfScope: readonly string[]; state: string }
     assert.deepEqual(result.outOfScope, ["outside.txt"])
     assert.equal(result.state, "repair")
@@ -320,7 +350,7 @@ test("candidate mutation and secret content fail mandatory evidence", async () =
         "src/value.txt",
         kind === "secret" ? "sk-ant-abcdefghijklmnopqrstuvwxyz012345\n" : "before\n",
       )
-      await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "done")
+      await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "done", "mvs-executor")
       await freezeWorkflowCandidate(item.runtime, item.root, workflow.id)
       if (kind === "mutation") item.write("src/value.txt", "after\n")
       const result = await verifyWorkflowCandidate(item.runtime, item.root, workflow.id) as {

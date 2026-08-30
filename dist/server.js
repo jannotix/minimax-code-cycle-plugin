@@ -4,7 +4,9 @@ import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { release } from "./admission.js";
+import { nextCoordinatorAction } from "./coordinator.js";
 import { diagnose } from "./diagnostics.js";
+import { isInterfaceFile } from "./evidence/design.js";
 import { abort as abortGoal, advance as advanceGoal, amend as amendGoal, approveCompletion, currentPlan, extend as extendGoal, focus as focusGoal, goals, link as linkGoal, newGoal, pause as pauseGoal, plan as planGoal, requestCompletion, resume as resumeGoal, status as goalStatus, } from "./goals.js";
 import { indexProject } from "./intel/indexer.js";
 import { ParsePool } from "./intel/pool.js";
@@ -16,8 +18,9 @@ import { Runtime } from "./runtime.js";
 import { assessAgent, assessUninstall, byteDigest, contentDigest, managedSystemPrompt, ownershipMarker, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
+import { frozenFiles } from "./store/workflows.js";
 import { readHistory, verifyHistory } from "./store/history.js";
-import { amendWorkflow, arbitrateWorkflow, candidateEvidence, controlWorkflow, deliverWorkflowCandidate, freezeWorkflowCandidate, reconcileWorkflow, reportTask, requireProjectWorkflow, startWorkflow, submitBrowserEvidence, submitPlan, submitReviewVerdict, submitSecurityProof, verifyWorkflowCandidate, workflowStatus, } from "./workflow/service.js";
+import { amendWorkflow, arbitrateWorkflow, bindWorkflowRoleSession, candidateEvidence, controlWorkflow, deliverWorkflowCandidate, freezeWorkflowCandidate, reconcileWorkflow, reportTask, requireProjectWorkflow, startWorkflow, submitBrowserEvidence, submitPlan, submitReviewVerdict, submitSecurityProof, verifyWorkflowCandidate, workflowStatus, } from "./workflow/service.js";
 import { VERSION } from "./version.js";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPTS = join(ROOT, "scripts");
@@ -49,6 +52,30 @@ const tools = [
         run: (args) => setupOperation(args),
     },
     {
+        name: "cycle_coordinator",
+        description: "Return the single legal next coordinator action from durable workflow state. Requires a " +
+            "validated ready setup receipt and explicit native mavis/task/browser capability facts. " +
+            "The planner is read-only and never dispatches a role or advances workflow state itself.",
+        inputSchema: objectSchema({
+            operation: enumSchema(["next"]),
+            project_root: stringSchema("Absolute project directory."),
+            workflow_id: stringSchema("Durable workflow identifier.", 64),
+            setup_receipt: { type: "object" },
+            native_mavis: { type: "boolean" },
+            native_task: { type: "boolean" },
+            browser: enumSchema(["available", "unavailable", "unknown"]),
+        }, [
+            "operation",
+            "project_root",
+            "workflow_id",
+            "setup_receipt",
+            "native_mavis",
+            "native_task",
+            "browser",
+        ]),
+        run: (args) => coordinatorOperation(args),
+    },
+    {
         name: "cycle_workflow",
         description: "Drive a durable evidence-gated workflow through planning, scoped execution reports, exact " +
             "candidate freeze, verification, reviews, arbitration, delivery, recovery, and controls. " +
@@ -58,6 +85,7 @@ const tools = [
                 "start",
                 "status",
                 "amend",
+                "bind_role_session",
                 "control",
                 "submit_plan",
                 "report_task",
@@ -85,7 +113,8 @@ const tools = [
             task_key: stringSchema("Plan task key."),
             task_status: enumSchema(["blocked", "completed", "plan_defect"]),
             summary: stringSchema("Bounded executor task summary."),
-            role: enumSchema(["functional_reviewer", "security_reviewer"]),
+            role: enumSchema(["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]),
+            role_session_id: stringSchema("Native Mavis session identifier for the acting role.", 128),
             verdict: { type: "object" },
             snapshot: { type: "object" },
             capture_token: stringSchema("One-use reviewer capture capability."),
@@ -298,6 +327,33 @@ function setupSnapshot(args) {
     }
     return { description: description ?? "", name, systemPrompt: systemPrompt ?? "" };
 }
+function coordinatorOperation(args) {
+    const operation = requiredString(args, "operation");
+    if (operation !== "next")
+        throw new Error(`unknown coordinator operation: ${operation}`);
+    const root = projectRoot(args);
+    const workflowId = requiredBoundedString(args, "workflow_id", 64);
+    const receipt = validateSetupReceipt(requiredRecord(args, "setup_receipt"), VERSION);
+    const view = workflowStatus(runtime, root, workflowId);
+    if (view === null)
+        throw new Error("workflow not found");
+    const candidatePaths = view.workflow.candidateId === null
+        ? []
+        : frozenFiles(runtime.requireStore(), view.workflow.candidateId).map((file) => file.path);
+    const plannedPaths = view.tasks.flatMap((task) => task.writeScopes);
+    const browserRequired = [...candidatePaths, ...plannedPaths].some(isInterfaceFile);
+    return nextCoordinatorAction({
+        browser: oneOf(args, "browser", ["available", "unavailable", "unknown"]),
+        browserRequired,
+        nativeMavis: requiredBoolean(args, "native_mavis"),
+        nativeTask: requiredBoolean(args, "native_task"),
+        reviews: view.reviews,
+        roleSessions: view.roleSessions,
+        setupReady: receipt.status === "ready",
+        tasks: view.tasks,
+        workflow: view.workflow,
+    });
+}
 async function workflowOperation(args) {
     const operation = requiredString(args, "operation");
     const root = projectRoot(args);
@@ -313,6 +369,8 @@ async function workflowOperation(args) {
             return workflowStatus(runtime, root, optionalString(args, "workflow_id"));
         case "amend":
             return amendWorkflow(runtime, root, requiredString(args, "workflow_id"), requiredString(args, "amendment"));
+        case "bind_role_session":
+            return bindWorkflowRoleSession(runtime, root, requiredString(args, "workflow_id"), oneOf(args, "role", ["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]), requiredBoundedString(args, "role_session_id", 128));
         case "control": {
             const additionalCycles = boundedInteger(args, "additional_cycles", 1, 20);
             const reason = optionalString(args, "reason");
@@ -323,9 +381,9 @@ async function workflowOperation(args) {
             });
         }
         case "submit_plan":
-            return submitPlan(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "plan"));
+            return submitPlan(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "plan"), requiredBoundedString(args, "role_session_id", 128));
         case "report_task":
-            return await reportTask(runtime, root, requiredString(args, "workflow_id"), requiredString(args, "task_key"), oneOf(args, "task_status", ["blocked", "completed", "plan_defect"]), requiredString(args, "summary"));
+            return await reportTask(runtime, root, requiredString(args, "workflow_id"), requiredString(args, "task_key"), oneOf(args, "task_status", ["blocked", "completed", "plan_defect"]), requiredString(args, "summary"), requiredBoundedString(args, "role_session_id", 128));
         case "freeze_candidate":
             return await freezeWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"));
         case "verify":
@@ -333,9 +391,9 @@ async function workflowOperation(args) {
         case "evidence":
             return candidateEvidence(runtime, root, requiredString(args, "workflow_id"));
         case "submit_review":
-            return submitReviewVerdict(runtime, root, requiredString(args, "workflow_id"), oneOf(args, "role", ["functional_reviewer", "security_reviewer"]), requiredRecord(args, "verdict"));
+            return submitReviewVerdict(runtime, root, requiredString(args, "workflow_id"), oneOf(args, "role", ["functional_reviewer", "security_reviewer"]), requiredRecord(args, "verdict"), requiredBoundedString(args, "role_session_id", 128));
         case "submit_browser_evidence":
-            return submitBrowserEvidence(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "snapshot"), optionalString(args, "capture_token") ?? null);
+            return submitBrowserEvidence(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "snapshot"), requiredBoundedString(args, "role_session_id", 128), optionalString(args, "capture_token") ?? null);
         case "run_proof": {
             const command = optionalString(args, "command");
             const interpreter = optionalString(args, "interpreter");
@@ -346,10 +404,10 @@ async function workflowOperation(args) {
                 rationale: requiredString(args, "rationale"),
                 ...(script === undefined ? {} : { script }),
                 vulnerabilityClass: requiredString(args, "vulnerability_class"),
-            });
+            }, requiredBoundedString(args, "role_session_id", 128));
         }
         case "arbitrate":
-            return arbitrateWorkflow(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "verdict"));
+            return arbitrateWorkflow(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "verdict"), requiredBoundedString(args, "role_session_id", 128));
         case "deliver":
             return await deliverWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"));
         case "reconcile":
@@ -554,6 +612,12 @@ function requiredString(args, key) {
         throw new Error(`${key} is required`);
     if (Buffer.byteLength(value, "utf8") > 1024 * 1024)
         throw new Error(`${key} is too large`);
+    return value;
+}
+function requiredBoolean(args, key) {
+    const value = args[key];
+    if (typeof value !== "boolean")
+        throw new Error(`${key} must be a boolean`);
     return value;
 }
 function requiredBoundedString(args, key, maximumBytes) {

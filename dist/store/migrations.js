@@ -379,5 +379,26 @@ create table capture_capabilities (
 create index capture_capabilities_by_candidate on capture_capabilities (candidate_id);
 `,
     },
+    {
+        version: 8,
+        name: "role-sessions",
+        sql: `
+-- Native Mavis role separation is durable evidence, not a prompt convention. One native session
+-- may serve only one role in a workflow; a role may receive a fresh session after repair.
+create table workflow_role_sessions (
+  workflow_id text not null references workflows (id) on delete cascade,
+  candidate_id text references candidates (id) on delete cascade,
+  role         text not null,
+  session_id   text not null,
+  bound_at     integer not null,
+  primary key (workflow_id, role, session_id),
+  unique (workflow_id, session_id),
+  unique (candidate_id, role)
+) strict;
+
+create index workflow_role_sessions_by_candidate
+  on workflow_role_sessions (candidate_id, role, bound_at);
+`,
+    },
 ];
 export const CURRENT_SCHEMA_VERSION = MIGRATIONS.reduce((highest, migration) => Math.max(highest, migration.version), 0);

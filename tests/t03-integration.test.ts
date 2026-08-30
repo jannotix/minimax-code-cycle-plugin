@@ -59,7 +59,7 @@ test("delivery persists provenance-backed memory and advances the focused goal a
     assert.equal(started.goalId, goal.goalId)
 
     write("src/answer.ts", "export const answer = 42\n")
-    await reportTask(first, root, started.workflow.id, "task-1", "completed", "implemented")
+    await reportTask(first, root, started.workflow.id, "task-1", "completed", "implemented", "mvs-executor")
     const frozen = await freezeWorkflowCandidate(first, root, started.workflow.id) as {
       candidateId: string
     }
@@ -74,7 +74,7 @@ test("delivery persists provenance-backed memory and advances the focused goal a
       findings: [],
       repair_target: null,
       requirements: [],
-    }) as { state: string }
+    }, "mvs-arbiter") as { state: string }
     assert.equal(arbitration.state, "delivery")
 
     const delivered = await deliverWorkflowCandidate(first, root, started.workflow.id) as {
@@ -146,7 +146,7 @@ test("repair exhaustion records the failed approach through the workflow service
     const credentialShape = ["AKIA", "IOSFODNN7EXAMPLE"].join("")
     mkdirSync(join(root, "src"))
     writeFileSync(join(root, "src", "unsafe.ts"), `export const token = "${credentialShape}"\n`)
-    await reportTask(runtime, root, started.workflow.id, "task-1", "completed", "attempted")
+    await reportTask(runtime, root, started.workflow.id, "task-1", "completed", "attempted", "mvs-executor")
     const frozen = await freezeWorkflowCandidate(runtime, root, started.workflow.id) as {
       candidateId: string
     }

@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.5` — production release is blocked.
+> Development line: `2.0.0-alpha.6` — production release is blocked.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -12,12 +12,13 @@ not be presented as a complete five-role autonomous cycle.
 ## Current, verified surface
 
 MiniMax Code discovers one Skill at `skills/cycle/SKILL.md` and one dependency-free stdio MCP server
-from `mcp.json`. The server currently exposes eleven local tools:
+from `mcp.json`. The server currently exposes twelve local tools:
 
 | Tool | Current guarantee |
 |---|---|
 | `cycle_doctor` | Diagnoses project identity, Node, configuration, SQLite schema, history, checkpoints, and key permissions. |
 | `cycle_setup` | Returns the exact managed Mavis agent specification and plans create/update/noop/conflict or marker-safe uninstall; it never mutates a profile. |
+| `cycle_coordinator` | Reads durable workflow/setup/capability facts and returns one legal dispatch, control-plane, resume, or stop action without mutating state. |
 | `cycle_workflow` | Drives durable planning, scoped task reconciliation, exact candidate freeze, verification, reviews, arbitration, delivery, and recovery. |
 | `cycle_history` | Lists project-scoped history, verifies the global append-only chain and checkpoints, and signs the current head with Ed25519. |
 | `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
@@ -35,7 +36,7 @@ package dependencies.
 
 The following capabilities remain release blockers and are not advertised as working:
 
-- automatic five-role dispatch by the production coordinator;
+- live-certified five-role dispatch on the current MiniMax profile/build;
 - certified live hook enforcement in the current MiniMax profile/build;
 - automatic browser driving from independent reviewer sessions;
 - production packaging and live MiniMax Code certification.
@@ -61,6 +62,24 @@ Registered and offline-tested hooks are not yet a runtime pass. [Upstream issue
 #131](https://github.com/MiniMax-AI/minimax-code/issues/131) documents a recent V2 build where loaded
 Markdown hooks were not dispatched by real turns. The setup receipt remains `installed_unverified`
 until T07 exercises actual allowed and denied tools in fresh role sessions.
+
+## Coordinator boundary
+
+The T05 Skill captures the exact request, starts or reconciles one durable workflow, and executes one
+`cycle_coordinator` action at a time. New roles are dispatched through MiniMax's native task tool;
+malformed output resumes the same bound Mavis session. Every plan, task report, review, browser
+capture, proof request, and arbitration is bound to the acting native session before the control
+plane accepts it.
+
+Reviewer sessions are distinct and blind to one another. The functional browser capture and
+security proof flows may pause for evidence and then resume the originating session. Provider,
+native-tool, setup, hook, browser, or schema failure pauses/stops the workflow; the coordinator never
+runs a missing role inline or reports a predicted transition as completed.
+
+The coordinator deliberately uses the in-session native task/session tools. The current CLI does
+not expose named multi-agent orchestration; [upstream issue
+#135](https://github.com/MiniMax-AI/minimax-code/issues/135) records that boundary. CLI fan-out or a
+single prompt pretending to contain five roles is not accepted as Cycle evidence.
 
 ## Target architecture
 
@@ -103,9 +122,10 @@ node --check scripts/graph-query.mjs
 node --check scripts/package-skill.mjs
 ```
 
-Passing these checks proves the T04 control plane, safe native setup planner, offline agent guards,
-candidate delivery, incremental graph, durable memory, Goal Mode, and measured admission foundation.
-It does not certify live Mavis role dispatch or MiniMax Code Desktop integration.
+Passing these checks proves the T05 coordinator contract, durable role-session separation, safe
+native setup planner, offline agent guards, candidate delivery, incremental graph, durable memory,
+Goal Mode, and measured admission foundation. It does not certify live Mavis role dispatch or
+MiniMax Code Desktop integration.
 
 ## Compatibility target
 

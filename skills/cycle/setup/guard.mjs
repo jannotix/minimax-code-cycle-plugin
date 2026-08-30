@@ -68,26 +68,12 @@ function canonicalTool(value) {
   return String(value ?? "").toLowerCase().replace(/[^a-z0-9]/gu, "")
 }
 
-function operationOf(args) {
-  return String(args?.operation ?? args?.control_operation ?? args?.controlOperation ?? "")
-}
-
 function isGraphQuery(tool) {
   return tool.includes("cyclegraphquery")
 }
 
-function allowedReviewerOperation(role, tool, args) {
-  if (!tool.includes("cycleworkflow")) return false
-  const operation = operationOf(args)
-  return (
-    (role === "functional_reviewer" && operation === "submit_browser_evidence") ||
-    (role === "security_reviewer" && operation === "run_proof")
-  )
-}
-
 function readOnlyDecision(role, tool, args) {
   if (READ_ONLY_TOOLS.has(tool) || tool.includes("browser") || isGraphQuery(tool)) return null
-  if (allowedReviewerOperation(role, tool, args)) return null
   if (WRITE_TOOLS.has(tool) || SHELL_TOOLS.has(tool) || DELEGATION_TOOLS.has(tool)) {
     return abort(`The Cycle ${role} is read-only and cannot use ${tool || "this tool"}.`)
   }

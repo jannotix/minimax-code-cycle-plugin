@@ -24,6 +24,12 @@ import { goalOfWorkflow } from "../store/goals.ts"
 import { appendHistory } from "../store/history.ts"
 import { newId } from "../store/ids.ts"
 import {
+  bindRoleSession,
+  candidateReviewerSessions,
+  roleSessions,
+  type WorkflowRole,
+} from "../store/role-sessions.ts"
+import {
   activeWorkflowForRequest,
   candidateManifest,
   createWorkflow,
@@ -62,6 +68,8 @@ export interface WorkflowView {
   readonly goalId: string | null
   readonly lastRefusal: ReturnType<typeof lastRefusal>
   readonly request: ReturnType<typeof loadRequest>
+  readonly reviews: ReturnType<typeof loadReviews>
+  readonly roleSessions: ReturnType<typeof roleSessions>
   readonly routing?: RoutingDecision
   readonly tasks: ReturnType<typeof loadTasks>
   readonly workflow: StoredWorkflow
@@ -74,6 +82,40 @@ export class WorkflowError extends Error {
     super(message)
     this.name = "WorkflowError"
   }
+}
+
+export function bindWorkflowRoleSession(
+  runtime: Runtime,
+  projectRoot: string,
+  workflowId: string,
+  role: WorkflowRole,
+  roleSessionId: string,
+  now = Date.now(),
+): unknown {
+  const project = runtime.project(projectRoot)
+  const database = runtime.requireStore()
+  const workflow = requireWorkflow(database, project.id, workflowId)
+  const allowed: Readonly<Record<WorkflowRole, readonly StoredWorkflow["state"][]>> = {
+    architect: ["architecture"],
+    executor: ["execution", "quick_execution"],
+    functional_reviewer: ["independent_reviews"],
+    security_reviewer: ["independent_reviews", "arbitration"],
+    arbiter: ["arbitration"],
+  }
+  if (!allowed[role].includes(workflow.state)) {
+    throw new WorkflowError(`${role} session cannot bind while workflow is ${workflow.state}`)
+  }
+  const candidateId = role === "functional_reviewer" || role === "security_reviewer" || role === "arbiter"
+    ? requireCandidate(workflow)
+    : null
+  const existing = roleSessions(database, workflow.id).some(
+    (entry) => entry.role === role && entry.sessionId === roleSessionId,
+  )
+  const binding = bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now)
+  if (!existing) {
+    record(database, workflow, "role.session_bound", { role }, now, role, roleSessionId)
+  }
+  return { binding, state: workflow.state }
 }
 
 const MAX_REQUEST_BYTES = 1024 * 1024
@@ -186,6 +228,7 @@ export function submitPlan(
   projectRoot: string,
   workflowId: string,
   raw: unknown,
+  roleSessionId: string,
   now = Date.now(),
 ): unknown {
   const project = runtime.project(projectRoot)
@@ -194,6 +237,7 @@ export function submitPlan(
   if (workflow.state !== "architecture") {
     throw new WorkflowError(`a plan is only accepted in architecture, not ${workflow.state}`)
   }
+  bindRoleSession(database, workflow.id, null, "architect", roleSessionId, now)
   const plan = parsePlan(raw)
   return database.transaction(() => {
     savePlan(database, workflow.id, plan, now)
@@ -201,7 +245,7 @@ export function submitPlan(
     record(database, next, "architecture.accepted", {
       requirements: String(plan.requirements.length),
       tasks: String(plan.tasks.length),
-    }, now, "architect")
+    }, now, "architect", roleSessionId)
     return {
       requirements: plan.requirements.map((entry) => entry.id),
       state: next.state,
@@ -217,6 +261,7 @@ export async function reportTask(
   key: string,
   status: "blocked" | "completed" | "plan_defect",
   summary: string,
+  roleSessionId: string,
   now = Date.now(),
 ): Promise<unknown> {
   const project = runtime.project(projectRoot)
@@ -225,6 +270,7 @@ export async function reportTask(
   if (workflow.state !== "execution" && workflow.state !== "quick_execution") {
     throw new WorkflowError(`a task is reported during execution, not ${workflow.state}`)
   }
+  bindRoleSession(database, workflow.id, null, "executor", roleSessionId, now)
 
   const tasks = loadTasks(database, workflow.id)
   const task = tasks.find((entry) => entry.key === key)
@@ -232,7 +278,7 @@ export async function reportTask(
 
   const changed = await changedFiles(project.path)
   if (changed === null) {
-    record(database, workflow, "execution.change_set_unreadable", { task: key }, now, "executor")
+    record(database, workflow, "execution.change_set_unreadable", { task: key }, now, "executor", roleSessionId)
     return { reason: "the change set could not be read; task completion was not recorded", retry: true }
   }
   const changedPaths = changed.map((entry) => entry.path)
@@ -244,7 +290,7 @@ export async function reportTask(
       record(database, workflow, "execution.scope_violation", {
         paths: violations.slice(0, 20).join(", "),
         task: key,
-      }, now, "executor")
+      }, now, "executor", roleSessionId)
       const next = transition(
         database,
         workflow,
@@ -259,7 +305,7 @@ export async function reportTask(
   record(database, workflow, `execution.task_${status}`, {
     summary: summary.slice(0, 2_000),
     task: key,
-  }, now, "executor")
+  }, now, "executor", roleSessionId)
 
   if (status === "plan_defect") {
     const next = workflow.state === "execution"
@@ -376,6 +422,7 @@ export function submitReviewVerdict(
   workflowId: string,
   role: "functional_reviewer" | "security_reviewer",
   raw: unknown,
+  roleSessionId: string,
   now = Date.now(),
 ): unknown {
   const project = runtime.project(projectRoot)
@@ -385,9 +432,10 @@ export function submitReviewVerdict(
     throw new WorkflowError(`a review is only accepted in independent_reviews, not ${workflow.state}`)
   }
   const candidateId = requireCandidate(workflow)
+  bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now)
   const verdict = parseVerdict(raw, verdictContext(database, workflow, role))
   const { reviewsReady } = submitReview(database, workflow.id, candidateId, role, verdict, now)
-  record(database, workflow, "review.submitted", { decision: verdict.decision, role }, now, role)
+  record(database, workflow, "review.submitted", { decision: verdict.decision, role }, now, role, roleSessionId)
   const next = reviewsReady
     ? transition(database, workflow, { type: "reviews_ready" }, now)
     : workflow
@@ -399,6 +447,7 @@ export function submitBrowserEvidence(
   projectRoot: string,
   workflowId: string,
   raw: unknown,
+  roleSessionId: string,
   captureToken: string | null = null,
   now = Date.now(),
 ): unknown {
@@ -415,6 +464,14 @@ export function submitBrowserEvidence(
     if (redeemed.role === null) throw new WorkflowError(`capture capability is ${redeemed.reason}`)
     capturedBy = redeemed.role
   }
+  bindRoleSession(
+    database,
+    workflow.id,
+    capturedBy === "executor" ? null : candidateId,
+    capturedBy,
+    roleSessionId,
+    now,
+  )
   const snapshot = parseSnapshot(raw)
   const { evidence, findings } = browserEvidence(snapshot, capturedBy, now)
   recordEvidence(database, candidateId, evidence, (item) => item.gate.mandatory)
@@ -422,7 +479,7 @@ export function submitBrowserEvidence(
     capturedBy,
     findings: String(findings.length),
     flow: snapshot.capturedFlow.slice(0, 200),
-  }, now, capturedBy)
+  }, now, capturedBy, roleSessionId)
   return { accessibility: findings, capturedBy, evidenceIds: evidence.map((item) => item.id) }
 }
 
@@ -431,6 +488,7 @@ export async function submitSecurityProof(
   projectRoot: string,
   workflowId: string,
   request: ProofRequest & { rationale: string; vulnerabilityClass: string },
+  roleSessionId: string,
   now = Date.now(),
 ): Promise<unknown> {
   const project = runtime.project(projectRoot)
@@ -443,6 +501,7 @@ export async function submitSecurityProof(
     throw new WorkflowError("executing security proofs is off; set CYCLE_SECURITY_PROOFS=on deliberately")
   }
   const candidateId = requireCandidate(workflow)
+  bindRoleSession(database, workflow.id, candidateId, "security_reviewer", roleSessionId, now)
   const rationale = request.rationale.trim().slice(0, 2_000)
   if (!rationale) throw new WorkflowError("a proof must state its rationale")
   const result = await runProof(project.path, {
@@ -455,7 +514,7 @@ export async function submitSecurityProof(
   record(database, workflow, `security.proof_${result.demonstrated ? "demonstrated" : "inconclusive"}`, {
     gate: proofGateName(request.vulnerabilityClass),
     rationale,
-  }, now, "security_reviewer")
+  }, now, "security_reviewer", roleSessionId)
   return {
     containment: result.containment,
     demonstrated: result.demonstrated,
@@ -488,6 +547,7 @@ export function arbitrateWorkflow(
   projectRoot: string,
   workflowId: string,
   raw: unknown,
+  roleSessionId: string,
   now = Date.now(),
 ): unknown {
   const project = runtime.project(projectRoot)
@@ -497,10 +557,14 @@ export function arbitrateWorkflow(
     throw new WorkflowError(`arbitration is only accepted in arbitration, not ${workflow.state}`)
   }
   const candidateId = requireCandidate(workflow)
+  bindRoleSession(database, workflow.id, candidateId, "arbiter", roleSessionId, now)
   const verdict = parseVerdict(raw, verdictContext(database, workflow, "arbiter"))
   if (workflow.mode === "full") {
     const reviews = loadReviews(database, candidateId)
     if (reviews.length < 2) throw new WorkflowError("arbitration requires both independent reviews")
+    if (candidateReviewerSessions(database, workflow.id, candidateId) === null) {
+      throw new WorkflowError("arbitration requires two distinct native reviewer sessions")
+    }
     if (verdict.decision === "approved" && reviews.some((review) => review.verdict.decision === "rejected")) {
       throw new WorkflowError("arbitration cannot approve while a reviewer rejected the candidate")
     }
@@ -530,7 +594,7 @@ export function arbitrateWorkflow(
       receiptDigest,
       ...(memoryId === null ? {} : { memoryId }),
       ...(refusal === null ? {} : { refusal }),
-    }, now, "arbiter")
+    }, now, "arbiter", roleSessionId)
     return {
       decision: verdict.decision,
       memoryId,
@@ -797,6 +861,7 @@ function record(
   metadata: Readonly<Record<string, string>>,
   now: number,
   role: "arbiter" | "architect" | "coordinator" | "executor" | "functional_reviewer" | "security_reviewer" | "system" = "system",
+  sessionId: string | null = null,
 ): void {
   appendHistory(database, {
     action,
@@ -805,6 +870,7 @@ function record(
     metadata,
     projectId: workflow.projectId,
     role,
+    sessionId,
     workflowId: workflow.id,
   }, now)
 }
@@ -815,6 +881,8 @@ function view(database: Database, workflow: StoredWorkflow, deduplicated: boolea
     goalId: goalOfWorkflow(database, workflow.id) ?? null,
     lastRefusal: lastRefusal(database, workflow.id),
     request: loadRequest(database, workflow.id),
+    reviews: workflow.candidateId === null ? [] : loadReviews(database, workflow.candidateId),
+    roleSessions: roleSessions(database, workflow.id),
     tasks: loadTasks(database, workflow.id),
     workflow,
   }

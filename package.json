@@ -1,8 +1,8 @@
 {
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.5",
+  "version": "2.0.0-alpha.6",
   "private": true,
-  "description": "Development preview for MiniMax Code with explicit native Mavis setup, evidence-gated delivery, code intelligence, memory, and goals.",
+  "description": "Development preview for MiniMax Code with a native multi-session coordinator, evidence-gated delivery, code intelligence, memory, and goals.",
   "type": "module",
   "author": "Gianluca Iannotta",
   "license": "FSL-1.1-MIT",

@@ -2,6 +2,34 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.6] - Unreleased
+
+### Added
+
+- Production coordinator Skill with exact-request intake, durable reconcile/resume, one-action state
+  planning, native task/session dispatch, provider-failure pause, and truthful state reporting.
+- Read-only `cycle_coordinator` planner returning deterministic `status`, `summary`, `next_actions`,
+  `artifacts`, and one legal dispatch/control/stop action.
+- Durable native Mavis role-session bindings. One session can serve only one workflow role;
+  functional/security reviewers are distinct and each repaired candidate requires fresh reviewer
+  and arbiter sessions.
+- Explicit `bind_role_session` before role-output parsing, so malformed output is corrected by the
+  same accountable session rather than silently replaced.
+- Blind parallel reviewer dispatch plus two-stage functional browser capture and security proof
+  request flows that resume the originating native session with new evidence identifiers.
+
+### Changed
+
+- Role agents no longer invoke Cycle governance operations directly. The coordinator binds and
+  submits their outputs, while the control plane remains the only transition authority.
+- Profile-local setup receipts are revalidated on every run and must be `ready`; stale or
+  `installed_unverified` setup stops dispatch.
+
+### Security
+
+- Missing native mavis/task/browser capability, invalid role output, provider failure, reused role
+  sessions, review cross-contamination, and internal transition drift all fail closed.
+
 ## [2.0.0-alpha.5] - Unreleased
 
 ### Added

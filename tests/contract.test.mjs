@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.5";
+const VERSION = "2.0.0-alpha.6";
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");
@@ -109,7 +109,7 @@ test("unsupported graph operations fail explicitly", async () => {
       "main",
     ]);
     assert.equal(unsupported.code, 1);
-    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.5/u);
+    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.6/u);
 
     const since = await run(process.execPath, [
       join(ROOT, "scripts", "graph-query.mjs"),
@@ -171,6 +171,15 @@ test("the Agent Plugin manifests remain parseable and expose only the portable c
   assert.equal(skill.match(/^name:\s*(.+)$/mu)?.[1]?.trim(), "cycle");
   assert.ok(description && description.length <= 1_024);
   assert.ok(compatibility && compatibility.length <= 500);
+  for (const reference of [
+    "coordinator/FLOW.md",
+    "coordinator/ROLE_DISPATCH.md",
+    "coordinator/RECOVERY.md",
+    "setup/PROCEDURE.md",
+  ]) {
+    assert.match(skill, new RegExp(reference.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.ok((await text(`skills/cycle/${reference}`)).trim());
+  }
 });
 
 test("the MCP handshake reports the alpha and only the implemented graph queries", async () => {
@@ -192,6 +201,7 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   assert.deepEqual(listed.result.tools.map((tool) => tool.name), [
     "cycle_doctor",
     "cycle_setup",
+    "cycle_coordinator",
     "cycle_workflow",
     "cycle_history",
     "cycle_limits",
@@ -219,7 +229,18 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   const setup = listed.result.tools.find((tool) => tool.name === "cycle_setup");
   assert.deepEqual(setup.inputSchema.properties.operation.enum, ["spec", "assess", "uninstall", "validate_receipt"]);
   assert.equal(setup.inputSchema.properties.project_root, undefined);
+  const coordinator = listed.result.tools.find((tool) => tool.name === "cycle_coordinator");
+  assert.deepEqual(coordinator.inputSchema.required, [
+    "operation",
+    "project_root",
+    "workflow_id",
+    "setup_receipt",
+    "native_mavis",
+    "native_task",
+    "browser",
+  ]);
   const workflow = listed.result.tools.find((tool) => tool.name === "cycle_workflow");
+  assert.ok(workflow.inputSchema.properties.operation.enum.includes("bind_role_session"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("freeze_candidate"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("verify"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("arbitrate"));

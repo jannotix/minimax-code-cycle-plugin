@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process"
+import { createHash } from "node:crypto"
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { dirname, join } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { promisify } from "node:util"
 
 import { redactSecrets } from "../secrets.ts"
@@ -14,6 +15,12 @@ const execFileAsync = promisify(execFile)
 
 /** Lower than the 600s gate default: a proof that needs ten minutes is not a proof. */
 export const PROOF_TIMEOUT_SECONDS = 60
+
+/** Stable, path-safe prefix used only to identify and audit this repository's disposable copies. */
+export function proofWorkspacePrefix(root: string): string {
+  const key = createHash("sha256").update(resolve(root)).digest("hex").slice(0, 16)
+  return `cycle-proof-${key}-`
+}
 
 const MAX_COPIED_FILES = 5_000
 const MAX_COPIED_BYTES = 64 * 1_024 * 1_024
@@ -132,7 +139,7 @@ export async function runProof(root: string, request: ProofRequest): Promise<Pro
   }
   assertProofSafe(command)
 
-  const workspace = await mkdtemp(join(tmpdir(), "cycle-proof-"))
+  const workspace = await mkdtemp(join(tmpdir(), proofWorkspacePrefix(root)))
   try {
     const copied = await copyCandidate(root, workspace)
     if (script) {

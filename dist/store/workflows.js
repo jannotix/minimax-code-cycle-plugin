@@ -84,6 +84,7 @@ export function loadTasks(database, workflowId) {
     return database
         .all("select * from tasks where workflow_id = ? order by position", workflowId)
         .map((row) => ({
+        dependencies: JSON.parse(String(row["dependencies"])),
         id: String(row["id"]),
         key: String(row["task_key"]),
         objective: String(row["objective"]),

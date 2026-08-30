@@ -114,13 +114,14 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.5")
+    assert.equal(identity.serverInfo.version, "2.0.0-alpha.6")
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
     assert.deepEqual(names, [
       "cycle_doctor",
       "cycle_setup",
+      "cycle_coordinator",
       "cycle_workflow",
       "cycle_history",
       "cycle_limits",
@@ -150,25 +151,27 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     assert.equal(setup.agents.length, 5)
     assert.equal(setup.host.agentApi, "native-mavis-tool-only")
     assert.match(setup.host.modelStrategy, /session-inherited/u)
+    const receiptAgents = setup.agents.map((entry) => ({
+      effectiveModel: null,
+      hookDigest: setup.guard.digest,
+      hookLiveVerified: false,
+      hookOfflineVerified: true,
+      modelSource: "session-inherited",
+      name: entry.name,
+      nativeVerified: true,
+      role: entry.role,
+    }))
+    const installedReceipt = {
+      agents: receiptAgents,
+      pluginVersion: "2.0.0-alpha.6",
+      profile: "cycle-t04",
+      schema: "cycle.mavis-setup-receipt.v1",
+      status: "installed_unverified",
+    }
     const receipt = toolBody(await first.call("tools/call", {
       arguments: {
         operation: "validate_receipt",
-        receipt: {
-          agents: setup.agents.map((entry) => ({
-            effectiveModel: null,
-            hookDigest: setup.guard.digest,
-            hookLiveVerified: false,
-            hookOfflineVerified: true,
-            modelSource: "session-inherited",
-            name: entry.name,
-            nativeVerified: true,
-            role: entry.role,
-          })),
-          pluginVersion: "2.0.0-alpha.5",
-          profile: "cycle-t04",
-          schema: "cycle.mavis-setup-receipt.v1",
-          status: "installed_unverified",
-        },
+        receipt: installedReceipt,
       },
       name: "cycle_setup",
     })) as { valid: boolean }
@@ -255,6 +258,71 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     assert.equal(started.workflow.mode, "full")
     assert.equal(started.workflow.state, "architecture")
 
+    const notReady = toolBody(await first.call("tools/call", {
+      arguments: {
+        browser: "available",
+        native_mavis: true,
+        native_task: true,
+        operation: "next",
+        project_root: projectA,
+        setup_receipt: installedReceipt,
+        workflow_id: workflowId,
+      },
+      name: "cycle_coordinator",
+    })) as { action: { kind: string }; status: string }
+    assert.equal(notReady.status, "error")
+    assert.equal(notReady.action.kind, "stop")
+
+    const readyReceipt = {
+      ...installedReceipt,
+      agents: receiptAgents.map((entry) => ({ ...entry, hookLiveVerified: true })),
+      status: "ready",
+    }
+    const coordinated = toolBody(await first.call("tools/call", {
+      arguments: {
+        browser: "available",
+        native_mavis: true,
+        native_task: true,
+        operation: "next",
+        project_root: projectA,
+        setup_receipt: readyReceipt,
+        workflow_id: workflowId,
+      },
+      name: "cycle_coordinator",
+    })) as { action: { kind: string; role: string }; status: string }
+    assert.equal(coordinated.status, "success")
+    assert.deepEqual(coordinated.action, { kind: "dispatch_role", role: "architect", taskKey: null })
+
+    const bound = toolBody(await first.call("tools/call", {
+      arguments: {
+        operation: "bind_role_session",
+        project_root: projectA,
+        role: "architect",
+        role_session_id: "mvs-architect",
+        workflow_id: workflowId,
+      },
+      name: "cycle_workflow",
+    })) as { state: string }
+    assert.equal(bound.state, "architecture")
+    const resumedAction = toolBody(await first.call("tools/call", {
+      arguments: {
+        browser: "available",
+        native_mavis: true,
+        native_task: true,
+        operation: "next",
+        project_root: projectA,
+        setup_receipt: readyReceipt,
+        workflow_id: workflowId,
+      },
+      name: "cycle_coordinator",
+    })) as { action: { kind: string; sessionId: string } }
+    assert.deepEqual(resumedAction.action, {
+      kind: "resume_role",
+      role: "architect",
+      sessionId: "mvs-architect",
+      taskKey: null,
+    })
+
     const relative = await first.call("tools/call", {
       arguments: { operation: "status", project_root: ".", workflow_id: workflowId },
       name: "cycle_workflow",
@@ -318,7 +386,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       }
     }
     assert.equal(doctor.ok, true)
-    assert.equal(doctor.store.schemaVersion, 7)
+    assert.equal(doctor.store.schemaVersion, 8)
     assert.equal(doctor.store.goals.total, 1)
     assert.equal(doctor.store.graph.files, expectedIndexedFiles)
     assert.equal(doctor.store.memory.total, 0)

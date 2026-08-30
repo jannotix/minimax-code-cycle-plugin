@@ -101,12 +101,12 @@ test("read-only roles fail closed except for their explicit inspection capabilit
     assert.equal(blocked(decide(envelope("unknown_future_tool", {}, role), role)), true, role)
   }
   assert.equal(
-    decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "submit_browser_evidence" }, "functional_reviewer"), "functional_reviewer"),
-    null,
+    blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "submit_browser_evidence" }, "functional_reviewer"), "functional_reviewer")),
+    true,
   )
   assert.equal(
-    decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "run_proof" }, "security_reviewer"), "security_reviewer"),
-    null,
+    blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "run_proof" }, "security_reviewer"), "security_reviewer")),
+    true,
   )
   assert.equal(
     blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "deliver" }, "arbiter"), "arbiter")),
@@ -188,10 +188,10 @@ test("managed role prompts use current schemas, measurable stops, and MiniMax fi
     assert.ok(architect.includes(`\`${key}\``), key)
   }
   const functional = readFileSync(join(ROOT, roleSetup("functional_reviewer").promptPath), "utf8")
-  assert.match(functional, /"workflow_id"/u)
-  assert.match(functional, /"capture_token"/u)
+  assert.match(functional, /"kind": "browser_capture"/u)
+  assert.match(functional, /Never call Cycle control-plane operations yourself/u)
   const security = readFileSync(join(ROOT, roleSetup("security_reviewer").promptPath), "utf8")
-  assert.match(security, /"workflow_id"/u)
+  assert.match(security, /"kind": "proof_request"/u)
   assert.match(security, /"vulnerability_class"/u)
 })
 
@@ -226,25 +226,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.5",
+    pluginVersion: "2.0.0-alpha.6",
     profile: "cycle-t04",
     schema: "cycle.mavis-setup-receipt.v1",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.5").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.6").status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.5"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.6"),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.5"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.6"),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.5"),
+    }, "2.0.0-alpha.6"),
     /role\/name mismatch/u,
   )
 })

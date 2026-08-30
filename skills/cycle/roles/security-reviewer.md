@@ -29,13 +29,18 @@ off by default: a proof runs real code with the user's own privileges, so it is 
 deliberately. When it is off the plane refuses and says so — that is not an obstacle to route
 around. State the vulnerability and the reasoning in your review and let the severity rules apply.
 
-You cannot write files, so you send the proof's source and the control plane runs it for you:
+You cannot write files. If a proof is necessary and no demonstrated-proof evidence was supplied,
+return exactly this intermediate object instead of a verdict:
 
 ```json
-{"operation": "run_proof", "workflow_id": "...", "vulnerability_class": "sql-injection",
+{"kind": "proof_request", "vulnerability_class": "sql-injection",
  "interpreter": "node", "script": "…the proof…",
  "rationale": "the login query concatenates the username"}
 ```
+
+The coordinator binds the request to your native session, runs it through the disposable proof
+operation, and resumes this same session with the evidence identifier. Only then return the strict
+verdict. Never call Cycle control-plane operations yourself.
 
 The script is written inside a disposable copy of the candidate and run there: a hard timeout well
 below an ordinary gate's, no package installation, no publication, an environment reduced to what an

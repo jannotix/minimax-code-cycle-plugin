@@ -15,6 +15,7 @@ import { loadEvidence, recordEvidence } from "../store/evidence.js";
 import { goalOfWorkflow } from "../store/goals.js";
 import { appendHistory } from "../store/history.js";
 import { newId } from "../store/ids.js";
+import { bindRoleSession, candidateReviewerSessions, roleSessions, } from "../store/role-sessions.js";
 import { activeWorkflowForRequest, candidateManifest, createWorkflow, frozenFiles, lastRefusal, latestWorkflow, loadPlan, loadRequest, loadReviews, loadTasks, loadWorkflow, recordArbitration, recordCandidate, requestDigestOf, savePlan, saveWorkflow, setTaskState, submitReview, } from "../store/workflows.js";
 import { apply, isTerminal, TransitionError } from "./machine.js";
 import { parsePlan } from "./plan.js";
@@ -26,6 +27,30 @@ export class WorkflowError extends Error {
         super(message);
         this.name = "WorkflowError";
     }
+}
+export function bindWorkflowRoleSession(runtime, projectRoot, workflowId, role, roleSessionId, now = Date.now()) {
+    const project = runtime.project(projectRoot);
+    const database = runtime.requireStore();
+    const workflow = requireWorkflow(database, project.id, workflowId);
+    const allowed = {
+        architect: ["architecture"],
+        executor: ["execution", "quick_execution"],
+        functional_reviewer: ["independent_reviews"],
+        security_reviewer: ["independent_reviews", "arbitration"],
+        arbiter: ["arbitration"],
+    };
+    if (!allowed[role].includes(workflow.state)) {
+        throw new WorkflowError(`${role} session cannot bind while workflow is ${workflow.state}`);
+    }
+    const candidateId = role === "functional_reviewer" || role === "security_reviewer" || role === "arbiter"
+        ? requireCandidate(workflow)
+        : null;
+    const existing = roleSessions(database, workflow.id).some((entry) => entry.role === role && entry.sessionId === roleSessionId);
+    const binding = bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now);
+    if (!existing) {
+        record(database, workflow, "role.session_bound", { role }, now, role, roleSessionId);
+    }
+    return { binding, state: workflow.state };
 }
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const MAX_AMENDMENT_BYTES = 64 * 1024;
@@ -101,13 +126,14 @@ export function amendWorkflow(runtime, projectRoot, workflowId, amendment, now =
     });
     return view(database, workflow, false);
 }
-export function submitPlan(runtime, projectRoot, workflowId, raw, now = Date.now()) {
+export function submitPlan(runtime, projectRoot, workflowId, raw, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
     if (workflow.state !== "architecture") {
         throw new WorkflowError(`a plan is only accepted in architecture, not ${workflow.state}`);
     }
+    bindRoleSession(database, workflow.id, null, "architect", roleSessionId, now);
     const plan = parsePlan(raw);
     return database.transaction(() => {
         savePlan(database, workflow.id, plan, now);
@@ -115,7 +141,7 @@ export function submitPlan(runtime, projectRoot, workflowId, raw, now = Date.now
         record(database, next, "architecture.accepted", {
             requirements: String(plan.requirements.length),
             tasks: String(plan.tasks.length),
-        }, now, "architect");
+        }, now, "architect", roleSessionId);
         return {
             requirements: plan.requirements.map((entry) => entry.id),
             state: next.state,
@@ -123,20 +149,21 @@ export function submitPlan(runtime, projectRoot, workflowId, raw, now = Date.now
         };
     });
 }
-export async function reportTask(runtime, projectRoot, workflowId, key, status, summary, now = Date.now()) {
+export async function reportTask(runtime, projectRoot, workflowId, key, status, summary, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
     if (workflow.state !== "execution" && workflow.state !== "quick_execution") {
         throw new WorkflowError(`a task is reported during execution, not ${workflow.state}`);
     }
+    bindRoleSession(database, workflow.id, null, "executor", roleSessionId, now);
     const tasks = loadTasks(database, workflow.id);
     const task = tasks.find((entry) => entry.key === key);
     if (tasks.length > 0 && task === undefined)
         throw new WorkflowError(`unknown task: ${key}`);
     const changed = await changedFiles(project.path);
     if (changed === null) {
-        record(database, workflow, "execution.change_set_unreadable", { task: key }, now, "executor");
+        record(database, workflow, "execution.change_set_unreadable", { task: key }, now, "executor", roleSessionId);
         return { reason: "the change set could not be read; task completion was not recorded", retry: true };
     }
     const changedPaths = changed.map((entry) => entry.path);
@@ -148,7 +175,7 @@ export async function reportTask(runtime, projectRoot, workflowId, key, status, 
             record(database, workflow, "execution.scope_violation", {
                 paths: violations.slice(0, 20).join(", "),
                 task: key,
-            }, now, "executor");
+            }, now, "executor", roleSessionId);
             const next = transition(database, workflow, { target: "execution", type: "execution_failed" }, now);
             return { outOfScope: violations, state: next.state };
         }
@@ -158,7 +185,7 @@ export async function reportTask(runtime, projectRoot, workflowId, key, status, 
     record(database, workflow, `execution.task_${status}`, {
         summary: summary.slice(0, 2_000),
         task: key,
-    }, now, "executor");
+    }, now, "executor", roleSessionId);
     if (status === "plan_defect") {
         const next = workflow.state === "execution"
             ? transition(database, workflow, { type: "replan" }, now)
@@ -250,7 +277,7 @@ export function candidateEvidence(runtime, projectRoot, workflowId) {
         requirements,
     };
 }
-export function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw, now = Date.now()) {
+export function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -258,15 +285,16 @@ export function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw,
         throw new WorkflowError(`a review is only accepted in independent_reviews, not ${workflow.state}`);
     }
     const candidateId = requireCandidate(workflow);
+    bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now);
     const verdict = parseVerdict(raw, verdictContext(database, workflow, role));
     const { reviewsReady } = submitReview(database, workflow.id, candidateId, role, verdict, now);
-    record(database, workflow, "review.submitted", { decision: verdict.decision, role }, now, role);
+    record(database, workflow, "review.submitted", { decision: verdict.decision, role }, now, role, roleSessionId);
     const next = reviewsReady
         ? transition(database, workflow, { type: "reviews_ready" }, now)
         : workflow;
     return { decision: verdict.decision, reviewsReady, state: next.state };
 }
-export function submitBrowserEvidence(runtime, projectRoot, workflowId, raw, captureToken = null, now = Date.now()) {
+export function submitBrowserEvidence(runtime, projectRoot, workflowId, raw, roleSessionId, captureToken = null, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -281,6 +309,7 @@ export function submitBrowserEvidence(runtime, projectRoot, workflowId, raw, cap
             throw new WorkflowError(`capture capability is ${redeemed.reason}`);
         capturedBy = redeemed.role;
     }
+    bindRoleSession(database, workflow.id, capturedBy === "executor" ? null : candidateId, capturedBy, roleSessionId, now);
     const snapshot = parseSnapshot(raw);
     const { evidence, findings } = browserEvidence(snapshot, capturedBy, now);
     recordEvidence(database, candidateId, evidence, (item) => item.gate.mandatory);
@@ -288,10 +317,10 @@ export function submitBrowserEvidence(runtime, projectRoot, workflowId, raw, cap
         capturedBy,
         findings: String(findings.length),
         flow: snapshot.capturedFlow.slice(0, 200),
-    }, now, capturedBy);
+    }, now, capturedBy, roleSessionId);
     return { accessibility: findings, capturedBy, evidenceIds: evidence.map((item) => item.id) };
 }
-export async function submitSecurityProof(runtime, projectRoot, workflowId, request, now = Date.now()) {
+export async function submitSecurityProof(runtime, projectRoot, workflowId, request, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -302,6 +331,7 @@ export async function submitSecurityProof(runtime, projectRoot, workflowId, requ
         throw new WorkflowError("executing security proofs is off; set CYCLE_SECURITY_PROOFS=on deliberately");
     }
     const candidateId = requireCandidate(workflow);
+    bindRoleSession(database, workflow.id, candidateId, "security_reviewer", roleSessionId, now);
     const rationale = request.rationale.trim().slice(0, 2_000);
     if (!rationale)
         throw new WorkflowError("a proof must state its rationale");
@@ -315,7 +345,7 @@ export async function submitSecurityProof(runtime, projectRoot, workflowId, requ
     record(database, workflow, `security.proof_${result.demonstrated ? "demonstrated" : "inconclusive"}`, {
         gate: proofGateName(request.vulnerabilityClass),
         rationale,
-    }, now, "security_reviewer");
+    }, now, "security_reviewer", roleSessionId);
     return {
         containment: result.containment,
         demonstrated: result.demonstrated,
@@ -334,7 +364,7 @@ export function mandatoryGatesPassed(runtime, projectRoot, workflowId) {
       where w.id = ? and e.mandatory = 1`, workflowId);
     return (row?.total ?? 0) > 0 && (row?.failed ?? 0) === 0;
 }
-export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, now = Date.now()) {
+export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -342,11 +372,15 @@ export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, now = D
         throw new WorkflowError(`arbitration is only accepted in arbitration, not ${workflow.state}`);
     }
     const candidateId = requireCandidate(workflow);
+    bindRoleSession(database, workflow.id, candidateId, "arbiter", roleSessionId, now);
     const verdict = parseVerdict(raw, verdictContext(database, workflow, "arbiter"));
     if (workflow.mode === "full") {
         const reviews = loadReviews(database, candidateId);
         if (reviews.length < 2)
             throw new WorkflowError("arbitration requires both independent reviews");
+        if (candidateReviewerSessions(database, workflow.id, candidateId) === null) {
+            throw new WorkflowError("arbitration requires two distinct native reviewer sessions");
+        }
         if (verdict.decision === "approved" && reviews.some((review) => review.verdict.decision === "rejected")) {
             throw new WorkflowError("arbitration cannot approve while a reviewer rejected the candidate");
         }
@@ -374,7 +408,7 @@ export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, now = D
             receiptDigest,
             ...(memoryId === null ? {} : { memoryId }),
             ...(refusal === null ? {} : { refusal }),
-        }, now, "arbiter");
+        }, now, "arbiter", roleSessionId);
         return {
             decision: verdict.decision,
             memoryId,
@@ -571,7 +605,7 @@ function requireCandidate(workflow) {
         throw new WorkflowError("workflow has no candidate");
     return workflow.candidateId;
 }
-function record(database, workflow, action, metadata, now, role = "system") {
+function record(database, workflow, action, metadata, now, role = "system", sessionId = null) {
     appendHistory(database, {
         action,
         actor: "cycle-control-plane",
@@ -579,6 +613,7 @@ function record(database, workflow, action, metadata, now, role = "system") {
         metadata,
         projectId: workflow.projectId,
         role,
+        sessionId,
         workflowId: workflow.id,
     }, now);
 }
@@ -588,6 +623,8 @@ function view(database, workflow, deduplicated) {
         goalId: goalOfWorkflow(database, workflow.id) ?? null,
         lastRefusal: lastRefusal(database, workflow.id),
         request: loadRequest(database, workflow.id),
+        reviews: workflow.candidateId === null ? [] : loadReviews(database, workflow.candidateId),
+        roleSessions: roleSessions(database, workflow.id),
         tasks: loadTasks(database, workflow.id),
         workflow,
     };

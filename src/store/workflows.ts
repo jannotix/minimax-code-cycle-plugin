@@ -192,6 +192,7 @@ export function loadPlan(database: Database, workflowId: string): Plan | undefin
 }
 
 export interface StoredTask {
+  readonly dependencies: readonly string[]
   readonly id: string
   readonly key: string
   readonly objective: string
@@ -206,6 +207,7 @@ export function loadTasks(database: Database, workflowId: string): StoredTask[] 
   return database
     .all<Row>("select * from tasks where workflow_id = ? order by position", workflowId)
     .map((row) => ({
+      dependencies: JSON.parse(String(row["dependencies"])) as string[],
       id: String(row["id"]),
       key: String(row["task_key"]),
       objective: String(row["objective"]),

@@ -59,18 +59,17 @@ executor's own capture does not supply it: the party whose work the gate exists 
 the party that clears it, and the control plane cannot tell a captured tree from an invented one, so
 a capture the executor reports is recorded for you to read and carries no weight.
 
-If you have browser tools, drive the affected flow yourself, capture the accessibility tree, and
-send it with the capture token your prompt gave you. The token was issued to you alone when the
-candidate was frozen and can be spent once; a submission without one is recorded as a self-report
-and proves nothing, and the plane reads the role from the token rather than from anything you say:
+If browser evidence is required and has not yet been recorded, drive the affected flow yourself and
+return exactly this intermediate object instead of a verdict:
 
 ```json
-{"operation": "submit_browser_evidence", "workflow_id": "...", "capture_token": "…from your prompt…",
+{"kind": "browser_capture",
  "snapshot": {"capturedFlow": "...", "url": "...", "nodes": [...]}}
 ```
 
-Never submit a tree you did not capture. The token makes your submission count, which is exactly
-why spending it on an invented flow would be the worst thing you could do here.
+The coordinator binds it to your native session and one-use capture token, records it, then resumes
+this same session with the resulting evidence identifiers. Only then return the strict verdict.
+Never call Cycle control-plane operations yourself and never return a tree you did not capture.
 
 If you cannot drive it, say so in your review and leave the gate unproven. A project with its own
 end-to-end suite already satisfies the layer through that suite, and needs none of this.

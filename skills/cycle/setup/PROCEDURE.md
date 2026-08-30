@@ -96,7 +96,10 @@ Produce one object matching `receipt.schema.json`:
 - status derived from the readiness states above.
 
 Call `cycle_setup` with `operation: "validate_receipt"` and the completed object. Report it only
-when the tool returns `valid: true`; otherwise setup is `blocked`.
+when the tool returns `valid: true`; otherwise setup is `blocked`. Write the validated sanitized
+object to `{{DATA_DIR}}/cycle/setup-receipt.json` in the current profile. This profile-local receipt
+is what the coordinator revalidates on every start; it is not stored in the project or the durable
+cross-profile Cycle database.
 
 The receipt contains no raw prompt, absolute profile/project path, API key, token, private config,
 session transcript, or raw process output. A MiniMax/app/plugin byte change makes the live portion
@@ -125,8 +128,8 @@ Uninstall requires a separate explicit user request.
 2. If any result is `conflict`, stop before deletion. Missing agents are already `noop`.
 3. Delete only results authorized as `delete`, using native `agent delete`.
 4. Verify `agent get` reports every managed name absent and `agent list` contains none of them.
-5. Return an `uninstalled` sanitized receipt. Preserve all durable Cycle data unless the user makes
-   a separate, explicit data-deletion request.
+5. Validate and write an `uninstalled` sanitized receipt to the same profile-local receipt path.
+   Preserve all durable Cycle data unless the user makes a separate, explicit data-deletion request.
 
 ## Host limitations recorded for MiniMax Code 3.0.68
 

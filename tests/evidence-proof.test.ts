@@ -6,7 +6,12 @@ import { dirname, join } from "node:path"
 import { test } from "node:test"
 
 import { proofEvidence, proofGateName } from "../src/evidence/proof-evidence.ts"
-import { ProofRefused, runProof, PROOF_TIMEOUT_SECONDS } from "../src/evidence/proof.ts"
+import {
+  ProofRefused,
+  proofWorkspacePrefix,
+  runProof,
+  PROOF_TIMEOUT_SECONDS,
+} from "../src/evidence/proof.ts"
 
 function repository(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), "cycle-proof-repo-"))
@@ -26,8 +31,8 @@ function repository(files: Record<string, string>): string {
   return root
 }
 
-const proofsLeftBehind = (): string[] =>
-  readdirSync(tmpdir()).filter((entry) => entry.startsWith("cycle-proof-"))
+const proofsLeftBehind = (root: string): string[] =>
+  readdirSync(tmpdir()).filter((entry) => entry.startsWith(proofWorkspacePrefix(root)))
 
 test("a proof that exits zero demonstrated the vulnerability", async () => {
   const root = repository({ "exploit.mjs": "process.exit(0)\n" })
@@ -59,7 +64,7 @@ test("a proof cannot touch the repository it is proving against", async () => {
     "src/app.js": "module.exports = 1\n",
   })
   try {
-    const before = proofsLeftBehind().length
+    const before = proofsLeftBehind(root).length
     const result = await runProof(root, { command: "node exploit.mjs" })
 
     assert.equal(result.demonstrated, true)
@@ -68,7 +73,7 @@ test("a proof cannot touch the repository it is proving against", async () => {
       [],
       "the proof wrote into the real repository",
     )
-    assert.equal(proofsLeftBehind().length, before, "the disposable copy was not deleted")
+    assert.equal(proofsLeftBehind(root).length, before, "the disposable copy was not deleted")
   } finally {
     rmSync(root, { force: true, recursive: true })
   }
@@ -77,10 +82,10 @@ test("a proof cannot touch the repository it is proving against", async () => {
 test("the disposable copy is deleted even when the proof fails to run", async () => {
   const root = repository({ "README.md": "x\n" })
   try {
-    const before = proofsLeftBehind().length
+    const before = proofsLeftBehind(root).length
     await runProof(root, { command: "definitely-not-a-real-program --go" })
 
-    assert.equal(proofsLeftBehind().length, before)
+    assert.equal(proofsLeftBehind(root).length, before)
   } finally {
     rmSync(root, { force: true, recursive: true })
   }
@@ -174,7 +179,7 @@ test("a proof that demonstrated nothing blocks nothing", () => {
 test("a reviewer-supplied script runs inside the copy and nowhere else", async () => {
   const root = repository({ "src/app.js": "module.exports = 1\n" })
   try {
-    const before = proofsLeftBehind().length
+    const before = proofsLeftBehind(root).length
     const result = await runProof(root, {
       script: [
         "import { existsSync, writeFileSync } from 'node:fs'",
@@ -187,7 +192,7 @@ test("a reviewer-supplied script runs inside the copy and nowhere else", async (
     assert.ok(result.containment.some((line) => line.includes(".cycle-proof/proof.mjs")))
     assert.deepEqual(readdirSync(root).filter((entry) => entry === "OWNED.txt"), [])
     assert.deepEqual(readdirSync(root).filter((entry) => entry === ".cycle-proof"), [])
-    assert.equal(proofsLeftBehind().length, before)
+    assert.equal(proofsLeftBehind(root).length, before)
   } finally {
     rmSync(root, { force: true, recursive: true })
   }

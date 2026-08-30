@@ -40,11 +40,18 @@ requirement satisfied exactly once, and no unresolved critical/high finding. The
 may report an unproven concern, but the validator downgrades a critical/high claim to `info` unless
 it cites a supplied demonstrated-proof evidence ID.
 
+Before a final verdict, the functional reviewer may return only a `browser_capture` intermediate
+object and the security reviewer may return only a `proof_request` intermediate object. The
+coordinator records the evidence with that role's bound native session ID, then resumes the same
+session for the final strict verdict. Role agents never invoke Cycle governance directly.
+
 ## Evidence discipline
 
 - Command evidence is created by the control plane from the real invocation, exit status, bounded
   output, and full-output digest; a role does not manufacture an evidence record.
 - Reviewers cite only IDs supplied for the current candidate.
-- The functional reviewer may spend its one-use capture token on a flow it actually drove.
-- The security reviewer may request a disposable proof only when proof execution is explicitly on.
+- The coordinator spends the functional reviewer's one-use token only on the flow that reviewer
+  actually drove and returned.
+- The coordinator submits a security reviewer's disposable proof request only when proof execution
+  is explicitly on.
 - The arbiter cannot override missing mandatory gates or missing independent reviews.

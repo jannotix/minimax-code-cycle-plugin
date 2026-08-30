@@ -28,7 +28,7 @@ test("concurrent first opens converge on one schema without migration races", as
       results.filter((result) => result.code !== 0).map((result) => result.stderr).join("\n---\n"),
     )
     const database = new Database({ path })
-    assert.equal(database.schemaVersion, 7)
+    assert.equal(database.schemaVersion, 8)
     database.close()
   } finally {
     rmSync(scratch, { force: true, recursive: true })

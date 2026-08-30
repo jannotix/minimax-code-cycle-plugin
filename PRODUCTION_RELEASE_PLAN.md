@@ -2,7 +2,7 @@
 
 Status: **BLOCKED — implementation and certification in progress**
 
-Development version: `2.0.0-alpha.5`
+Development version: `2.0.0-alpha.6`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -69,10 +69,10 @@ history.
 | Capability | Claude reference | Current development line | Production requirement |
 |---|---:|---:|---|
 | Agent Plugin manifest | yes | yes | schema-validated |
-| Natural-language Skill | commands plus Skills | limited | coordinator with fail-closed setup check |
-| MCP server | full control plane | T04 core plus native-setup planner and two legacy diagnostics | full control plane |
+| Natural-language Skill | commands plus Skills | T05 coordinator contract; live pending | coordinator with fail-closed setup check |
+| MCP server | full control plane | T05 core plus setup/coordinator planners and two legacy diagnostics | full control plane |
 | Persistent state machine | yes | yes at T01 | SQLite, migrations, legal transitions |
-| Five isolated roles | plugin agents | T04 managed setup; live sessions pending | native Mavis agents created on explicit setup |
+| Five isolated roles | plugin agents | T05 durable dispatch/session contract; live pending | native Mavis agents created on explicit setup |
 | Tool boundaries | declarations plus hook | T04 offline guards; live dispatch pending | agent hooks plus post-task reconciliation |
 | Evidence engine | yes | yes at T02 | discovery, execution, timeout, cap, secret scan |
 | Candidate integrity | byte snapshot | yes at T02 | exact base and approved-byte snapshot |
@@ -81,7 +81,7 @@ history.
 | Code intelligence | Tree-sitter incremental | yes at T03 | Tree-sitter WASM, incremental, bounded queries |
 | Memory and goals | yes | yes at T03 | provenance, scopes, confirmation gates |
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
-| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T04 suites | requirement-mapped suite |
+| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T05 suites | requirement-mapped suite |
 | CI and packaging | yes | no | OS matrix, allowlist, SBOM, checksums, provenance |
 | Live MiniMax receipt | n/a | no | clean install and behavioral matrix |
 
@@ -204,6 +204,18 @@ Replace the alpha Skill with the production coordinator. It captures the exact r
 control plane, sends role prompts to separate Mavis sessions, keeps reviewers blind to one another,
 submits only schema-valid outputs, resumes from durable state, and reports the returned state without
 inventing success. Missing agents, hooks, evidence, or browser capability stop the cycle.
+
+The coordinator validates a profile-local `ready` setup receipt on every run and requires live
+native `mavis` and `task` capabilities. A read-only planner returns exactly one next action from the
+durable workflow state. New roles use the exact managed native agent; malformed results, browser
+captures, and proof requests resume the same bound session. Provider/session failure pauses instead
+of falling back inline.
+
+Native role bindings are stored in schema version 8 and included in append-only history. One session
+cannot serve two roles. Reviewers use distinct sessions, are dispatched before either result is
+consumed, and never receive one another's verdict. A repaired candidate requires fresh reviewer and
+arbiter sessions. Delivery remains a control-plane transition after evidence and arbitration, never
+a coordinator judgement.
 
 ### T06 — Test, CI, and supply chain
 

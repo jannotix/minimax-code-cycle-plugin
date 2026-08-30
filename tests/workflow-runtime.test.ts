@@ -12,6 +12,7 @@ import {
   amendWorkflow,
   controlWorkflow,
   startWorkflow,
+  submitPlan,
   workflowStatus,
 } from "../src/workflow/service.ts"
 
@@ -91,9 +92,35 @@ test("a workflow survives restart, stays project-scoped, and signs cancellation"
 
     const doctor = await diagnose(second, projectA, "test") as { ok: boolean; store: { schemaVersion: number } }
     assert.equal(doctor.ok, true)
-    assert.equal(doctor.store.schemaVersion, 7)
+    assert.equal(doctor.store.schemaVersion, 8)
   } finally {
     second.close()
+    rmSync(scratch, { force: true, recursive: true })
+  }
+})
+
+test("a malformed architect result keeps its native session bound for correction", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "cycle-minimax-role-retry-"))
+  const project = join(scratch, "project")
+  mkdirSync(project)
+  const runtime = new Runtime({ ...process.env, CYCLE_DATA_DIR: join(scratch, "data") })
+  try {
+    const started = startWorkflow(runtime, {
+      preference: "full",
+      projectRoot: project,
+      request: "plan a durable change",
+    }).workflow
+    assert.throws(
+      () => submitPlan(runtime, project, started.id, {}, "mvs-architect"),
+      /exactly these keys/u,
+    )
+    const status = workflowStatus(runtime, project, started.id)
+    assert.equal(status?.workflow.state, "architecture")
+    assert.deepEqual(status?.roleSessions.map((entry) => [entry.role, entry.sessionId]), [
+      ["architect", "mvs-architect"],
+    ])
+  } finally {
+    runtime.close()
     rmSync(scratch, { force: true, recursive: true })
   }
 })

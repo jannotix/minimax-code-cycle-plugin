@@ -6,7 +6,9 @@ import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { release } from "./admission.ts"
+import { nextCoordinatorAction } from "./coordinator.ts"
 import { diagnose } from "./diagnostics.ts"
+import { isInterfaceFile } from "./evidence/design.ts"
 import {
   abort as abortGoal,
   advance as advanceGoal,
@@ -49,10 +51,12 @@ import {
 } from "./setup.ts"
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.ts"
 import { graphSize } from "./store/graph.ts"
+import { frozenFiles } from "./store/workflows.ts"
 import { readHistory, verifyHistory } from "./store/history.ts"
 import {
   amendWorkflow,
   arbitrateWorkflow,
+  bindWorkflowRoleSession,
   candidateEvidence,
   controlWorkflow,
   deliverWorkflowCandidate,
@@ -107,6 +111,34 @@ const tools: readonly ToolDefinition[] = [
     run: (args) => setupOperation(args),
   },
   {
+    name: "cycle_coordinator",
+    description:
+      "Return the single legal next coordinator action from durable workflow state. Requires a " +
+      "validated ready setup receipt and explicit native mavis/task/browser capability facts. " +
+      "The planner is read-only and never dispatches a role or advances workflow state itself.",
+    inputSchema: objectSchema(
+      {
+        operation: enumSchema(["next"]),
+        project_root: stringSchema("Absolute project directory."),
+        workflow_id: stringSchema("Durable workflow identifier.", 64),
+        setup_receipt: { type: "object" },
+        native_mavis: { type: "boolean" },
+        native_task: { type: "boolean" },
+        browser: enumSchema(["available", "unavailable", "unknown"]),
+      },
+      [
+        "operation",
+        "project_root",
+        "workflow_id",
+        "setup_receipt",
+        "native_mavis",
+        "native_task",
+        "browser",
+      ],
+    ),
+    run: (args) => coordinatorOperation(args),
+  },
+  {
     name: "cycle_workflow",
     description:
       "Drive a durable evidence-gated workflow through planning, scoped execution reports, exact " +
@@ -118,6 +150,7 @@ const tools: readonly ToolDefinition[] = [
           "start",
           "status",
           "amend",
+          "bind_role_session",
           "control",
           "submit_plan",
           "report_task",
@@ -145,7 +178,8 @@ const tools: readonly ToolDefinition[] = [
         task_key: stringSchema("Plan task key."),
         task_status: enumSchema(["blocked", "completed", "plan_defect"]),
         summary: stringSchema("Bounded executor task summary."),
-        role: enumSchema(["functional_reviewer", "security_reviewer"]),
+        role: enumSchema(["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]),
+        role_session_id: stringSchema("Native Mavis session identifier for the acting role.", 128),
         verdict: { type: "object" },
         snapshot: { type: "object" },
         capture_token: stringSchema("One-use reviewer capture capability."),
@@ -402,6 +436,32 @@ function setupSnapshot(args: Record<string, unknown>): AgentSnapshot | undefined
   return { description: description ?? "", name, systemPrompt: systemPrompt ?? "" }
 }
 
+function coordinatorOperation(args: Record<string, unknown>): unknown {
+  const operation = requiredString(args, "operation")
+  if (operation !== "next") throw new Error(`unknown coordinator operation: ${operation}`)
+  const root = projectRoot(args)
+  const workflowId = requiredBoundedString(args, "workflow_id", 64)
+  const receipt = validateSetupReceipt(requiredRecord(args, "setup_receipt"), VERSION)
+  const view = workflowStatus(runtime, root, workflowId)
+  if (view === null) throw new Error("workflow not found")
+  const candidatePaths = view.workflow.candidateId === null
+    ? []
+    : frozenFiles(runtime.requireStore(), view.workflow.candidateId).map((file) => file.path)
+  const plannedPaths = view.tasks.flatMap((task) => task.writeScopes)
+  const browserRequired = [...candidatePaths, ...plannedPaths].some(isInterfaceFile)
+  return nextCoordinatorAction({
+    browser: oneOf(args, "browser", ["available", "unavailable", "unknown"]),
+    browserRequired,
+    nativeMavis: requiredBoolean(args, "native_mavis"),
+    nativeTask: requiredBoolean(args, "native_task"),
+    reviews: view.reviews,
+    roleSessions: view.roleSessions,
+    setupReady: receipt.status === "ready",
+    tasks: view.tasks,
+    workflow: view.workflow,
+  })
+}
+
 async function workflowOperation(args: Record<string, unknown>): Promise<unknown> {
   const operation = requiredString(args, "operation")
   const root = projectRoot(args)
@@ -421,6 +481,14 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         root,
         requiredString(args, "workflow_id"),
         requiredString(args, "amendment"),
+      )
+    case "bind_role_session":
+      return bindWorkflowRoleSession(
+        runtime,
+        root,
+        requiredString(args, "workflow_id"),
+        oneOf(args, "role", ["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]),
+        requiredBoundedString(args, "role_session_id", 128),
       )
     case "control": {
       const additionalCycles = boundedInteger(args, "additional_cycles", 1, 20)
@@ -443,6 +511,7 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         root,
         requiredString(args, "workflow_id"),
         requiredRecord(args, "plan"),
+        requiredBoundedString(args, "role_session_id", 128),
       )
     case "report_task":
       return await reportTask(
@@ -452,6 +521,7 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         requiredString(args, "task_key"),
         oneOf(args, "task_status", ["blocked", "completed", "plan_defect"]),
         requiredString(args, "summary"),
+        requiredBoundedString(args, "role_session_id", 128),
       )
     case "freeze_candidate":
       return await freezeWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"))
@@ -466,6 +536,7 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         requiredString(args, "workflow_id"),
         oneOf(args, "role", ["functional_reviewer", "security_reviewer"]),
         requiredRecord(args, "verdict"),
+        requiredBoundedString(args, "role_session_id", 128),
       )
     case "submit_browser_evidence":
       return submitBrowserEvidence(
@@ -473,6 +544,7 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         root,
         requiredString(args, "workflow_id"),
         requiredRecord(args, "snapshot"),
+        requiredBoundedString(args, "role_session_id", 128),
         optionalString(args, "capture_token") ?? null,
       )
     case "run_proof": {
@@ -485,7 +557,7 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         rationale: requiredString(args, "rationale"),
         ...(script === undefined ? {} : { script }),
         vulnerabilityClass: requiredString(args, "vulnerability_class"),
-      })
+      }, requiredBoundedString(args, "role_session_id", 128))
     }
     case "arbitrate":
       return arbitrateWorkflow(
@@ -493,6 +565,7 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         root,
         requiredString(args, "workflow_id"),
         requiredRecord(args, "verdict"),
+        requiredBoundedString(args, "role_session_id", 128),
       )
     case "deliver":
       return await deliverWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"))
@@ -738,6 +811,12 @@ function requiredString(args: Record<string, unknown>, key: string): string {
   const value = args[key]
   if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${key} is required`)
   if (Buffer.byteLength(value, "utf8") > 1024 * 1024) throw new Error(`${key} is too large`)
+  return value
+}
+
+function requiredBoolean(args: Record<string, unknown>, key: string): boolean {
+  const value = args[key]
+  if (typeof value !== "boolean") throw new Error(`${key} must be a boolean`)
   return value
 }
 
