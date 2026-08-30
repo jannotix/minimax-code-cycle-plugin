@@ -1,0 +1,114 @@
+{
+  "schema": "cycle.t07.live-certification.v1",
+  "recordedAt": "2026-08-30T04:53:29.7452732Z",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "edb2e7e12f11c4a21de09bb6d588aa666dd24d58",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.7.tgz",
+    "artifactVersion": "2.0.0-alpha.7",
+    "artifactBytes": 1894939,
+    "artifactSha256": "681f4b1133189f4cc12bf567e5a6271db84ca1b383cea6cf4b1db702ba706dcd"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "profile": "disposable-runtime",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M3"
+  },
+  "profileIsolation": {
+    "status": "passed",
+    "realConfigUnchanged": true,
+    "realPluginDirectoryCount": 0,
+    "realCycleAgentCount": 0,
+    "temporaryPluginCountAfterAttempt": 0,
+    "temporaryCycleAgentCountAfterAttempt": 0,
+    "temporaryCycleSkillFileCountAfterAttempt": 0
+  },
+  "nativeSurface": {
+    "validHelpGroups": [
+      "agent",
+      "cron",
+      "session",
+      "mcp"
+    ],
+    "pluginGroup": false,
+    "skillGroup": false,
+    "agentCreateArguments": [
+      "name",
+      "display_name",
+      "system_prompt",
+      "persona",
+      "description",
+      "avatar",
+      "default_workspace_dir"
+    ],
+    "agentUpdateArguments": [
+      "agent_name",
+      "new_name",
+      "system_prompt",
+      "persona",
+      "description",
+      "avatar"
+    ],
+    "agentHookRegistration": false,
+    "mcpCommands": [
+      "list",
+      "get",
+      "create",
+      "update",
+      "delete"
+    ]
+  },
+  "findings": [
+    {
+      "id": "T07-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "Fresh local Agent Plugin installation through a supported MiniMax surface",
+      "result": "failed",
+      "evidence": "The live native mavis tool rejected plugin help as an unknown target and advertised only agent, cron, session, and mcp groups.",
+      "consequence": "The canonical plugin cannot be installed or queried without using a forbidden fallback, so Skill discovery and MiniMax-owned MCP activation cannot be certified."
+    },
+    {
+      "id": "T07-B02",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "Agent-scoped PreToolUse guard registration for all five managed roles",
+      "result": "failed",
+      "evidence": "The live agent create and update contracts expose identity, prompt, persona, description, avatar, and workspace fields only; neither contract exposes hooks or tool policy.",
+      "consequence": "Creating the five agents would not prove or enforce the fail-closed role boundaries required by T04 and T07."
+    }
+  ],
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "fresh-local-install", "status": "failed", "finding": "T07-B01" },
+    { "id": "skill-discovery", "status": "not_run", "blockedBy": "fresh-local-install" },
+    { "id": "mcp-handshake", "status": "not_run", "blockedBy": "fresh-local-install" },
+    { "id": "agent-creation", "status": "not_run", "blockedBy": "agent-hook-enforcement" },
+    { "id": "agent-hook-enforcement", "status": "failed", "finding": "T07-B02" },
+    { "id": "advisory-roles", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "quick-cycle", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "full-cycle", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "repair-blocked-retry-pause-resume", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "application-restart", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "provider-failure", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "concurrent-projects", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "candidate-delivery", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "state-persistence", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "uninstall", "status": "not_applicable", "reason": "No plugin or managed agent was created." },
+    { "id": "critical-battery-20", "status": "not_run", "blockedBy": "activation-gate" },
+    { "id": "disposable-cleanup", "status": "passed", "method": "moved_to_trash" }
+  ],
+  "forbiddenFallbacksUsed": [],
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}

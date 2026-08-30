@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — implementation and certification in progress**
+Status: **BLOCKED — T07 activation failed on MiniMax Code Desktop 3.0.68.134**
 
 Development version: `2.0.0-alpha.7`
 
@@ -83,7 +83,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | no | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | T07 blocked: no native plugin/Skill surface and no agent hook registration | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -236,6 +236,14 @@ times without relaxing timeouts or fail-closed checks.
 
 Live receipts bind the exact clean source SHA and exact artifact SHA-256. Raw prompts, credentials,
 absolute user paths, private configuration, and raw process output are excluded.
+
+Current verdict: **BLOCKED**. On Windows x64 with MiniMax Code Desktop `3.0.68.134`, the live native
+`mavis` tool rejected `plugin help` and advertised only `agent`, `cron`, `session`, and `mcp`. It has
+no plugin installation or Skill inspection group. Its live `agent create/update` contracts also
+expose no hook or tool-policy field. The activation gate therefore failed before installation,
+discovery, MCP activation, role setup, or downstream behavioral certification. No forbidden fallback
+was used. See `certification/t07-live-certification.json` and
+`certification/T07_LIVE_CERTIFICATION.md`.
 
 ### T08 — Release and distribution gate
 
