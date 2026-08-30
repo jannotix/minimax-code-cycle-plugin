@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.4",
-  "description": "Development preview for MiniMax Code with evidence-gated delivery, incremental code intelligence, durable memory, and goals.",
+  "version": "2.0.0-alpha.5",
+  "description": "Development preview for MiniMax Code with explicit native Mavis setup, evidence-gated delivery, code intelligence, memory, and goals.",
   "author": {
     "name": "Gianluca Iannotta",
     "email": "giannotta@tublat.com",
@@ -20,6 +20,9 @@
     "tree-sitter",
     "memory",
     "goals",
+    "mavis",
+    "agents",
+    "hooks",
     "verification",
     "planning",
     "skill",

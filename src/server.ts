@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -30,6 +31,22 @@ import { chainOf, explain, forget, recall } from "./memory.ts"
 import { serve, type ToolDefinition } from "./mcp.ts"
 import { pressure } from "./resources.ts"
 import { Runtime } from "./runtime.ts"
+import {
+  assessAgent,
+  assessUninstall,
+  byteDigest,
+  contentDigest,
+  managedSystemPrompt,
+  ownershipMarker,
+  ROLE_SETUP,
+  roleSetup,
+  SETUP_NAMESPACE,
+  SETUP_OWNER,
+  SETUP_SCHEMA,
+  validateSetupReceipt,
+  type AgentSnapshot,
+  type CycleRole,
+} from "./setup.ts"
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.ts"
 import { graphSize } from "./store/graph.ts"
 import { readHistory, verifyHistory } from "./store/history.ts"
@@ -68,6 +85,26 @@ const tools: readonly ToolDefinition[] = [
       "project_root",
     ]),
     run: async (args) => await diagnose(runtime, projectRoot(args), VERSION),
+  },
+  {
+    name: "cycle_setup",
+    description:
+      "Return the native Mavis agent setup specification, deterministically assess one observed " +
+      "agent for create/update/noop/conflict, authorize deletion only for a Cycle-owned agent, or " +
+      "validate a sanitized readiness receipt. " +
+      "This tool never mutates the MiniMax profile; the Cycle Skill uses the native mavis tool.",
+    inputSchema: objectSchema(
+      {
+        operation: enumSchema(["spec", "assess", "uninstall", "validate_receipt"]),
+        role: enumSchema(["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]),
+        observed_name: stringSchema("Name returned by native mavis agent get.", 128),
+        observed_description: stringSchema("Description returned by native mavis agent get.", 2_048),
+        observed_system_prompt: stringSchema("System prompt returned by native mavis agent get.", 65_536),
+        receipt: { type: "object" },
+      },
+      ["operation"],
+    ),
+    run: (args) => setupOperation(args),
   },
   {
     name: "cycle_workflow",
@@ -279,6 +316,91 @@ const tools: readonly ToolDefinition[] = [
 serve({ name: "cycle-control-plane-minimax", version: VERSION }, tools)
 
 process.on("exit", () => runtime.close())
+
+function setupOperation(args: Record<string, unknown>): unknown {
+  const operation = requiredString(args, "operation")
+  if (operation === "spec") {
+    const guard = readFileSync(join(ROOT, "skills", "cycle", "setup", "guard.mjs"))
+    return {
+      agents: ROLE_SETUP.map((entry) => {
+        const body = setupPrompt(entry.role)
+        const systemPrompt = managedSystemPrompt(entry.role, body)
+        return {
+          access: entry.access,
+          description: entry.description,
+          displayName: entry.displayName,
+          marker: ownershipMarker(entry.role),
+          name: entry.agentName,
+          promptPath: entry.promptPath,
+          promptDigest: contentDigest(systemPrompt),
+          role: entry.role,
+          systemPrompt,
+        }
+      }),
+      guard: {
+        digest: byteDigest(guard),
+        event: "PreToolUse",
+        path: "skills/cycle/setup/guard.mjs",
+        priority: 10,
+        template: "skills/cycle/setup/pre-tool-use.md.template",
+      },
+      host: {
+        agentApi: "native-mavis-tool-only",
+        hookScope: "agent",
+        liveHookProof: "required-before-production",
+        modelStrategy: "session-inherited-unless-native-round-trip-proves-an-agent-model",
+      },
+      namespace: SETUP_NAMESPACE,
+      owner: SETUP_OWNER,
+      schema: SETUP_SCHEMA,
+      version: VERSION,
+    }
+  }
+  if (operation === "validate_receipt") {
+    return { receipt: validateSetupReceipt(requiredRecord(args, "receipt"), VERSION), valid: true }
+  }
+
+  const role = oneOf(args, "role", [
+    "architect",
+    "executor",
+    "functional_reviewer",
+    "security_reviewer",
+    "arbiter",
+  ]) as CycleRole
+  const observed = setupSnapshot(args)
+  if (operation === "assess") {
+    const action = assessAgent(role, setupPrompt(role), observed)
+    const expected = roleSetup(role)
+    return {
+      ...action,
+      expected: {
+        description: expected.description,
+        name: expected.agentName,
+        promptDigest: contentDigest(managedSystemPrompt(role, setupPrompt(role))),
+      },
+      role,
+    }
+  }
+  if (operation === "uninstall") return { ...assessUninstall(role, observed), role }
+  throw new Error(`unknown setup operation: ${operation}`)
+}
+
+function setupPrompt(role: CycleRole): string {
+  return readFileSync(join(ROOT, roleSetup(role).promptPath), "utf8")
+}
+
+function setupSnapshot(args: Record<string, unknown>): AgentSnapshot | undefined {
+  const name = optionalBoundedString(args, "observed_name", 128)
+  const description = optionalBoundedString(args, "observed_description", 2_048)
+  const systemPrompt = optionalBoundedString(args, "observed_system_prompt", 65_536)
+  if (name === undefined) {
+    if (description !== undefined || systemPrompt !== undefined) {
+      throw new Error("observed_name is required when an observed agent is supplied")
+    }
+    return undefined
+  }
+  return { description: description ?? "", name, systemPrompt: systemPrompt ?? "" }
+}
 
 async function workflowOperation(args: Record<string, unknown>): Promise<unknown> {
   const operation = requiredString(args, "operation")

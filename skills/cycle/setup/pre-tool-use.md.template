@@ -1,0 +1,10 @@
+---
+hookEvent: PreToolUse
+type: script
+priority: 10
+timeout: 10000
+---
+
+```bash
+node "{{GUARD_PATH}}" "{{ROLE}}"
+```

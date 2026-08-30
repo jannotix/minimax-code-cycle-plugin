@@ -2,7 +2,7 @@
 
 Status: **BLOCKED — implementation and certification in progress**
 
-Development version: `2.0.0-alpha.4`
+Development version: `2.0.0-alpha.5`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -70,10 +70,10 @@ history.
 |---|---:|---:|---|
 | Agent Plugin manifest | yes | yes | schema-validated |
 | Natural-language Skill | commands plus Skills | limited | coordinator with fail-closed setup check |
-| MCP server | full control plane | T03 core plus two legacy diagnostic utilities | full control plane |
+| MCP server | full control plane | T04 core plus native-setup planner and two legacy diagnostics | full control plane |
 | Persistent state machine | yes | yes at T01 | SQLite, migrations, legal transitions |
-| Five isolated roles | plugin agents | no | native Mavis agents created on explicit setup |
-| Tool boundaries | declarations plus hook | no | agent hooks plus post-task reconciliation |
+| Five isolated roles | plugin agents | T04 managed setup; live sessions pending | native Mavis agents created on explicit setup |
+| Tool boundaries | declarations plus hook | T04 offline guards; live dispatch pending | agent hooks plus post-task reconciliation |
 | Evidence engine | yes | yes at T02 | discovery, execution, timeout, cap, secret scan |
 | Candidate integrity | byte snapshot | yes at T02 | exact base and approved-byte snapshot |
 | Atomic delivery | journaled | yes at T02 | fail-closed, recoverable, idempotent |
@@ -81,7 +81,7 @@ history.
 | Code intelligence | Tree-sitter incremental | yes at T03 | Tree-sitter WASM, incremental, bounded queries |
 | Memory and goals | yes | yes at T03 | provenance, scopes, confirmation gates |
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
-| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T03 suites | requirement-mapped suite |
+| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T04 suites | requirement-mapped suite |
 | CI and packaging | yes | no | OS matrix, allowlist, SBOM, checksums, provenance |
 | Live MiniMax receipt | n/a | no | clean install and behavioral matrix |
 
@@ -185,6 +185,18 @@ at agent scope, verifies every agent through the native Mavis API, records model
 provides a reversible uninstall that preserves Cycle data unless separately requested.
 
 No setup action runs from plugin installation alone.
+
+MiniMax `3.0.68` exposes agent management through the native model tool, not the installed connector
+CLI. Setup preflights all five names, refuses foreign collisions before mutation, and uses only
+native `agent create/update/get/list/delete` operations whose current arguments are discovered with
+`agent help`. Per-agent model YAML is not evidence: the receipt records the inherited session model
+unless a native write/read round-trip proves another model.
+
+Each managed agent receives an agent-scoped `PreToolUse` guard. Read-only roles fail closed to an
+inspection allowlist; the executor cannot delegate, govern Cycle, address `.git`, or run a mutating
+or unknown Git operation. Registration and offline guard execution do not prove live dispatch. The
+T04 state is `installed_unverified`; only T07 real-session allow/deny probes on the exact MiniMax
+build may produce `ready`.
 
 ### T05 — Cycle coordinator Skill
 

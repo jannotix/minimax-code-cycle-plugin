@@ -1,85 +1,35 @@
-# Plan: <one-line title>
+# Architecture plan output
 
-Plan id: <uuid>
-Request digest: <sha256>
-Architect session: <uuid>
-Created at: <iso8601>
+Return exactly one JSON object. No Markdown wrapper and no additional keys.
 
-## Original request
+```json
+{
+  "assumptions": ["explicit assumption"],
+  "integration_checks": ["node --test"],
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "statement": "observable outcome",
+      "acceptance_criteria": ["criterion that can be independently verified"]
+    }
+  ],
+  "risks": ["concrete risk and its relevant boundary"],
+  "tasks": [
+    {
+      "key": "task-1",
+      "title": "bounded task title",
+      "objective": "one outcome",
+      "write_scopes": ["src/feature", "tests/feature.test.ts"],
+      "dependencies": [],
+      "requirement_ids": ["REQ-1"],
+      "acceptance_criteria": ["criterion this task establishes"],
+      "verification_commands": ["node --test tests/feature.test.ts"]
+    }
+  ]
+}
+```
 
-<verbatim text of the user's original request, plus any amendments>
-
-## Non-goals
-
-- <what the user did not ask for, that the system should not deliver>
-- <...>
-
-## Constraints
-
-- <hard constraint from the environment, the deployment, the team>
-- <...>
-
-## Requirements
-
-### R1: <statement>
-
-Acceptance criteria:
-
-- <criterion, externally verifiable>
-- <criterion, externally verifiable>
-
-### R2: <statement>
-
-Acceptance criteria:
-
-- <criterion>
-- <criterion>
-
-## Tasks
-
-### T1: <title>
-
-- Objective: <one sentence>
-- Requirement ids: R1, R2
-- Write scopes: src/api/users.ts, tests/api/users.test.ts
-- Dependencies: T0
-- Verification commands:
-  - pnpm vitest run tests/api/users.test.ts
-  - pnpm tsc --noEmit
-- Acceptance criteria:
-  - <criterion>
-  - <criterion>
-
-### T2: <title>
-
-- Objective: <one sentence>
-- Requirement ids: R2
-- Write scopes: src/db/migrations/20260820_add_user_role.sql, src/db/users.ts
-- Dependencies: T1
-- Verification commands:
-  - pnpm db:migrate --target up && pnpm db:migrate --target down
-  - pnpm vitest run tests/db/users.test.ts
-- Acceptance criteria:
-  - <criterion>
-
-## Risks
-
-### r1: <description>
-
-Mitigation: <how the executor should handle it>
-
-### r2: <description>
-
-Mitigation: <how the executor should handle it>
-
-## Assumptions
-
-- <assumption 1: the user has provisioned the database with the
-  expected role>
-- <assumption 2: the user is on the latest stable version of the
-  project dependencies>
-
-## Open questions
-
-- <question 1: the original request mentions "search", but does not
-  specify whether the search should match case-insensitively>
+Every requirement must be implemented by at least one task. Task keys and requirement identifiers
+are unique. Dependencies resolve and are acyclic. Overlapping write scopes require an ordering
+dependency. Commands execute without a shell, so pipes, redirects, chaining, Git, installation,
+deployment, and publication are invalid.

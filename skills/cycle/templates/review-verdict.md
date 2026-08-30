@@ -1,47 +1,29 @@
-# Review: <role>
+# Review verdict output
 
-Review id: <uuid>
-Candidate id: <uuid>
-Reviewer role: functional_reviewer | security_reviewer
-Reviewer session: <uuid>
-Verdict: approve | reject | reject_with_repair
-Created at: <iso8601>
+Return exactly one JSON object. No Markdown wrapper and no additional keys.
 
-## Summary
+```json
+{
+  "decision": "approved",
+  "requirements": [
+    {
+      "requirement_id": "REQ-1",
+      "status": "satisfied",
+      "evidence_ids": ["supplied-evidence-id"]
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "summary": "specific observation",
+      "evidence_ids": ["supplied-evidence-id"]
+    }
+  ],
+  "repair_target": null
+}
+```
 
-<two to six sentences the arbiter will read>
-
-## Findings
-
-### F1: <title>
-
-- Severity: blocker | major | minor | nit
-- File: src/api/users.ts:42
-- Description: <what is wrong, in the user's terms>
-- Evidence: <evidence_id or reading>
-- Suggested repair: <what the executor should change, never the patch>
-
-### F2: <title>
-
-- Severity: <...>
-- File: <...>
-- Description: <...>
-- Evidence: <...>
-- Suggested repair: <...>
-
-## Triage (security reviewer only)
-
-1. Authentication and authorization: satisfied | unsatisfied | n/a
-   Evidence: <...>
-2. Untrusted input: satisfied | unsatisfied | n/a
-   Evidence: <...>
-3. Secret handling: satisfied | unsatisfied | n/a
-   Evidence: <...>
-4. Trust boundaries: satisfied | unsatisfied | n/a
-   Evidence: <...>
-5. Dependency and supply-chain risk: satisfied | unsatisfied | n/a
-   Evidence: <...>
-6. Resource behavior: satisfied | unsatisfied | n/a
-   Evidence: <...>
-7. Production architecture: satisfied | unsatisfied | n/a
-   Evidence: <...>
+`decision` is `approved` or `rejected`. A rejection names `architecture` or `execution` as
+`repair_target`; approval uses `null`. Every supplied requirement identifier is decided exactly
+once. Cite only supplied evidence identifiers. Findings use `critical`, `high`, `medium`, `low`, or
+`info`. Approval is invalid with an unsatisfied requirement or unresolved critical/high finding.

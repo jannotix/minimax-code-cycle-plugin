@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.4";
+const VERSION = "2.0.0-alpha.5";
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");
@@ -109,7 +109,7 @@ test("unsupported graph operations fail explicitly", async () => {
       "main",
     ]);
     assert.equal(unsupported.code, 1);
-    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.4/u);
+    assert.match(unsupported.stderr, /not implemented in 2\.0\.0-alpha\.5/u);
 
     const since = await run(process.execPath, [
       join(ROOT, "scripts", "graph-query.mjs"),
@@ -158,6 +158,9 @@ test("the Agent Plugin manifests remain parseable and expose only the portable c
     type: "stdio",
   });
   assert.equal(packageJson.dependencies, undefined);
+  for (const lifecycle of ["preinstall", "install", "postinstall"]) {
+    assert.equal(packageJson.scripts[lifecycle], undefined, `${lifecycle} must not mutate a profile`);
+  }
   assert.equal(packageJson.scripts["graph-index"], undefined);
   assert.equal(packageJson.scripts["graph-query"], undefined);
   assert.match(await text("dist/server.js"), /cycle-control-plane-minimax/u);
@@ -188,6 +191,7 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   assert.equal(initialized.result.serverInfo.version, VERSION);
   assert.deepEqual(listed.result.tools.map((tool) => tool.name), [
     "cycle_doctor",
+    "cycle_setup",
     "cycle_workflow",
     "cycle_history",
     "cycle_limits",
@@ -212,6 +216,9 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   assert.deepEqual(memory.inputSchema.properties.operation.enum, ["search", "explain", "chain", "forget"]);
   const goal = listed.result.tools.find((tool) => tool.name === "cycle_goal");
   assert.ok(goal.inputSchema.properties.operation.enum.includes("approve"));
+  const setup = listed.result.tools.find((tool) => tool.name === "cycle_setup");
+  assert.deepEqual(setup.inputSchema.properties.operation.enum, ["spec", "assess", "uninstall", "validate_receipt"]);
+  assert.equal(setup.inputSchema.properties.project_root, undefined);
   const workflow = listed.result.tools.find((tool) => tool.name === "cycle_workflow");
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("freeze_candidate"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("verify"));

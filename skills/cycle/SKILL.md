@@ -1,13 +1,13 @@
 ---
 name: cycle
-description: Inspect the Cycle for MiniMax Code 2.0 development line and operate its durable workflow, exact candidate delivery, evidence, incremental Tree-sitter graph, project memory, goals, history, diagnostics, and admission MCP tools. Use when the user explicitly mentions Cycle for MiniMax Code or asks to inspect its local control-plane state. Native five-role dispatch is not yet production-ready.
+description: Inspect Cycle for MiniMax Code and operate its explicit native Mavis setup, durable workflow, exact candidate delivery, evidence, incremental Tree-sitter graph, project memory, goals, history, diagnostics, and admission MCP tools. Use when the user explicitly mentions Cycle for MiniMax Code or asks to inspect its local control-plane state. Native five-role dispatch is not yet production-ready.
 license: FSL-1.1-MIT
 compatibility: Requires MiniMax Code with Agent Plugins 1.0 support and Node.js 22 or later on PATH. The 2.0 development line is not production-ready.
 ---
 
 # Cycle for MiniMax Code
 
-This is the entry point for the `2.0.0-alpha.4` development line. MiniMax Code loads this Skill and
+This is the entry point for the `2.0.0-alpha.5` development line. MiniMax Code loads this Skill and
 the `cycle-tools` MCP server. It does not load the repository's legacy custom-agent files or create
 a command namespace.
 
@@ -17,12 +17,26 @@ The production rebuild is incomplete. Do not state or imply that the current alp
 
 - an autonomous five-role workflow;
 - isolated architect, executor, reviewers, or arbiter sessions;
-- native Mavis agent or hook setup;
+- automatic role dispatch by the production coordinator;
+- live hook enforcement before the current profile/build passes its runtime probes;
 - automatic browser driving or production packaging.
 
-If a user asks to run a governed implementation cycle, explain that the control plane and native
-Mavis-agent setup have not reached their production gate. Do not substitute a single-session
+If a user asks to run a governed implementation cycle, explain that native setup can be installed
+but the T05 coordinator and T07 live gate are still incomplete. Do not substitute a single-session
 implementation and call it Cycle.
+
+## Explicit native setup
+
+Only after an explicit setup or uninstall request, read `setup/PROCEDURE.md` completely and follow
+it. Use `cycle_setup` for the deterministic managed specification and collision decisions, and the
+native `mavis` tool for every agent create/update/get/list/delete operation. Never use a shell CLI,
+undocumented HTTP endpoint, or direct agent-store edit. Installation alone performs no setup.
+
+Setup creates exactly five `cycle-v2-*` user-owned agents and agent-scoped `PreToolUse` guards. A
+matching install is a no-op; a foreign name collision stops before mutation. The procedure preserves
+durable Cycle data on rollback and uninstall. Report `installed_unverified` until live tool dispatch
+has been demonstrated in the current profile and MiniMax build; offline hook execution alone is not
+`ready`.
 
 ## T03 control-plane operations
 
@@ -34,6 +48,10 @@ directory or its process working directory.
 Use `cycle_doctor` to inspect the project identity, durable SQLite store, schema version, history
 chain, Ed25519 checkpoints, key permissions, configuration, and Node runtime. Warnings are not a
 production pass; errors stop the workflow.
+
+Use `cycle_setup` `spec` to obtain the exact managed prompts and guard digest. Use `assess` with one
+native `agent get` observation before create/update, and `uninstall` before deletion. The tool plans
+and validates ownership; it never mutates the MiniMax profile.
 
 ### Operate durable workflow state
 
@@ -101,7 +119,7 @@ used as evidence for approval or delivery.
 - Do not pass an output directory outside the project for the diagnostic manifest.
 - Do not treat a tool exit code as evidence for behavior the tool does not implement.
 - Do not create agents, hooks, or persistent profile configuration until the user explicitly asks
-  to set up Cycle and the production setup task has been delivered.
+  to set up Cycle; then use only `setup/PROCEDURE.md`.
 - Keep credentials, private configuration, raw prompts, and absolute user paths out of reports.
 
 ## Source of truth

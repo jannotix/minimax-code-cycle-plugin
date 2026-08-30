@@ -1,0 +1,19 @@
+{
+  "schema": "cycle.mavis-setup.v1",
+  "namespace": "cycle-v2",
+  "owner": "minimax-code-cycle-plugin",
+  "modelStrategy": "session-inherited",
+  "agents": [
+    { "role": "architect", "name": "cycle-v2-architect", "displayName": "Cycle Architect", "access": "read_only", "prompt": "../roles/architect.md" },
+    { "role": "executor", "name": "cycle-v2-executor", "displayName": "Cycle Executor", "access": "executor", "prompt": "../roles/executor.md" },
+    { "role": "functional_reviewer", "name": "cycle-v2-functional-reviewer", "displayName": "Cycle Functional Reviewer", "access": "read_only", "prompt": "../roles/functional-reviewer.md" },
+    { "role": "security_reviewer", "name": "cycle-v2-security-reviewer", "displayName": "Cycle Security Reviewer", "access": "read_only", "prompt": "../roles/security-reviewer.md" },
+    { "role": "arbiter", "name": "cycle-v2-arbiter", "displayName": "Cycle Arbiter", "access": "read_only", "prompt": "../roles/arbiter.md" }
+  ],
+  "hook": {
+    "event": "PreToolUse",
+    "priority": 10,
+    "guard": "guard.mjs",
+    "template": "pre-tool-use.md.template"
+  }
+}

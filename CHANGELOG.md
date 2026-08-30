@@ -2,6 +2,32 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.5] - Unreleased
+
+### Added
+
+- Explicit, natural-language native Mavis setup for five uniquely named `cycle-v2-*` user agents,
+  with deterministic create/update/noop/conflict assessment through `cycle_setup`.
+- Agent-scoped Mavis `PreToolUse` guard and offline negative tests: read-only roles fail closed to an
+  inspection allowlist; the executor cannot delegate, govern Cycle, touch `.git`, stage, commit, or
+  run a mutating/unknown Git operation.
+- Native `agent get`/`agent list` round-trip requirements, rollback journal, sanitized receipt schema,
+  and marker-safe reversible uninstall that preserves durable Cycle data.
+- Current strict JSON role prompts and plan/review/arbitration templates aligned with the T02 control
+  plane schemas and MiniMax snake-case MCP arguments.
+
+### Changed
+
+- Per-agent models are no longer claimed from profile YAML. Setup records the effective inherited
+  session model unless the native API proves a per-agent model through a write/read round-trip.
+- Hook registration, offline guard execution, and live role-session dispatch are separate gates.
+  Setup remains `installed_unverified` until T07 proves enforcement on the current MiniMax build.
+
+### Security
+
+- Plugin installation has no profile side effects; setup and uninstall require separate explicit
+  user requests and refuse foreign agent-name collisions before mutation.
+
 ## [2.0.0-alpha.4] - Unreleased
 
 ### Added

@@ -114,12 +114,13 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.4")
+    assert.equal(identity.serverInfo.version, "2.0.0-alpha.5")
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
     assert.deepEqual(names, [
       "cycle_doctor",
+      "cycle_setup",
       "cycle_workflow",
       "cycle_history",
       "cycle_limits",
@@ -130,6 +131,76 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       "cycle_memory",
       "cycle_goal",
     ])
+
+    const setup = toolBody(await first.call("tools/call", {
+      arguments: { operation: "spec" },
+      name: "cycle_setup",
+    })) as {
+      agents: {
+        description: string
+        name: string
+        role: string
+        systemPrompt: string
+      }[]
+      guard: { digest: string }
+      host: { agentApi: string; modelStrategy: string }
+      schema: string
+    }
+    assert.equal(setup.schema, "cycle.mavis-setup.v1")
+    assert.equal(setup.agents.length, 5)
+    assert.equal(setup.host.agentApi, "native-mavis-tool-only")
+    assert.match(setup.host.modelStrategy, /session-inherited/u)
+    const receipt = toolBody(await first.call("tools/call", {
+      arguments: {
+        operation: "validate_receipt",
+        receipt: {
+          agents: setup.agents.map((entry) => ({
+            effectiveModel: null,
+            hookDigest: setup.guard.digest,
+            hookLiveVerified: false,
+            hookOfflineVerified: true,
+            modelSource: "session-inherited",
+            name: entry.name,
+            nativeVerified: true,
+            role: entry.role,
+          })),
+          pluginVersion: "2.0.0-alpha.5",
+          profile: "cycle-t04",
+          schema: "cycle.mavis-setup-receipt.v1",
+          status: "installed_unverified",
+        },
+      },
+      name: "cycle_setup",
+    })) as { valid: boolean }
+    assert.equal(receipt.valid, true)
+    const architect = setup.agents.find((entry) => entry.role === "architect")!
+    const absent = toolBody(await first.call("tools/call", {
+      arguments: { operation: "assess", role: "architect" },
+      name: "cycle_setup",
+    })) as { action: string }
+    assert.equal(absent.action, "create")
+    const managed = toolBody(await first.call("tools/call", {
+      arguments: {
+        observed_description: architect.description,
+        observed_name: architect.name,
+        observed_system_prompt: architect.systemPrompt,
+        operation: "assess",
+        role: "architect",
+      },
+      name: "cycle_setup",
+    })) as { action: string }
+    assert.equal(managed.action, "noop")
+    const foreign = toolBody(await first.call("tools/call", {
+      arguments: {
+        observed_description: "user agent",
+        observed_name: architect.name,
+        observed_system_prompt: "not Cycle managed",
+        operation: "uninstall",
+        role: "architect",
+      },
+      name: "cycle_setup",
+    })) as { action: string }
+    assert.equal(foreign.action, "conflict")
 
     const goal = toolBody(await first.call("tools/call", {
       arguments: {

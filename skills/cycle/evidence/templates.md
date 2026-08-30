@@ -1,99 +1,50 @@
-# Evidence templates
+# Evidence-bound role outputs
 
-The evidence templates are concrete forms the executor and the reviewers
-fill in. They are not auto-generated. The executor writes a `task_summary`
-after every task, the functional reviewer writes a `findings_list` per
-finding, the security reviewer writes a `triage_checklist` evaluation,
-the arbiter writes a `decision_rationale`.
+Cycle role results are strict JSON consumed by the control plane. Markdown forms, prose before or
+after the object, additional keys, invented requirement IDs, and invented evidence IDs are refused.
 
-A template that the executor does not fill in is evidence that the
-executor did not think. A reviewer that skips a triage item is a
-reviewer that did not check.
+## Executor task result
 
-## task_summary
-
-```text
-Task: T<key> — <title>
-Status: completed | failed | blocked | plan_defect
-
-What changed:
-  - <path>: <one-line description>
-  - <path>: <one-line description>
-
-Why:
-  <one sentence: the requirement this task satisfies>
-
-Verification:
-  - <command> → <passed|failed>, <output_digest>
-  - <command> → <passed|failed>, <output_digest>
-
-Notes for reviewers:
-  <anything the reviewers need to know that the evidence does not already say>
+```json
+{
+  "status": "completed",
+  "summary": "what changed and which checks actually ran",
+  "browser": null
+}
 ```
 
-## findings_list (per finding)
+`status` is `completed`, `blocked`, or `plan_defect`. For a user-visible change, `browser` is the
+captured flow object defined in `../browser/qa-protocol.md`; otherwise it is `null`. The coordinator
+reads Git and records changed paths independently.
 
-```text
-Finding: F<n>
-Severity: blocker | major | minor | nit
-File: <path>:<line or range>
-Description:
-  <what is wrong, in the user's terms>
-Evidence:
-  - <command or attachment that supports the finding>
-Suggested repair:
-  <what the executor should change; never the patch>
+## Functional/security review and arbitration
+
+All three use the strict verdict in `../templates/review-verdict.md` (the arbiter rules are further
+described in `../templates/arbitration-decision.md`):
+
+```json
+{
+  "decision": "approved",
+  "requirements": [
+    { "requirement_id": "REQ-1", "status": "satisfied", "evidence_ids": ["evidence-id"] }
+  ],
+  "findings": [
+    { "severity": "info", "summary": "specific observation", "evidence_ids": ["evidence-id"] }
+  ],
+  "repair_target": null
+}
 ```
 
-## triage_checklist (security reviewer)
+Rejection requires `repair_target` `execution` or `architecture`. Approval requires `null`, every
+requirement satisfied exactly once, and no unresolved critical/high finding. The security reviewer
+may report an unproven concern, but the validator downgrades a critical/high claim to `info` unless
+it cites a supplied demonstrated-proof evidence ID.
 
-```text
-Triage:
-  1. Authentication and authorization: <satisfied | unsatisfied | n/a>
-     Evidence: <command, attachment, or reading>
-  2. Untrusted input: <satisfied | unsatisfied | n/a>
-     Evidence: <...>
-  3. Secret handling: <satisfied | unsatisfied | n/a>
-     Evidence: <...>
-  4. Trust boundaries: <satisfied | unsatisfied | n/a>
-     Evidence: <...>
-  5. Dependency and supply-chain risk: <satisfied | unsatisfied | n/a>
-     Evidence: <...>
-  6. Resource behavior: <satisfied | unsatisfied | n/a>
-     Evidence: <...>
-  7. Production architecture: <satisfied | unsatisfied | n/a>
-     Evidence: <...>
+## Evidence discipline
 
-Overall verdict: approve | reject | reject_with_repair
-Summary: <one paragraph the arbiter will read>
-```
-
-## decision_rationale (arbiter)
-
-```text
-Decision: approved | repair | replan | blocked
-
-Original request match: satisfied | partial | unsatisfied
-Evidence sufficiency: sufficient | insufficient
-Reviewer consensus: agree | disagree | partial
-
-What the candidate does well:
-  - <one sentence>
-
-What the candidate does not do, or does wrong:
-  - <one sentence, with file:line if applicable>
-
-If approved: the user can rely on the candidate.
-If repair: the executor must <change> and re-run <evidence>.
-If replan: the architect must rebuild the plan because <structural reason>.
-If blocked: the workflow cannot continue without a user decision.
-```
-
-## notes
-
-- The forms are not auto-generated. The agent writes them.
-- A template that is filled in with "n/a" everywhere is a skipped
-  review. The arbiter treats a skipped review as `insufficient`
-  evidence.
-- A finding that does not name a file or a command is an unanchored
-  finding. The arbiter downgrades unanchored findings by one severity.
+- Command evidence is created by the control plane from the real invocation, exit status, bounded
+  output, and full-output digest; a role does not manufacture an evidence record.
+- Reviewers cite only IDs supplied for the current candidate.
+- The functional reviewer may spend its one-use capture token on a flow it actually drove.
+- The security reviewer may request a disposable proof only when proof execution is explicitly on.
+- The arbiter cannot override missing mandatory gates or missing independent reviews.

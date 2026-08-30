@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.4` — production release is blocked.
+> Development line: `2.0.0-alpha.5` — production release is blocked.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -12,11 +12,12 @@ not be presented as a complete five-role autonomous cycle.
 ## Current, verified surface
 
 MiniMax Code discovers one Skill at `skills/cycle/SKILL.md` and one dependency-free stdio MCP server
-from `mcp.json`. The server currently exposes ten local tools:
+from `mcp.json`. The server currently exposes eleven local tools:
 
 | Tool | Current guarantee |
 |---|---|
 | `cycle_doctor` | Diagnoses project identity, Node, configuration, SQLite schema, history, checkpoints, and key permissions. |
+| `cycle_setup` | Returns the exact managed Mavis agent specification and plans create/update/noop/conflict or marker-safe uninstall; it never mutates a profile. |
 | `cycle_workflow` | Drives durable planning, scoped task reconciliation, exact candidate freeze, verification, reviews, arbitration, delivery, and recovery. |
 | `cycle_history` | Lists project-scoped history, verifies the global append-only chain and checkpoints, and signs the current head with Ed25519. |
 | `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
@@ -34,14 +35,32 @@ package dependencies.
 
 The following capabilities remain release blockers and are not advertised as working:
 
-- five isolated MiniMax role agents;
-- runtime tool-boundary hooks;
-- the native Mavis setup and production coordinator Skill;
+- automatic five-role dispatch by the production coordinator;
+- certified live hook enforcement in the current MiniMax profile/build;
 - automatic browser driving from independent reviewer sessions;
 - production packaging and live MiniMax Code certification.
 
 The top-level `agents/`, ignored `docs/`, and ignored Markdown scenarios are legacy design inputs.
 MiniMax Code does not load them as Agent Plugin components.
+
+## Native Mavis setup boundary
+
+After a separate explicit user request, the Cycle Skill can install five user-owned `cycle-v2-*`
+agents and agent-scoped guards through MiniMax's native `mavis` tool. `cycle_setup` supplies the
+exact prompts and deterministic collision/ownership decisions; it performs no profile write itself.
+Setup is idempotent and uninstall deletes only marker-owned agents while preserving the durable
+Cycle database.
+
+MiniMax Code `3.0.68` exposes agent management to model sessions through the native tool, not the
+installed connector CLI. Setup therefore refuses CLI, undocumented HTTP, and direct database/file
+scaffolding substitutes. It records the inherited session model unless a native agent-model
+round-trip succeeds. [Upstream issue #124](https://github.com/MiniMax-AI/minimax-code/issues/124)
+documents why per-agent YAML is not treated as evidence.
+
+Registered and offline-tested hooks are not yet a runtime pass. [Upstream issue
+#131](https://github.com/MiniMax-AI/minimax-code/issues/131) documents a recent V2 build where loaded
+Markdown hooks were not dispatched by real turns. The setup receipt remains `installed_unverified`
+until T07 exercises actual allowed and denied tools in fresh role sessions.
 
 ## Target architecture
 
@@ -84,9 +103,9 @@ node --check scripts/graph-query.mjs
 node --check scripts/package-skill.mjs
 ```
 
-Passing these checks proves the T03 control-plane, candidate delivery, incremental graph, durable
-memory, Goal Mode, and measured admission foundation. It does not certify native Mavis role dispatch
-or MiniMax Code Desktop integration.
+Passing these checks proves the T04 control plane, safe native setup planner, offline agent guards,
+candidate delivery, incremental graph, durable memory, Goal Mode, and measured admission foundation.
+It does not certify live Mavis role dispatch or MiniMax Code Desktop integration.
 
 ## Compatibility target
 
