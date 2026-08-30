@@ -25,7 +25,13 @@ execFileSync(
   ],
   { stdio: "inherit", timeout: 180_000 },
 )
+const localSkill = execFileSync(
+  process.execPath,
+  [join(ROOT, "scripts", "package-local-skill.mjs"), "--output", output, ...(process.argv.includes("--require-clean") ? ["--require-clean"] : [])],
+  { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], timeout: 180_000 },
+).trim()
 console.log(packaging)
+console.log(localSkill)
 
 function valueAfter(flag) {
   const index = process.argv.indexOf(flag)

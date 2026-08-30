@@ -54,7 +54,9 @@ const input = (state: WorkflowState, overrides: Partial<CoordinatorInput> = {}):
 })
 
 test("coordinator preflight fails closed on setup, native tools, and required browser", () => {
-  assert.equal(nextCoordinatorAction(input("architecture", { setupReady: false })).action.kind, "stop")
+  const setup = nextCoordinatorAction(input("architecture", { setupReady: false }))
+  assert.equal(setup.action.kind, "stop")
+  assert.match(setup.next_actions[0]!, /capability-profile/u)
   assert.equal(nextCoordinatorAction(input("architecture", { nativeTask: false })).status, "error")
   assert.match(
     nextCoordinatorAction(input("execution", { browser: "unknown", browserRequired: true })).summary,

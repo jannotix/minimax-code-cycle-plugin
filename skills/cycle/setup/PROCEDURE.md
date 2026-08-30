@@ -1,141 +1,141 @@
-# Native Mavis setup and uninstall
+# Native MiniMax setup and uninstall
 
-This procedure is the only supported way to create Cycle role agents. It runs only after the user
-explicitly asks to set up Cycle. Plugin installation alone must never call it or write outside the
-plugin directory.
+Run this procedure only after the user explicitly asks to set up Cycle. Agent Plugin installation
+alone creates no agents and changes no profile capability.
 
-The setup uses the native MiniMax `mavis` model tool for agent operations and ordinary file tools
-for agent-scoped hooks. Do not shell out to a `mavis` CLI, call an undocumented local HTTP endpoint,
-or create agent database rows/directories by hand.
+MiniMax Code `3.0.68.134` exposes native `agent`, `session`, and `mcp` management, but no native
+`plugin`, `skill`, or hook-management group. Cycle therefore uses the supported surfaces that do
+exist:
+
+- local distribution: the user uploads `cycle-skill-<version>.zip` through **Plugins → Personal →
+  Create → Input skill → Upload a skill**;
+- Agent Plugin distribution: MiniMax imports the public Git repository and discovers the Skill and
+  MCP manifest;
+- local MCP setup: the coordinator registers `cycle-tools` through native `mavis mcp create` from
+  the extracted canonical artifact;
+- five custom agents: native `mavis agent` owns their identity and canonical `agent.md` files own
+  their exact tool/MCP/Skill selectors.
+
+Do not use a shell `mavis` CLI, undocumented HTTP endpoint, database edit, direct plugin-store edit,
+or prompt-only tool restriction.
 
 ## Readiness states
 
-- `installed_unverified`: all five native agents round-trip and guard files pass offline probes, but
-  real-session hook dispatch has not been demonstrated on this MiniMax build.
-- `ready`: the installed state plus live per-role hook probes passed in the current profile/build.
-- `blocked`: a collision, missing native capability, failed round-trip, failed hook probe, or partial
-  rollback remains.
-- `uninstalled`: all Cycle-owned agents are absent. Durable Cycle control-plane data was untouched.
-
-T04 can establish `installed_unverified`. Only the live T07 matrix may establish `ready`.
+- `installed_unverified`: MCP and five agents round-trip, every canonical capability profile is
+  byte-exact, but fresh child-session tool ceilings have not been live-probed.
+- `ready`: the installed state plus live per-role allow/deny roster and behavior probes passed on
+  the current MiniMax build.
+- `blocked`: a collision, missing native capability, profile mismatch, MCP failure, or live probe
+  failure remains.
+- `uninstalled`: Cycle-owned agents and MCP registration are absent. Durable Cycle data remains.
 
 ## 1. Preflight — no writes
 
-1. Show the user the current MiniMax profile name and its resolved data directory. Certification
-   uses the separately authorized disposable profile; never silently use the default profile.
-2. Call `cycle_setup` with `operation: "spec"`. This returns the five exact names, descriptions,
-   ownership markers, managed prompts, prompt digests, and guard digest for this plugin version.
-3. Call the native tool with `mavis({ command: "agent help", args: {} })`, then
-   `mavis({ command: "agent list", args: { include_primary: true, limit: 100, offset: 0 } })`.
-   The help result must expose deterministic create/update/get/delete operations. If it does not,
-   stop before changing anything.
-4. For each expected name, call `mavis({ command: "agent get", args: { agent_name: name } })`.
-   A missing agent is an absent observation. For an existing agent, send the returned name,
-   description, and system prompt to `cycle_setup` `operation: "assess"`.
-5. If any assessment is `conflict`, stop before the first mutation. Cycle never takes over an
-   unmarked user agent merely because its name matches. `create`, `update`, and `noop` may proceed.
+1. Show the sanitized current profile name and confirm the resolved profile is the intended one.
+2. Call `cycle_setup` with `operation: "spec"`. It returns the five exact agents, their complete
+   canonical `agent.md` bytes and digests, and the `cycle-tools` MCP specification.
+3. Call native `mavis` with `agent help`, `agent list`, `mcp help`, and `mcp list`.
+4. The live contracts must expose deterministic agent create/update/get/delete and MCP
+   list/get/create/update/delete. Missing operations stop setup.
+5. For each expected agent, call `agent get`. Read its canonical `agent.md` when present and pass
+   native fields plus `observed_agent_markdown` to `cycle_setup assess`.
+6. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
+   description, transport, command and arguments match this version's specification.
 
-Capture the preflight snapshots in memory for rollback. Do not put raw prompts, absolute paths,
-credentials, or private profile configuration in the receipt.
+If any agent or MCP collision is foreign, stop before the first mutation. Keep bounded preflight
+snapshots for rollback, but never place raw prompts, absolute paths, credentials, private config, or
+session transcripts in a receipt.
 
-## 2. Create or update through the native API
+## 2. Register the local MCP when needed
 
-Use only argument names returned by the current `agent help`; the bundled MiniMax documentation has
-changed between builds. The native call must be able to establish the exact managed name,
-description, and system prompt returned by `cycle_setup spec`. If it cannot, stop as `blocked`
-instead of guessing another schema or editing the agent store directly.
+Agent Plugin import may already have registered `cycle-tools`. For a local Skill upload, require the
+user to provide the extracted canonical plugin root. Resolve `dist/server.js` below that root and
+confirm it is a regular file inside the root.
 
-- For `create`, call native `agent create`, then `agent update` if the current API separates
-  scaffolding from prompt configuration.
-- For `update`, call native `agent update` only on an agent whose ownership marker was verified.
-- For `noop`, make no native write.
+Use native `mavis mcp create` with:
 
-After every mutation, call native `agent get` and reassess it with `cycle_setup`. The required result
-is `noop`. At the end, `agent list` must contain each exact name once.
+- name `cycle-tools`;
+- transport `stdio`;
+- command `node`;
+- one argument: the resolved `dist/server.js`;
+- description containing `cycle-managed:minimax-code-cycle-plugin` and this plugin version;
+- enabled `true`.
 
-Do not write per-agent `model:` or `thinking:` YAML. On affected MiniMax builds those fields are
-silently ignored and child sessions inherit the effective session model. Record the model returned
-by the native session/agent surface when available; otherwise record `null` with
-`modelSource: "session-inherited"`. A per-agent model may be recorded only after a native write/read
-round-trip proves that this build honors it.
+Immediately call `mcp get`, then invoke `cycle_doctor` through the connected MCP. A configuration
+row without a successful MiniMax-owned handshake is not installed. Update only a previously
+Cycle-owned stale row; never take over a foreign same-name MCP server.
 
-## 3. Install agent-scoped guards
+## 3. Create agents and install capability profiles
 
-For each managed agent, resolve its native agent directory under the current profile. Create its
-`hooks/` directory only after native `agent get` succeeded.
+Use only arguments returned by current `agent help`. Native create/update establishes the exact
+name, description, and managed system prompt returned by `cycle_setup spec`. After the native agent
+exists, write the complete returned `profile` bytes to its canonical `agent.md`; do not merge or
+invent fields. Re-read it and require its SHA-256 to match `profileDigest`.
 
-1. Copy `guard.mjs` byte-for-byte to `hooks/cycle-guard.mjs`.
-2. Render `pre-tool-use.md.template` to `hooks/cycle-pre-tool-use.md`, replacing
-   `{{GUARD_PATH}}` with the absolute copied guard path and `{{ROLE}}` with the manifest role.
-   Quote the path as the template does; use forward slashes on Windows.
-3. Re-read both files. The copied guard SHA-256 must equal `cycle_setup spec.guard.digest`; the hook
-   frontmatter must remain `PreToolUse`, `script`, priority `10`, timeout `10000`.
-4. From the setup coordinator session, run the copied guard directly with documented Mavis
-   `{ "input": ..., "output": ... }` envelopes. Every read-only role must allow a read and return
-   `_abort` for a write, shell, task, and unknown tool. The executor must allow a normal write and
-   `git status`, and return `_abort` for delegation, `.git` access, `git add`, `git commit`,
-   `git checkout`, and Cycle delivery/control calls.
+The canonical selectors are the security boundary enforced by MiniMax before every child Turn:
 
-An offline pass proves the script and file registration, not runtime dispatch. MiniMax Code issue
-https://github.com/MiniMax-AI/minimax-code/issues/131 documents a build where Markdown hooks loaded
-but normal V2 turns did not dispatch them. Keep `hookLiveVerified: false` until T07 triggers the
-actual native tools in fresh role sessions and observes the expected allow/abort behavior.
+| Role | Exact tools | MCP servers | Skills |
+|---|---|---|---|
+| architect | `read`, `grep`, `glob` | none | none |
+| executor | `read`, `write`, `edit`, `grep`, `glob` | none | none |
+| functional reviewer | `read`, `grep`, `glob` | none | none |
+| security reviewer | `read`, `grep`, `glob` | none | none |
+| arbiter | `read`, `grep`, `glob` | none | none |
 
-The guard is defense in depth. Agent prompts remain layer one and post-task Git scope
-reconciliation remains layer three; a missing hook never turns a role report into approval.
+The allowlist excludes shell/Git, delegation, `mavis`, memory, browser mutation, every MCP tool, and
+unknown future tools. Deterministic tests and proofs run in the parent through the Cycle evidence
+engine; role sessions only inspect or propose scoped file edits. Post-task Git reconciliation still
+rejects executor writes outside the current/completed task scopes.
 
-## 4. Sanitized receipt
+After every mutation, call `agent get`, re-read `agent.md`, and call `cycle_setup assess`. The result
+must be `noop`. At the end `agent list` contains each expected name exactly once.
 
-Produce one object matching `receipt.schema.json`:
+Per-agent model YAML is not evidence. Record the inherited session model unless a native
+write/read round-trip proves another model. See https://github.com/MiniMax-AI/minimax-code/issues/124.
 
-- exactly five roles and names;
-- `nativeVerified: true` only after `agent get` and `agent list` agree;
-- effective model plus its honest source;
-- copied guard digest;
-- separate offline and live hook booleans;
-- status derived from the readiness states above.
+## 4. Live capability probes
 
-Call `cycle_setup` with `operation: "validate_receipt"` and the completed object. Report it only
-when the tool returns `valid: true`; otherwise setup is `blocked`. Write the validated sanitized
-object to `{{DATA_DIR}}/cycle/setup-receipt.json` in the current profile. This profile-local receipt
-is what the coordinator revalidates on every start; it is not stored in the project or the durable
-cross-profile Cycle database.
+T04 can prove only canonical bytes. T07 starts a fresh native task session for every managed agent
+and inspects the actual child tool roster before asking for behavior:
 
-The receipt contains no raw prompt, absolute profile/project path, API key, token, private config,
-session transcript, or raw process output. A MiniMax/app/plugin byte change makes the live portion
-stale.
+- every role must lack `task`, `task_append`, `mavis`, `memory`, all `mcp__*`, and an unknown probe;
+- read-only roles expose exactly `read`, `grep`, and `glob` from the Cycle profile;
+- executor exposes exactly `read`, `write`, `edit`, `grep`, and `glob` from the Cycle profile;
+- a read succeeds for every role;
+- a bounded executor write inside its assigned scope succeeds and is reconciled;
+- read-only write requests fail because the tool is absent, not because the prompt declined;
+- executor shell, Git, delegation, Cycle-control, and MCP requests fail because those tools are
+  absent.
 
-## 5. Rollback after a failed setup
+Tool text or a role claim is not evidence. Use the session event/tool records plus the resulting
+filesystem state. Any extra tool, missing allowed tool, or selector drift keeps setup blocked.
 
-Rollback only changes made by this run:
+## 5. Sanitized receipt
 
-1. Delete newly created agents with native `agent delete`, but only after `cycle_setup uninstall`
-   returns `delete` for the current native snapshot.
-2. Restore previously managed agents from their preflight name/description/prompt snapshots through
-   native `agent update`.
-3. Restore prior hook bytes for updated agents; remove hook files only when this run created them.
-4. Re-run `agent get`, `agent list`, and offline hook checks. Any incomplete rollback is `blocked`.
+Produce one `cycle.mavis-setup-receipt.v2` object:
 
-Never delete the Cycle SQLite/data directory, project files, unrelated hooks, user agents, sessions,
-provider configuration, or credentials.
+- exactly five role/name rows;
+- `nativeVerified` only after native get/list agreement;
+- effective model plus honest source;
+- `configDigest` of the canonical `agent.md`;
+- separate offline and live profile verification booleans;
+- status derived from the readiness rules above.
 
-## 6. Explicit uninstall
+Validate it with `cycle_setup validate_receipt`, then write it to the profile-local
+`cycle/setup-receipt.json`. It contains no raw prompt, path, credential, private configuration,
+session identifier, or raw tool output. A MiniMax, Skill, MCP, agent-profile, or artifact byte change
+makes the live portion stale.
 
-Uninstall requires a separate explicit user request.
+## 6. Rollback and explicit uninstall
 
-1. Native `agent get` every expected name and call `cycle_setup` `operation: "uninstall"` with the
-   observed fields.
-2. If any result is `conflict`, stop before deletion. Missing agents are already `noop`.
-3. Delete only results authorized as `delete`, using native `agent delete`.
-4. Verify `agent get` reports every managed name absent and `agent list` contains none of them.
-5. Validate and write an `uninstalled` sanitized receipt to the same profile-local receipt path.
-   Preserve all durable Cycle data unless the user makes a separate, explicit data-deletion request.
+Rollback changes only this run made:
 
-## Host limitations recorded for MiniMax Code 3.0.68
+1. Delete newly created agents only after `cycle_setup uninstall` authorizes each current native
+   snapshot.
+2. Restore prior Cycle-owned agent fields and canonical profile bytes for updated agents.
+3. Delete a newly created `cycle-tools` row, or restore the prior Cycle-owned row.
+4. Re-run agent and MCP get/list checks. Any incomplete rollback is `blocked`.
 
-- The installed `mcode-tools` CLI manages connectors, not native agents or sessions.
-- Agent operations are native `mavis` tool calls; CLI/HTTP substitutes are unsupported here.
-- Per-agent model configuration is not assumed. See
-  https://github.com/MiniMax-AI/minimax-code/issues/124.
-- Hook registration, offline execution, and live turn dispatch are three different facts. Only the
-  last one clears the T07 runtime gate.
+Explicit uninstall requires a separate user request. Delete only marker-owned agents and the
+matching Cycle-owned MCP row, validate an `uninstalled` receipt, and preserve all durable Cycle data
+unless the user separately requests its deletion.

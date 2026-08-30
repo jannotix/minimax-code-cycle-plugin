@@ -2,6 +2,24 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.8] - Unreleased
+
+### Changed
+
+- Replaced unsupported agent hook setup with MiniMax canonical custom-agent capability profiles.
+  Four roles expose only `read`, `grep`, and `glob`; the executor additionally exposes `write` and
+  `edit`. Shell, Git, delegation, `mavis`, MCP, memory, browser mutation, and future tools are absent
+  from the runtime catalog rather than discouraged by prompts.
+- Added the supported local installation path: a standard Git-archive Skill ZIP uploaded through
+  MiniMax Personal Skills plus native `mavis mcp create` for the extracted canonical MCP server.
+- Upgraded setup and receipt contracts to v2 with byte-exact profile digests and separate offline
+  and live capability-profile verification.
+
+### Removed
+
+- Removed the `PreToolUse` hook files that MiniMax `3.0.68.134` cannot register through its native
+  management surface.
+
 ## [2.0.0-alpha.7] - Unreleased
 
 ### Added

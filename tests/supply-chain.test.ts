@@ -17,7 +17,7 @@ test("the package allowlist contains every runtime root and refuses development 
     "scripts/freeze-candidate.mjs",
     "scripts/verify-audit.mjs",
     "skills/cycle/SKILL.md",
-    "skills/cycle/setup/guard.mjs",
+    "skills/cycle/setup/manifest.json",
     "vendor/manifest.json",
     "LICENSE",
     "NOTICE",
@@ -83,6 +83,7 @@ test("the release secret scan detects high-confidence credential shapes", () => 
 
 test("the supply-chain verifier uses npm pack and an external tar reader", async () => {
   const packager = await readFile(join(ROOT as string, "scripts", "package.mjs"), "utf8")
+  const skillPackager = await readFile(join(ROOT as string, "scripts", "package-local-skill.mjs"), "utf8")
   const verifier = await readFile(join(ROOT as string, "scripts", "verify-package.mjs"), "utf8")
   assert.match(packager, /"pack", "--json", "--ignore-scripts"/u)
   assert.doesNotMatch(packager, /package-skill|createTar|tar writer/iu)
@@ -91,6 +92,9 @@ test("the supply-chain verifier uses npm pack and an external tar reader", async
   assert.match(verifier, /provenance does not bind the canonical artifact/u)
   assert.match(verifier, /method: "initialize"/u)
   assert.match(verifier, /method: "tools\/list"/u)
+  assert.match(skillPackager, /"archive", "--format=zip"/u)
+  assert.match(skillPackager, /HEAD:skills\/cycle/u)
+  assert.match(skillPackager, /unzipSync\(bytes\)/u)
 })
 
 test("CI runs the core gate on Windows, macOS, and Linux at the Node floor", async () => {

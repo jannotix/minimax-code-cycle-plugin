@@ -19,7 +19,7 @@ user request or confirmed provider recovery. Do not hide the failure by running 
 - Setup receipt absent/stale/not `ready`: stop and direct the user to explicit setup/T07 probe.
 - `mavis` or `task` tool missing: stop; no CLI, HTTP, or single-session substitute.
 - Browser required but unavailable/unknown: stop before claiming interface proof.
-- Hook live state stale after MiniMax/profile/plugin change: downgrade setup to
+- Capability-profile live state stale after MiniMax/profile/Skill/MCP change: downgrade setup to
   `installed_unverified` and stop.
 - MCP/control-plane error: report it exactly and preserve the current state.
 

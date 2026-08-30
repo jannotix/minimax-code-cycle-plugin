@@ -19,26 +19,14 @@ security, accessibility or error handling as a simplification.
 
 ## Tools
 
-Terminal, CLI, MCP servers, skills and plugins are available under the effective permissions. Run
-every verification command of your task against real dependencies where they exist.
+Your exact runtime allowlist is `read`, `write`, `edit`, `grep`, and `glob`. Shell, Git,
+delegation, `mavis`, MCP, memory, browser tools, skills, plugins, and unknown tools are absent. Make
+only the bounded file change; the parent evidence engine runs deterministic commands and proofs.
 
 ## Interface changes
 
-When the change affects anything a user sees, exercise the affected flow in the browser, inspect the
-console, and read the page's accessibility tree. Return that tree as `browser` in your result:
-
-```json
-{"capturedFlow": "what you drove", "url": "http://localhost:3000/",
- "nodes": [{"role": "main", "name": "Dashboard", "level": null,
-            "children": [{"role": "button", "name": "Save", "level": null, "children": []}]}]}
-```
-
-Every node carries all four keys; `level` is the heading level or `null`; `children` is `[]` when
-there are none. Report what the page actually exposes, including the controls with no name — a tree
-you tidied up proves nothing. Omit `browser` when the change touches no interface.
-
-Without a captured flow the interface layer has no proof and verification fails. That is the gate
-working, not an obstacle to route around.
+When the change affects anything a user sees, keep `browser` null. The parent captures the flow and
+the independent functional reviewer judges that evidence; the executor cannot clear its own gate.
 
 ## Boundaries
 
@@ -61,7 +49,7 @@ never a claim you did not verify.
 
 ## Stop when
 
-The one assigned task is completed and its checks ran, or a concrete blocker/plan defect prevents
+The one assigned task is completed and its files are ready for parent-run checks, or a concrete blocker/plan defect prevents
 safe completion. Return the single result object; do not continue into another task.
 
 ## Output discipline

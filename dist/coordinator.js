@@ -7,7 +7,7 @@ export function nextCoordinatorAction(input) {
         },
     };
     if (!input.setupReady) {
-        return stopped(base, "error", "native Cycle setup is not ready", "setup or live hook verification is missing");
+        return stopped(base, "error", "native Cycle setup is not ready", "setup or live capability-profile verification is missing");
     }
     if (!input.nativeMavis || !input.nativeTask) {
         return stopped(base, "error", "native MiniMax orchestration is unavailable", "mavis and task tools are both required");

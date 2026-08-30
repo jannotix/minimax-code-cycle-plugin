@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cycle.mavis-setup-receipt.v1",
+  "$id": "cycle.mavis-setup-receipt.v2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "pluginVersion", "profile", "agents", "status"],
   "properties": {
-    "schema": { "const": "cycle.mavis-setup-receipt.v1" },
+    "schema": { "const": "cycle.mavis-setup-receipt.v2" },
     "pluginVersion": { "type": "string", "minLength": 1 },
     "profile": { "type": "string", "minLength": 1, "maxLength": 128 },
     "status": { "enum": ["installed_unverified", "ready", "blocked", "uninstalled"] },
@@ -16,16 +16,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["role", "name", "nativeVerified", "effectiveModel", "modelSource", "hookDigest", "hookOfflineVerified", "hookLiveVerified"],
+        "required": ["role", "name", "nativeVerified", "effectiveModel", "modelSource", "configDigest", "configOfflineVerified", "configLiveVerified"],
         "properties": {
           "role": { "enum": ["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"] },
           "name": { "type": "string", "pattern": "^cycle-v2-" },
           "nativeVerified": { "type": "boolean" },
           "effectiveModel": { "type": ["string", "null"] },
           "modelSource": { "enum": ["session-inherited", "native-agent"] },
-          "hookDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-          "hookOfflineVerified": { "type": "boolean" },
-          "hookLiveVerified": { "type": "boolean" }
+          "configDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "configOfflineVerified": { "type": "boolean" },
+          "configLiveVerified": { "type": "boolean" }
         }
       }
     }

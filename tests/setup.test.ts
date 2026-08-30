@@ -1,18 +1,18 @@
 import assert from "node:assert/strict"
-import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 
-import { decide } from "../skills/cycle/setup/guard.mjs"
 import {
   assessAgent,
   assessUninstall,
+  managedAgentMarkdown,
   managedSystemPrompt,
   ownershipMarker,
   ROLE_SETUP,
   roleSetup,
+  roleAllowsTool,
   SETUP_NAMESPACE,
   SETUP_OWNER,
   SETUP_SCHEMA,
@@ -21,22 +21,11 @@ import {
 } from "../src/setup.ts"
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
-const envelope = (
-  toolName: string,
-  toolArgs: Record<string, unknown> = {},
-  role: CycleRole = "executor",
-) => ({
-  input: { agentName: roleSetup(role).agentName, sessionId: "session", toolArgs, toolName },
-  output: { metadata: {}, toolArgs },
-})
-const blocked = (value: unknown): boolean =>
-  typeof value === "object" && value !== null && "_abort" in value
-
 test("the setup manifest defines five unique, owned, deterministic agents", () => {
   const manifest = JSON.parse(
     readFileSync(join(ROOT, "skills", "cycle", "setup", "manifest.json"), "utf8"),
   ) as {
-    agents: { access: string; name: string; prompt: string; role: string }[]
+    agents: { access: string; mcpServers: string[]; name: string; prompt: string; role: string; skills: string[]; tools: string[] }[]
     namespace: string
     owner: string
     schema: string
@@ -52,6 +41,9 @@ test("the setup manifest defines five unique, owned, deterministic agents", () =
   for (const entry of manifest.agents) {
     assert.match(entry.name, /^cycle-v2-[a-z-]+$/u)
     assert.ok(["executor", "read_only"].includes(entry.access))
+    assert.ok(entry.tools.length >= 3)
+    assert.deepEqual(entry.mcpServers, [])
+    assert.deepEqual(entry.skills, [])
     assert.equal(entry.prompt.includes(".."), true)
     assert.ok(readFileSync(join(ROOT, "skills", "cycle", "setup", entry.prompt), "utf8").trim())
   }
@@ -62,6 +54,7 @@ test("setup assessment is create, update, noop, or conflict without taking over 
   const spec = roleSetup(role)
   const body = readFileSync(join(ROOT, spec.promptPath), "utf8")
   const systemPrompt = managedSystemPrompt(role, body)
+  const profile = managedAgentMarkdown(role, body)
 
   assert.equal(assessAgent(role, body, undefined).action, "create")
   assert.equal(assessAgent(role, body, {
@@ -78,7 +71,12 @@ test("setup assessment is create, update, noop, or conflict without taking over 
     description: spec.description,
     name: spec.agentName,
     systemPrompt: systemPrompt.replaceAll("\n", "\r\n"),
-  }).action, "noop")
+  }, profile.replaceAll("\n", "\r\n")).action, "noop")
+  assert.equal(assessAgent(role, body, {
+    description: spec.description,
+    name: spec.agentName,
+    systemPrompt,
+  }, "---\nname: foreign\n---\nnot managed").action, "conflict")
   assert.equal(assessUninstall(role, {
     description: spec.description,
     name: spec.agentName,
@@ -93,86 +91,40 @@ test("setup assessment is create, update, noop, or conflict without taking over 
 
 test("read-only roles fail closed except for their explicit inspection capabilities", () => {
   for (const role of ["architect", "functional_reviewer", "security_reviewer", "arbiter"] as const) {
-    assert.equal(decide(envelope("read", { filePath: "src/app.ts" }, role), role), null, role)
-    assert.equal(decide(envelope("mcp__cycle-tools__cycle_graph_query", { operation: "symbol" }, role), role), null, role)
-    assert.equal(blocked(decide(envelope("bash", { command: "git status" }, role), role)), true, role)
-    assert.equal(blocked(decide(envelope("write", { filePath: "src/app.ts" }, role), role)), true, role)
-    assert.equal(blocked(decide(envelope("task", { prompt: "delegate" }, role), role)), true, role)
-    assert.equal(blocked(decide(envelope("unknown_future_tool", {}, role), role)), true, role)
+    assert.equal(roleAllowsTool(role, "read"), true, role)
+    assert.equal(roleAllowsTool(role, "grep"), true, role)
+    assert.equal(roleAllowsTool(role, "glob"), true, role)
+    for (const denied of ["bash", "write", "edit", "task", "mavis", "memory", "mcp__cycle-tools__cycle_workflow", "unknown_future_tool"]) {
+      assert.equal(roleAllowsTool(role, denied), false, `${role}:${denied}`)
+    }
   }
-  assert.equal(
-    blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "submit_browser_evidence" }, "functional_reviewer"), "functional_reviewer")),
-    true,
-  )
-  assert.equal(
-    blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "run_proof" }, "security_reviewer"), "security_reviewer")),
-    true,
-  )
-  assert.equal(
-    blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "deliver" }, "arbiter"), "arbiter")),
-    true,
-  )
 })
 
-test("the executor can work but cannot delegate, govern, touch .git, or mutate Git", () => {
-  assert.equal(decide(envelope("write", { filePath: "src/app.ts" }), "executor"), null)
-  assert.equal(decide(envelope("bash", { command: "npm test" }), "executor"), null)
-  assert.equal(decide(envelope("bash", { command: "git status --short" }), "executor"), null)
-  assert.equal(blocked(decide(envelope("bash", {}), "executor")), true)
-  assert.equal(
-    decide(envelope("bash", { command: '"C:/Program Files/Git/bin/git.exe" diff --stat' }), "executor"),
-    null,
-  )
-  for (const command of [
-    "git add -A",
-    "git commit -m done",
-    "cmd /c git checkout main",
-    "git config core.hooksPath off",
-    "git update-index --skip-worktree src/app.ts",
-    "Remove-Item -Recurse .git",
-  ]) {
-    assert.equal(blocked(decide(envelope("bash", { command }), "executor")), true, command)
+test("the executor allowlist excludes shell, delegation, governance, and future tools", () => {
+  for (const allowed of ["read", "write", "edit", "grep", "glob"]) {
+    assert.equal(roleAllowsTool("executor", allowed), true, allowed)
   }
-  assert.equal(blocked(decide(envelope("edit", { filePath: ".git/config" }), "executor")), true)
-  assert.equal(blocked(decide(envelope("task", { prompt: "delegate" }), "executor")), true)
-  assert.equal(
-    blocked(decide(envelope("mcp__cycle-tools__cycle_workflow", { operation: "deliver" }), "executor")),
-    true,
-  )
-  assert.equal(
-    blocked(decide({ ...envelope("read"), input: { ...envelope("read").input, agentName: "other" } }, "executor")),
-    true,
-  )
+  for (const denied of ["bash", "task", "task_append", "mavis", "memory", "website_deploy", "mcp__cycle-tools__cycle_workflow", "unknown_future_tool"]) {
+    assert.equal(roleAllowsTool("executor", denied), false, denied)
+  }
 })
 
-test("the installed script emits a Mavis _abort result and fails closed on malformed input", () => {
-  const guard = join(ROOT, "skills", "cycle", "setup", "guard.mjs")
-  const denied = spawnSync(process.execPath, [guard, "executor"], {
-    encoding: "utf8",
-    input: JSON.stringify(envelope("bash", { command: "git commit -m no" })),
-  })
-  assert.equal(denied.status, 0)
-  assert.equal(blocked(JSON.parse(denied.stdout)), true)
-
-  const malformed = spawnSync(process.execPath, [guard, "executor"], {
-    encoding: "utf8",
-    input: "not-json",
-  })
-  assert.equal(malformed.status, 0)
-  assert.equal(blocked(JSON.parse(malformed.stdout)), true)
+test("canonical agent profiles carry exact fail-closed selectors", () => {
+  for (const spec of ROLE_SETUP) {
+    const body = readFileSync(join(ROOT, spec.promptPath), "utf8")
+    const profile = managedAgentMarkdown(spec.role, body)
+    assert.match(profile, new RegExp(`^---\\nname: ${spec.agentName}\\n`, "u"))
+    assert.match(profile, /\nmcpServers: \[\]\nskills: \[\]\n/u)
+    assert.doesNotMatch(profile, /\n  - (?:bash|task|mavis|memory)\n/u)
+    assert.match(profile, new RegExp(ownershipMarker(spec.role), "u"))
+  }
 })
 
-test("the hook template and sanitized setup receipt schema remain parseable", () => {
-  const hook = readFileSync(
-    join(ROOT, "skills", "cycle", "setup", "pre-tool-use.md.template"),
-    "utf8",
-  )
-  assert.match(hook, /^---\nhookEvent: PreToolUse\ntype: script\npriority: 10\ntimeout: 10000\n---/u)
-  assert.match(hook, /node "\{\{GUARD_PATH\}\}" "\{\{ROLE\}\}"/u)
-
+test("the capability manifest and sanitized setup receipt schema remain parseable", () => {
   const receipt = JSON.parse(
     readFileSync(join(ROOT, "skills", "cycle", "setup", "receipt.schema.json"), "utf8"),
-  ) as { properties: { status: { enum: string[] } } }
+  ) as { properties: { schema: { const: string }; status: { enum: string[] } } }
+  assert.equal(receipt.properties.schema.const, "cycle.mavis-setup-receipt.v2")
   assert.deepEqual(receipt.properties.status.enum, ["installed_unverified", "ready", "blocked", "uninstalled"])
 })
 
@@ -195,16 +147,18 @@ test("managed role prompts use current schemas, measurable stops, and MiniMax fi
   assert.match(security, /"vulnerability_class"/u)
 })
 
-test("the natural-language setup is explicit, native-only, reversible, and honest about live hooks", () => {
+test("the natural-language setup is explicit, native-only, reversible, and honest about live profiles", () => {
   const procedure = readFileSync(join(ROOT, "skills", "cycle", "setup", "PROCEDURE.md"), "utf8")
   assert.match(procedure, /only after the user\s+explicitly asks/iu)
-  assert.match(procedure, /native MiniMax `mavis` model tool/iu)
-  assert.match(procedure, /Do not shell out to a `mavis` CLI/iu)
-  assert.match(procedure, /If any assessment is `conflict`, stop before the first mutation/iu)
+  assert.match(procedure, /Call native `mavis`/iu)
+  assert.match(procedure, /Do not use a shell `mavis` CLI/iu)
+  assert.match(procedure, /If any agent or MCP collision is foreign, stop before the first mutation/iu)
+  assert.match(procedure, /canonical `agent\.md`/iu)
   assert.match(procedure, /installed_unverified/iu)
   assert.match(procedure, /preserve all durable Cycle data/iu)
-  assert.match(procedure, /issues\/131/iu)
   assert.match(procedure, /issues\/124/iu)
+  assert.match(procedure, /Upload a skill/iu)
+  assert.match(procedure, /mcp create/iu)
 
   const modelsText = readFileSync(join(ROOT, "skills", "cycle", "config", "models.example.json"), "utf8")
   const models = JSON.parse(modelsText) as { roles: Record<string, string>; strategy: string }
@@ -215,10 +169,10 @@ test("the natural-language setup is explicit, native-only, reversible, and hones
 
 test("setup receipts cannot claim ready, omit a role, or substitute an agent", () => {
   const agents = ROLE_SETUP.map((spec) => ({
+    configDigest: "a".repeat(64),
+    configLiveVerified: false,
+    configOfflineVerified: true,
     effectiveModel: "minimax/MiniMax-M3",
-    hookDigest: "a".repeat(64),
-    hookLiveVerified: false,
-    hookOfflineVerified: true,
     modelSource: "session-inherited",
     name: spec.agentName,
     nativeVerified: true,
@@ -226,25 +180,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.7",
+    pluginVersion: "2.0.0-alpha.8",
     profile: "cycle-t04",
-    schema: "cycle.mavis-setup-receipt.v1",
+    schema: "cycle.mavis-setup-receipt.v2",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.7").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.8").status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.7"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.8"),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.7"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.8"),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.7"),
+    }, "2.0.0-alpha.8"),
     /role\/name mismatch/u,
   )
 })

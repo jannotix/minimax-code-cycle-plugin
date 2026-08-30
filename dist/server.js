@@ -15,7 +15,7 @@ import { chainOf, explain, forget, recall } from "./memory.js";
 import { serve } from "./mcp.js";
 import { pressure } from "./resources.js";
 import { Runtime } from "./runtime.js";
-import { assessAgent, assessUninstall, byteDigest, contentDigest, managedSystemPrompt, ownershipMarker, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
+import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
 import { frozenFiles } from "./store/workflows.js";
@@ -46,6 +46,7 @@ const tools = [
             role: enumSchema(["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]),
             observed_name: stringSchema("Name returned by native mavis agent get.", 128),
             observed_description: stringSchema("Description returned by native mavis agent get.", 2_048),
+            observed_agent_markdown: stringSchema("Canonical agent.md read from the active profile.", 65_536),
             observed_system_prompt: stringSchema("System prompt returned by native mavis agent get.", 65_536),
             receipt: { type: "object" },
         }, ["operation"]),
@@ -248,7 +249,6 @@ process.on("exit", () => runtime.close());
 function setupOperation(args) {
     const operation = requiredString(args, "operation");
     if (operation === "spec") {
-        const guard = readFileSync(join(ROOT, "skills", "cycle", "setup", "guard.mjs"));
         return {
             agents: ROLE_SETUP.map((entry) => {
                 const body = setupPrompt(entry.role);
@@ -261,21 +261,25 @@ function setupOperation(args) {
                     name: entry.agentName,
                     promptPath: entry.promptPath,
                     promptDigest: contentDigest(systemPrompt),
+                    profile: managedAgentMarkdown(entry.role, body),
+                    profileDigest: contentDigest(managedAgentMarkdown(entry.role, body)),
                     role: entry.role,
                     systemPrompt,
+                    tools: entry.tools,
                 };
             }),
-            guard: {
-                digest: byteDigest(guard),
-                event: "PreToolUse",
-                path: "skills/cycle/setup/guard.mjs",
-                priority: 10,
-                template: "skills/cycle/setup/pre-tool-use.md.template",
+            mcp: {
+                argsFromPluginRoot: ["dist/server.js"],
+                command: "node",
+                description: `cycle-managed:${SETUP_OWNER};version=${VERSION}`,
+                name: "cycle-tools",
+                transport: "stdio",
             },
             host: {
                 agentApi: "native-mavis-tool-only",
-                hookScope: "agent",
-                liveHookProof: "required-before-production",
+                capabilityProfile: "canonical-agent-markdown",
+                liveCapabilityProof: "required-before-production",
+                localSkillInstall: "upload-cycle-skill-zip",
                 modelStrategy: "session-inherited-unless-native-round-trip-proves-an-agent-model",
             },
             namespace: SETUP_NAMESPACE,
@@ -296,7 +300,8 @@ function setupOperation(args) {
     ]);
     const observed = setupSnapshot(args);
     if (operation === "assess") {
-        const action = assessAgent(role, setupPrompt(role), observed);
+        const observedAgentMarkdown = optionalBoundedString(args, "observed_agent_markdown", 65_536);
+        const action = assessAgent(role, setupPrompt(role), observed, observedAgentMarkdown);
         const expected = roleSetup(role);
         return {
             ...action,
@@ -304,6 +309,8 @@ function setupOperation(args) {
                 description: expected.description,
                 name: expected.agentName,
                 promptDigest: contentDigest(managedSystemPrompt(role, setupPrompt(role))),
+                profileDigest: contentDigest(managedAgentMarkdown(role, setupPrompt(role))),
+                tools: expected.tools,
             },
             role,
         };

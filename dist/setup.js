@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { containsSecret } from "./secrets.js";
-export const SETUP_SCHEMA = "cycle.mavis-setup.v1";
+export const SETUP_SCHEMA = "cycle.mavis-setup.v2";
 export const SETUP_NAMESPACE = "cycle-v2";
 export const SETUP_OWNER = "minimax-code-cycle-plugin";
+const READ_ONLY_TOOLS = ["read", "grep", "glob"];
+const EXECUTOR_TOOLS = ["read", "write", "edit", "grep", "glob"];
 export const ROLE_SETUP = [
     {
         access: "read_only",
@@ -11,6 +13,7 @@ export const ROLE_SETUP = [
         displayName: "Cycle Architect",
         promptPath: "skills/cycle/roles/architect.md",
         role: "architect",
+        tools: READ_ONLY_TOOLS,
     },
     {
         access: "executor",
@@ -19,6 +22,7 @@ export const ROLE_SETUP = [
         displayName: "Cycle Executor",
         promptPath: "skills/cycle/roles/executor.md",
         role: "executor",
+        tools: EXECUTOR_TOOLS,
     },
     {
         access: "read_only",
@@ -27,6 +31,7 @@ export const ROLE_SETUP = [
         displayName: "Cycle Functional Reviewer",
         promptPath: "skills/cycle/roles/functional-reviewer.md",
         role: "functional_reviewer",
+        tools: READ_ONLY_TOOLS,
     },
     {
         access: "read_only",
@@ -35,6 +40,7 @@ export const ROLE_SETUP = [
         displayName: "Cycle Security Reviewer",
         promptPath: "skills/cycle/roles/security-reviewer.md",
         role: "security_reviewer",
+        tools: READ_ONLY_TOOLS,
     },
     {
         access: "read_only",
@@ -43,6 +49,7 @@ export const ROLE_SETUP = [
         displayName: "Cycle Arbiter",
         promptPath: "skills/cycle/roles/arbiter.md",
         role: "arbiter",
+        tools: READ_ONLY_TOOLS,
     },
 ];
 export function roleSetup(role) {
@@ -60,13 +67,35 @@ export function managedSystemPrompt(role, body) {
         throw new Error(`the ${role} prompt is empty`);
     return `${ownershipMarker(role)}\n\n${prompt}`;
 }
+export function managedAgentMarkdown(role, body) {
+    const spec = roleSetup(role);
+    const tools = spec.tools.map((tool) => `  - ${tool}`).join("\n");
+    return [
+        "---",
+        `name: ${spec.agentName}`,
+        `description: ${spec.description}`,
+        "tools:",
+        tools,
+        "mcpServers: []",
+        "skills: []",
+        "x-mavis:",
+        `  displayName: ${spec.displayName}`,
+        "---",
+        "",
+        managedSystemPrompt(role, body),
+        "",
+    ].join("\n");
+}
+export function roleAllowsTool(role, toolName) {
+    return roleSetup(role).tools.includes(toolName);
+}
 export function contentDigest(content) {
     return createHash("sha256").update(normalize(content)).digest("hex");
 }
 export function byteDigest(content) {
     return createHash("sha256").update(content).digest("hex");
 }
-export function assessAgent(role, expectedBody, observed) {
+export function assessAgent(role, expectedBody, observed, observedAgentMarkdown) {
     const expected = roleSetup(role);
     if (observed === undefined)
         return { action: "create", reason: "managed agent is absent" };
@@ -77,11 +106,17 @@ export function assessAgent(role, expectedBody, observed) {
         return { action: "conflict", reason: "agent name is owned by a non-Cycle prompt" };
     }
     const wantedPrompt = managedSystemPrompt(role, expectedBody);
+    const wantedMarkdown = managedAgentMarkdown(role, expectedBody);
     if (normalize(observed.systemPrompt) === normalize(wantedPrompt) &&
-        normalize(observed.description) === normalize(expected.description)) {
-        return { action: "noop", reason: "agent already matches the managed specification" };
+        normalize(observed.description) === normalize(expected.description) &&
+        normalize(observedAgentMarkdown ?? "") === normalize(wantedMarkdown)) {
+        return { action: "noop", reason: "agent and capability profile match the managed specification" };
     }
-    return { action: "update", reason: "managed prompt or description is stale" };
+    if (observedAgentMarkdown !== undefined &&
+        !normalize(observedAgentMarkdown).includes(ownershipMarker(role))) {
+        return { action: "conflict", reason: "agent profile is not owned by this Cycle setup" };
+    }
+    return { action: "update", reason: "managed prompt, description, or capability profile is stale" };
 }
 export function assessUninstall(role, observed) {
     if (observed === undefined)
@@ -94,7 +129,7 @@ export function assessUninstall(role, observed) {
 }
 export function validateSetupReceipt(raw, pluginVersion) {
     const root = exactRecord(raw, ["agents", "pluginVersion", "profile", "schema", "status"], "receipt");
-    if (root["schema"] !== "cycle.mavis-setup-receipt.v1")
+    if (root["schema"] !== "cycle.mavis-setup-receipt.v2")
         throw new Error("invalid setup receipt schema");
     if (root["pluginVersion"] !== pluginVersion)
         throw new Error("setup receipt plugin version is stale");
@@ -110,32 +145,32 @@ export function validateSetupReceipt(raw, pluginVersion) {
         throw new Error("invalid setup receipt status");
     }
     const allNative = agents.every((entry) => entry.nativeVerified);
-    const allOffline = agents.every((entry) => entry.hookOfflineVerified);
-    const allLive = agents.every((entry) => entry.hookLiveVerified);
-    const allAbsent = agents.every((entry) => !entry.nativeVerified && !entry.hookOfflineVerified && !entry.hookLiveVerified);
+    const allOffline = agents.every((entry) => entry.configOfflineVerified);
+    const allLive = agents.every((entry) => entry.configLiveVerified);
+    const allAbsent = agents.every((entry) => !entry.nativeVerified && !entry.configOfflineVerified && !entry.configLiveVerified);
     if (status === "ready" && !(allNative && allOffline && allLive)) {
-        throw new Error("ready requires native, offline-hook, and live-hook verification for every role");
+        throw new Error("ready requires native, offline-profile, and live-profile verification for every role");
     }
     if (status === "installed_unverified" && !(allNative && allOffline && !allLive)) {
-        throw new Error("installed_unverified requires native/offline verification and an incomplete live gate");
+        throw new Error("installed_unverified requires native/profile verification and an incomplete live gate");
     }
     if (status === "uninstalled" && !allAbsent) {
-        throw new Error("uninstalled requires every managed agent and hook verification to be absent");
+        throw new Error("uninstalled requires every managed agent and profile verification to be absent");
     }
     return {
         agents,
         pluginVersion,
         profile,
-        schema: "cycle.mavis-setup-receipt.v1",
+        schema: "cycle.mavis-setup-receipt.v2",
         status: status,
     };
 }
 function receiptAgent(raw, expected) {
     const entry = exactRecord(raw, [
+        "configDigest",
+        "configLiveVerified",
+        "configOfflineVerified",
         "effectiveModel",
-        "hookDigest",
-        "hookLiveVerified",
-        "hookOfflineVerified",
         "modelSource",
         "name",
         "nativeVerified",
@@ -155,18 +190,18 @@ function receiptAgent(raw, expected) {
     if (modelSource !== "session-inherited" && modelSource !== "native-agent") {
         throw new Error(`invalid model source for ${expected.role}`);
     }
-    const hookDigest = boundedText(entry["hookDigest"], `${expected.role} hookDigest`, 64);
-    if (!/^[a-f0-9]{64}$/u.test(hookDigest))
-        throw new Error(`invalid hook digest for ${expected.role}`);
-    for (const key of ["nativeVerified", "hookOfflineVerified", "hookLiveVerified"]) {
+    const configDigest = boundedText(entry["configDigest"], `${expected.role} configDigest`, 64);
+    if (!/^[a-f0-9]{64}$/u.test(configDigest))
+        throw new Error(`invalid config digest for ${expected.role}`);
+    for (const key of ["nativeVerified", "configOfflineVerified", "configLiveVerified"]) {
         if (typeof entry[key] !== "boolean")
             throw new Error(`${expected.role} ${key} must be boolean`);
     }
     return {
+        configDigest,
+        configLiveVerified: entry["configLiveVerified"],
+        configOfflineVerified: entry["configOfflineVerified"],
         effectiveModel,
-        hookDigest,
-        hookLiveVerified: entry["hookLiveVerified"],
-        hookOfflineVerified: entry["hookOfflineVerified"],
         modelSource,
         name: expected.agentName,
         nativeVerified: entry["nativeVerified"],

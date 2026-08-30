@@ -63,7 +63,7 @@
     },
     {
       "id": "T04-FAIL-CLOSED-GUARDS",
-      "evidence": [{ "file": "tests/setup.test.ts", "test": "the executor can work but cannot delegate, govern, touch .git, or mutate Git" }]
+      "evidence": [{ "file": "tests/setup.test.ts", "test": "the executor allowlist excludes shell, delegation, governance, and future tools" }]
     },
     {
       "id": "T05-NATIVE-SESSION-BINDING",

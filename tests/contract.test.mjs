@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.7";
+const VERSION = "2.0.0-alpha.8";
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");

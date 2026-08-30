@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — T07 activation failed on MiniMax Code Desktop 3.0.68.134**
+Status: **BLOCKED — T07R remediation implemented; fresh live T07 evidence pending**
 
-Development version: `2.0.0-alpha.7`
+Development version: `2.0.0-alpha.8`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -42,8 +42,9 @@ The portable Agent Plugin contains only standard components:
 ### 2.2 Full-fidelity setup
 
 Full five-role operation is enabled only after an explicit user setup request. The Cycle Skill uses
-native Mavis operations to create or update user-owned agents and agent-scoped hooks. Setup must be
-idempotent, reversible, and independently verifiable. Installation by itself has no persistent
+native Mavis operations to create or update user-owned agents and installs canonical capability
+profiles with exact tool/MCP/Skill selectors. Setup must be idempotent, reversible, and independently
+verifiable. Installation by itself has no persistent
 side effects outside the plugin directory.
 
 The roles are:
@@ -73,7 +74,7 @@ history.
 | MCP server | full control plane | T05 core plus setup/coordinator planners and two legacy diagnostics | full control plane |
 | Persistent state machine | yes | yes at T01 | SQLite, migrations, legal transitions |
 | Five isolated roles | plugin agents | T05 durable dispatch/session contract; live pending | native Mavis agents created on explicit setup |
-| Tool boundaries | declarations plus hook | T04 offline guards; live dispatch pending | agent hooks plus post-task reconciliation |
+| Tool boundaries | declarations plus hook | T07R canonical agent allowlists; live dispatch pending | code-gated role profiles plus post-task reconciliation |
 | Evidence engine | yes | yes at T02 | discovery, execution, timeout, cap, secret scan |
 | Candidate integrity | byte snapshot | yes at T02 | exact base and approved-byte snapshot |
 | Atomic delivery | journaled | yes at T02 | fail-closed, recoverable, idempotent |
@@ -83,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | T07 blocked: no native plugin/Skill surface and no agent hook registration | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7 blocked receipt retained; alpha.8 recertification pending | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -177,12 +178,12 @@ The development line makes no 500,000-file performance claim, so that conditiona
 an exit gate. T03 instead records bounded incremental behavior and defers scale claims until a
 controlled benchmark is specified and executed.
 
-### T04 — Native Mavis agent and hook setup
+### T04/T07R — Native Mavis agents and capability profiles
 
 Create a natural-language, explicit, idempotent setup procedure. It creates uniquely named user-owned
-role agents in a disposable profile during certification, installs read-only and executor Git guards
-at agent scope, verifies every agent through the native Mavis API, records model configuration, and
-provides a reversible uninstall that preserves Cycle data unless separately requested.
+role agents in a disposable profile during certification, installs byte-exact canonical `agent.md`
+capability profiles, verifies every agent through the native Mavis API, records model configuration,
+and provides a reversible uninstall that preserves Cycle data unless separately requested.
 
 No setup action runs from plugin installation alone.
 
@@ -192,18 +193,19 @@ native `agent create/update/get/list/delete` operations whose current arguments 
 `agent help`. Per-agent model YAML is not evidence: the receipt records the inherited session model
 unless a native write/read round-trip proves another model.
 
-Each managed agent receives an agent-scoped `PreToolUse` guard. Read-only roles fail closed to an
-inspection allowlist; the executor cannot delegate, govern Cycle, address `.git`, or run a mutating
-or unknown Git operation. Registration and offline guard execution do not prove live dispatch. The
-T04 state is `installed_unverified`; only T07 real-session allow/deny probes on the exact MiniMax
-build may produce `ready`.
+MiniMax `3.0.68.134` exposes no native hook-management surface. T07R therefore uses the runtime's
+canonical custom-agent selectors: read-only roles allow only `read`, `grep`, and `glob`; executor
+adds `write` and `edit`; every role has empty MCP and Skill selectors. Shell/Git, delegation,
+`mavis`, memory, browser mutation, Cycle governance, and unknown future tools are absent from the
+child catalog. Byte verification produces `installed_unverified`; only T07 live roster and behavior
+probes on the exact MiniMax build may produce `ready`.
 
 ### T05 — Cycle coordinator Skill
 
 Replace the alpha Skill with the production coordinator. It captures the exact request, drives the
 control plane, sends role prompts to separate Mavis sessions, keeps reviewers blind to one another,
 submits only schema-valid outputs, resumes from durable state, and reports the returned state without
-inventing success. Missing agents, hooks, evidence, or browser capability stop the cycle.
+inventing success. Missing agents, capability profiles, evidence, or browser capability stop the cycle.
 
 The coordinator validates a profile-local `ready` setup receipt on every run and requires live
 native `mavis` and `task` capabilities. A read-only planner returns exactly one next action from the
@@ -226,10 +228,16 @@ and test the canonical artifact.
 
 The legacy custom tar writer is not reused.
 
+T07R adds a standard local-channel artifact: `git archive` produces
+`cycle-skill-<version>.zip` from the committed Skill tree. An independent archive reader extracts and
+hashes it. Local setup uploads this ZIP through MiniMax Personal Skills and registers the MCP from
+the extracted canonical TGZ through native `mavis mcp create`; public Git import remains the Agent
+Plugin channel after publication.
+
 ### T07 — Live MiniMax Code certification
 
 Use the authorized disposable MiniMax profile. Record sanitized receipts for fresh local install,
-Skill discovery, MCP handshake, agent creation, hook enforcement, advisory roles, quick/full cycles,
+Skill discovery, MCP handshake, agent creation, capability-profile enforcement, advisory roles, quick/full cycles,
 repair, blocked, retry, pause/resume, application restart, provider failure, concurrent projects,
 candidate delivery, uninstall, and state persistence. Run the critical deterministic battery twenty
 times without relaxing timeouts or fail-closed checks.
@@ -244,6 +252,10 @@ expose no hook or tool-policy field. The activation gate therefore failed before
 discovery, MCP activation, role setup, or downstream behavioral certification. No forbidden fallback
 was used. See `certification/t07-live-certification.json` and
 `certification/T07_LIVE_CERTIFICATION.md`.
+
+T07R remediation for `2.0.0-alpha.8` removes the unsupported hook dependency, adds supported local
+Skill upload plus native MCP registration, and moves role isolation into MiniMax's canonical agent
+selectors. The alpha.7 failure receipt remains historical evidence; it does not certify alpha.8.
 
 ### T08 — Release and distribution gate
 

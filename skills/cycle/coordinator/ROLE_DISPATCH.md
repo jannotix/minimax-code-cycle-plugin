@@ -4,6 +4,10 @@ Every Cycle role runs in its own Mavis session. Use the native `task` tool to cr
 for the exact managed agent named by `cycle_coordinator`; use native `mavis session send` only when
 the planner returns `resume_role`. If the live task schema cannot target that exact agent, stop.
 
+Before accepting output, require the task result's `resolved_agent_name` to equal the requested
+Cycle agent and require the live child roster to match its receipt-bound allowlist. A missing or
+extra tool is `capability_profile_drift`, not a prompt-correction case.
+
 The task result must expose its native `session_id`. Immediately call `cycle_workflow
 bind_role_session` before parsing or submitting the role output, so malformed output still resumes
 the accountable session. Do not submit a role result without that binding. The control plane binds
@@ -31,9 +35,9 @@ receives implementation/review output except the bounded repair reason when repl
 - Architect: submit its object with `submit_plan` and `role_session_id`.
 - Executor: accept only `{status, summary, browser}`. Call `report_task` with its session ID. If it
   returned a browser capture, submit it as executor self-report; it does not clear reviewer proof.
-- Functional reviewer: a `browser_capture` intermediate result is submitted with its native session
-  ID and one-use token. Resume the same session with the new evidence IDs, then submit its strict
-  verdict with `submit_review`.
+- Functional reviewer: `browser_capture` is a request with `snapshot: null`. The parent independently
+  drives the flow, submits the real snapshot with the reviewer's native session ID and one-use token,
+  then resumes that same session with the evidence IDs before accepting its strict verdict.
 - Security reviewer: a `proof_request` intermediate result is submitted with its native session ID
   only when proof execution is explicitly enabled. Resume the same session with the proof evidence,
   then submit its strict verdict.
