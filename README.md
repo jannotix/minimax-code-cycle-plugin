@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.6` — production release is blocked.
+> Development line: `2.0.0-alpha.7` — production release is blocked pending live T07 certification.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -39,7 +39,7 @@ The following capabilities remain release blockers and are not advertised as wor
 - live-certified five-role dispatch on the current MiniMax profile/build;
 - certified live hook enforcement in the current MiniMax profile/build;
 - automatic browser driving from independent reviewer sessions;
-- production packaging and live MiniMax Code certification.
+- live MiniMax Code certification and publication authorization.
 
 The top-level `agents/`, ignored `docs/`, and ignored Markdown scenarios are legacy design inputs.
 MiniMax Code does not load them as Agent Plugin components.
@@ -103,29 +103,29 @@ requests an open-source license, so registry acceptance is an external blocked g
 maintainers explicitly accept this license. Until then, the only planned channels are a verified
 GitHub release and a local directory install. Neither channel is authorized for publication yet.
 
-The legacy `v1.0.0`–`v1.1.2` archives are not production artifacts. The legacy packager is disabled
-and exits non-zero until the supply-chain task replaces it with a standard, independently verified
-artifact pipeline.
+The legacy `v1.0.0`–`v1.1.2` archives are not production artifacts and their custom packager remains
+disabled. T06 builds one canonical `minimax-code-cycle-plugin-<version>.tgz` with standard
+`npm pack`. A strict allowlist creates a runtime-only package; SHA-256, file manifest, and provenance
+sidecars bind the result. The gate then uses the host's independent `tar` implementation to list and
+extract it in a second clean directory, verifies every file digest, and starts the extracted MCP
+server for `initialize` and `tools/list` probes.
 
 ## Development checks
 
 ```sh
-npm test
-npm run typecheck
-npm run build
-node --check dist/server.js
-node --check scripts/verify-audit.mjs
-node --check scripts/inspect-ledger.mjs
-node --check scripts/freeze-candidate.mjs
-node --check scripts/graph-index.mjs
-node --check scripts/graph-query.mjs
-node --check scripts/package-skill.mjs
+npm ci --ignore-scripts
+npm run check
+npm audit --omit=dev
 ```
 
-Passing these checks proves the T05 coordinator contract, durable role-session separation, safe
-native setup planner, offline agent guards, candidate delivery, incremental graph, durable memory,
-Goal Mode, and measured admission foundation. It does not certify live Mavis role dispatch or
-MiniMax Code Desktop integration.
+`npm run check` runs typecheck, build, the requirement-mapped behavioral suite, SBOM and license
+inventory freshness, artifact secret scanning, canonical packaging, and independent extraction and
+MCP startup verification. Generated artifacts and sidecars are written under ignored `release/`.
+`npm run package:release` additionally refuses a dirty Git worktree.
+
+Passing these checks proves the T06 core and supply-chain contract on the executing host. It does not
+certify live Mavis role dispatch, hook enforcement, another operating system, or MiniMax Code Desktop
+integration.
 
 ## Compatibility target
 

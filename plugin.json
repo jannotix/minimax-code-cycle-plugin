@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.6",
-  "description": "Development preview for MiniMax Code with a native multi-session coordinator, evidence-gated delivery, code intelligence, memory, and goals.",
+  "version": "2.0.0-alpha.7",
+  "description": "Production-candidate Cycle control plane for MiniMax Code with native multi-session coordination and evidence-gated delivery.",
   "author": {
     "name": "Gianluca Iannotta",
     "email": "giannotta@tublat.com",

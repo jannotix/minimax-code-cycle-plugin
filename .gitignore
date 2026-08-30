@@ -42,7 +42,9 @@ skill-install/
 # Old plugin format (v1.0/v1.1) - renamed to .removed during v1.1.1 migration
 .minimax-plugin.removed/
 
-# Production tarball (attached to GitHub Releases, not committed)
+# Canonical release artifact and sidecars (attached to a release, never committed)
+release/
+minimax-code-cycle-plugin-*.tgz
 minimax-code-cycle-plugin-*.tar.gz
 
 # Documentation (see README for the public-facing manual)

@@ -2,7 +2,7 @@
 
 Status: **BLOCKED — implementation and certification in progress**
 
-Development version: `2.0.0-alpha.6`
+Development version: `2.0.0-alpha.7`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -81,8 +81,8 @@ history.
 | Code intelligence | Tree-sitter incremental | yes at T03 | Tree-sitter WASM, incremental, bounded queries |
 | Memory and goals | yes | yes at T03 | provenance, scopes, confirmation gates |
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
-| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T05 suites | requirement-mapped suite |
-| CI and packaging | yes | no | OS matrix, allowlist, SBOM, checksums, provenance |
+| Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
+| CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
 | Live MiniMax receipt | n/a | no | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime

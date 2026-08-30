@@ -114,7 +114,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.6")
+    assert.equal(identity.serverInfo.version, "2.0.0-alpha.7")
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
@@ -163,7 +163,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     }))
     const installedReceipt = {
       agents: receiptAgents,
-      pluginVersion: "2.0.0-alpha.6",
+      pluginVersion: "2.0.0-alpha.7",
       profile: "cycle-t04",
       schema: "cycle.mavis-setup-receipt.v1",
       status: "installed_unverified",

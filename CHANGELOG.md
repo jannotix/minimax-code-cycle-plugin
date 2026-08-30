@@ -2,6 +2,22 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.7] - Unreleased
+
+### Added
+
+- Added a requirement-to-test map covering every production tranche through T06.
+- Added a standard `npm pack` TGZ builder with a strict runtime allowlist, independent extraction
+  and MCP startup verification, SHA-256 checksum, artifact manifest, and provenance sidecars.
+- Added a CycloneDX runtime SBOM, machine-readable license inventory, high-confidence artifact secret
+  scan, security policy, and pinned Windows/macOS/Linux core CI.
+
+### Changed
+
+- Made the full local gate run typecheck, build, behavioral tests, traceability, supply-chain
+  inventories, secret scan, and second-directory canonical artifact verification.
+- Kept production blocked until the disposable-profile live MiniMax certification in T07.
+
 ## [2.0.0-alpha.6] - Unreleased
 
 ### Added

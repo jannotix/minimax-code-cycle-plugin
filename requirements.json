@@ -1,0 +1,101 @@
+{
+  "schema": "cycle.requirements.v1",
+  "requirements": [
+    {
+      "id": "T00-PORTABLE-CONTRACT",
+      "evidence": [{ "file": "tests/contract.test.mjs", "test": "the Agent Plugin manifests remain parseable and expose only the portable component roots" }]
+    },
+    {
+      "id": "T00-HONEST-PUBLIC-SURFACE",
+      "evidence": [{ "file": "tests/contract.test.mjs", "test": "the public contract does not advertise unsupported commands or marketplace publication" }]
+    },
+    {
+      "id": "T01-DURABLE-PROJECT-IDENTITY",
+      "evidence": [{ "file": "tests/paths-project.test.ts", "test": "project identity requires an explicit absolute directory and is stable" }]
+    },
+    {
+      "id": "T01-APPEND-ONLY-HISTORY",
+      "evidence": [{ "file": "tests/store-history.test.ts", "test": "entries form a contiguous chain, each committing to its predecessor" }]
+    },
+    {
+      "id": "T01-RESOURCE-ADMISSION",
+      "evidence": [{ "file": "tests/admission-minimax.test.ts", "test": "admission leases renew, release, expire, and fail closed on resource pressure" }]
+    },
+    {
+      "id": "T02-EXACT-CANDIDATE",
+      "evidence": [{ "file": "tests/t02-workflow.test.ts", "test": "renames, deletions, and untracked files remain exact through freeze and delivery" }]
+    },
+    {
+      "id": "T02-EVIDENCE-GATED-DELIVERY",
+      "evidence": [{ "file": "tests/t02-workflow.test.ts", "test": "a full route requires plan coverage, both independent reviews, evidence, and arbitration" }]
+    },
+    {
+      "id": "T02-FILESYSTEM-BOUNDARY",
+      "evidence": [{ "file": "tests/filesystem-boundary.test.ts", "test": "candidate reads and delivery writes refuse traversal, symlinks, and junctions" }]
+    },
+    {
+      "id": "T02-SECURITY-PROOF",
+      "evidence": [{ "file": "tests/evidence-proof.test.ts", "test": "a proof cannot touch the repository it is proving against" }]
+    },
+    {
+      "id": "T03-BUNDLED-OFFLINE-PARSER",
+      "evidence": [{ "file": "tests/vendor.test.ts", "test": "the parser uses only bundled files and contains no dynamic download path" }]
+    },
+    {
+      "id": "T03-INCREMENTAL-GRAPH",
+      "evidence": [{ "file": "tests/intel-index.test.ts", "test": "a second pass reparses nothing when no bytes changed" }]
+    },
+    {
+      "id": "T03-MEMORY-PROVENANCE",
+      "evidence": [{ "file": "tests/memory-service.test.ts", "test": "a delivery is remembered with the gates that justify it" }]
+    },
+    {
+      "id": "T03-GOAL-APPROVAL",
+      "evidence": [{ "file": "tests/goals.test.ts", "test": "completion takes a request and then an explicit approval" }]
+    },
+    {
+      "id": "T04-NATIVE-AGENT-SETUP",
+      "evidence": [{ "file": "tests/setup.test.ts", "test": "the setup manifest defines five unique, owned, deterministic agents" }]
+    },
+    {
+      "id": "T04-FOREIGN-COLLISION",
+      "evidence": [{ "file": "tests/setup.test.ts", "test": "setup assessment is create, update, noop, or conflict without taking over a user agent" }]
+    },
+    {
+      "id": "T04-FAIL-CLOSED-GUARDS",
+      "evidence": [{ "file": "tests/setup.test.ts", "test": "the executor can work but cannot delegate, govern, touch .git, or mutate Git" }]
+    },
+    {
+      "id": "T05-NATIVE-SESSION-BINDING",
+      "evidence": [{ "file": "tests/role-sessions.test.ts", "test": "one native session can serve only one workflow role" }]
+    },
+    {
+      "id": "T05-REVIEWER-BLINDNESS",
+      "evidence": [{ "file": "tests/coordinator.test.ts", "test": "reviewers start blind and a missing verdict resumes only its bound session" }]
+    },
+    {
+      "id": "T05-FAIL-CLOSED-COORDINATOR",
+      "evidence": [{ "file": "tests/coordinator.test.ts", "test": "coordinator preflight fails closed on setup, native tools, and required browser" }]
+    },
+    {
+      "id": "T06-PACKAGE-ALLOWLIST",
+      "evidence": [{ "file": "tests/supply-chain.test.ts", "test": "the package allowlist contains every runtime root and refuses development material" }]
+    },
+    {
+      "id": "T06-SBOM-LICENSES-NOTICES",
+      "evidence": [{ "file": "tests/supply-chain.test.ts", "test": "SBOM, license inventory, and notices cover every bundled byte" }]
+    },
+    {
+      "id": "T06-SECRET-SCAN",
+      "evidence": [{ "file": "tests/supply-chain.test.ts", "test": "the release secret scan detects high-confidence credential shapes" }]
+    },
+    {
+      "id": "T06-INDEPENDENT-ARTIFACT-VERIFICATION",
+      "evidence": [{ "file": "tests/supply-chain.test.ts", "test": "the supply-chain verifier uses npm pack and an external tar reader" }]
+    },
+    {
+      "id": "T06-CROSS-PLATFORM-CI",
+      "evidence": [{ "file": "tests/supply-chain.test.ts", "test": "CI runs the core gate on Windows, macOS, and Linux at the Node floor" }]
+    }
+  ]
+}

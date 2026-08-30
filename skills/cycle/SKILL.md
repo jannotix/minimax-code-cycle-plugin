@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with Agent Plugins 1.0, native mavis/task t
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.6` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.7` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
