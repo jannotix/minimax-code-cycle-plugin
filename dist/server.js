@@ -279,7 +279,7 @@ function setupOperation(args) {
                 agentApi: "native-mavis-tool-only",
                 capabilityProfile: "canonical-agent-markdown",
                 liveCapabilityProof: "required-before-production",
-                localSkillInstall: "upload-cycle-skill-zip",
+                localSkillInstall: "not-certified-on-minimax-3.0.68.134",
                 modelStrategy: "session-inherited-unless-native-round-trip-proves-an-agent-model",
             },
             namespace: SETUP_NAMESPACE,

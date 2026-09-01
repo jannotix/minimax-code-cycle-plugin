@@ -92,22 +92,40 @@ async function rpc(server, request) {
     const child = spawn(process.execPath, [server], { cwd: join(server, "..", ".."), stdio: ["pipe", "pipe", "pipe"] })
     let stdout = ""
     let stderr = ""
+    let response
+    let responseError
+    let timedOut = false
     const timer = setTimeout(() => {
+      timedOut = true
       child.kill()
-      reject(new Error(`extracted server timed out: ${stderr}`))
     }, 15_000)
     child.stdout.setEncoding("utf8")
     child.stderr.setEncoding("utf8")
     child.stdout.on("data", (chunk) => {
       stdout += chunk
       const line = stdout.split(/\r?\n/u).find((candidate) => candidate.trim() !== "")
-      if (line === undefined) return
-      clearTimeout(timer)
+      if (line === undefined || response !== undefined || responseError !== undefined) return
+      try {
+        response = JSON.parse(line)
+      } catch (error) {
+        responseError = error instanceof Error ? error : new Error(String(error))
+      }
       child.kill()
-      resolvePromise(JSON.parse(line))
     })
     child.stderr.on("data", (chunk) => { stderr += chunk })
     child.on("error", (error) => { clearTimeout(timer); reject(error) })
+    child.on("close", () => {
+      clearTimeout(timer)
+      if (timedOut) {
+        reject(new Error(`extracted server timed out: ${stderr}`))
+      } else if (responseError !== undefined) {
+        reject(responseError)
+      } else if (response !== undefined) {
+        resolvePromise(response)
+      } else {
+        reject(new Error(`extracted server exited before a response: ${stderr}`))
+      }
+    })
     child.stdin.end(`${JSON.stringify(request)}\n`)
   })
 }

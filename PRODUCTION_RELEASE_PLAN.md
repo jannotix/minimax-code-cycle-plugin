@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — T07R remediation implemented; fresh live T07 evidence pending**
+Status: **BLOCKED — alpha.8 live T07 evidence recorded; alpha.9 remediation requires a fresh live T07**
 
-Development version: `2.0.0-alpha.8`
+Development version: `2.0.0-alpha.9`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7 blocked receipt retained; alpha.8 recertification pending | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7 receipt retained; alpha.8 MCP live handshake passed but distribution/setup gates blocked; alpha.9 recertification pending | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -98,8 +98,9 @@ observation, or an exact artifact receipt is required.
 - Node.js: 22 is the runtime floor; release testing includes the floor and the current development
   version.
 
-The owner keeps FSL-1.1-MIT unchanged. Direct GitHub/local distribution may proceed only after all
-technical gates and owner publication approval. Official MiniMax registry distribution stays
+The owner keeps FSL-1.1-MIT unchanged. Direct GitHub distribution may proceed only after all
+technical gates and owner publication approval. A local distribution channel remains blocked until
+an exact supported-UI install path is live-certified. Official MiniMax registry distribution stays
 blocked unless its maintainers explicitly accept the license. A mechanical validator pass cannot
 override a human licensing decision.
 
@@ -228,11 +229,11 @@ and test the canonical artifact.
 
 The legacy custom tar writer is not reused.
 
-T07R adds a standard local-channel artifact: `git archive` produces
-`cycle-skill-<version>.zip` from the committed Skill tree. An independent archive reader extracts and
-hashes it. Local setup uploads this ZIP through MiniMax Personal Skills and registers the MCP from
-the extracted canonical TGZ through native `mavis mcp create`; public Git import remains the Agent
-Plugin channel after publication.
+T07R adds a deterministic local-channel candidate: `git archive` produces
+`cycle-skill-<version>.zip` from the committed Skill tree and an independent archive reader extracts
+and hashes it. Live Desktop `3.0.68.134` exposes only a manual Personal Skill editor, not a ZIP
+upload control, so this archive is not a certified installation channel. Public Git import remains
+the Agent Plugin candidate after publication and requires its own exact live-install proof.
 
 ### T07 — Live MiniMax Code certification
 
@@ -253,9 +254,11 @@ discovery, MCP activation, role setup, or downstream behavioral certification. N
 was used. See `certification/t07-live-certification.json` and
 `certification/T07_LIVE_CERTIFICATION.md`.
 
-T07R remediation for `2.0.0-alpha.8` removes the unsupported hook dependency, adds supported local
-Skill upload plus native MCP registration, and moves role isolation into MiniMax's canonical agent
-selectors. The alpha.7 failure receipt remains historical evidence; it does not certify alpha.8.
+The alpha.8 live probe proved a MiniMax-owned MCP handshake after a full application restart, but it
+also proved that local ZIP Skill upload is absent from the observed UI and that complete role setup
+was not reconciled. Alpha.9 corrects the setup order: write and byte-verify canonical `agent.md`
+before native `agent update` writes the matching `system_prompt`. The alpha.7 and alpha.8 receipts
+remain historical evidence and do not certify alpha.9.
 
 ### T08 — Release and distribution gate
 

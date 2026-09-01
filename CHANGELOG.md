@@ -2,6 +2,17 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.9] - Unreleased
+
+### Changed
+
+- Corrected the native setup order from live MiniMax evidence: write and byte-verify canonical
+  `agent.md` before updating the matching native `system_prompt`, because the local runtime rejects
+  a prompt/profile mismatch.
+- Corrected distribution documentation: MiniMax Code Desktop `3.0.68.134` exposes a manual Personal
+  Skill editor, not a local Skill ZIP upload control. The deterministic ZIP remains an integrity
+  artifact, not a certified installation channel.
+
 ## [2.0.0-alpha.8] - Unreleased
 
 ### Changed

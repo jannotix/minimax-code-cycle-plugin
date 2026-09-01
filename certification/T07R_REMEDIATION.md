@@ -2,6 +2,11 @@
 
 Status: **IMPLEMENTED — LIVE RECERTIFICATION REQUIRED**
 
+> Historical qualification: alpha.8 live UI evidence subsequently showed that **Input skill** opens
+> a manual editor on Desktop `3.0.68.134` and exposes no local ZIP upload control. The local-upload
+> hypothesis below is superseded and must not be used as distribution evidence. See the alpha.8 live
+> receipt for the exact blocked verdict.
+
 Baseline source: `ea8a94851ee3c6d5df559155be6f6381fb974fcb`
 
 Target line: `2.0.0-alpha.8`
@@ -33,12 +38,14 @@ The executor no longer receives shell/Git or browser tools. Parent-owned evidenc
 tests and proofs. Parent-mediated browser capture is passed to the independent functional reviewer.
 Fresh T07 child-roster and behavior probes remain mandatory before `ready`.
 
-## Supported local installation
+## Superseded local-installation hypothesis
 
-The installed UI supports local Skill upload from `.zip`, `.skill`, or `.md`, while full Agent
-Plugin import requires a public Git repository. T07R therefore adds a standard `git archive` Skill
-ZIP for the local pre-publication channel. Native `mavis mcp create` registers `cycle-tools` against
-the extracted canonical TGZ. Post-publication Git import remains the complete Agent Plugin path.
+Static renderer inspection suggested local Skill upload from `.zip`, `.skill`, or `.md`, while full
+Agent Plugin import requires a public Git repository. The direct alpha.8 UI probe contradicted that
+inference: **Input skill** opens a manual editor and has no ZIP upload control. The `git archive`
+Skill ZIP remains a deterministic integrity artifact only. Native `mavis mcp create` can register
+`cycle-tools` against an extracted canonical TGZ for a disposable MCP test, but that is not Skill
+installation or distribution proof.
 
 ## Installed-source evidence
 

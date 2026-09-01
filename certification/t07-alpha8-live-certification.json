@@ -1,0 +1,96 @@
+{
+  "schema": "cycle.t07.live-certification.v2",
+  "recordedAt": "2026-09-02T00:00:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "ccb30de574830606618810440905825af1d939b8",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.8.tgz",
+    "artifactVersion": "2.0.0-alpha.8",
+    "artifactBytes": 1893078,
+    "artifactSha256": "fc995e6d629c74c538388f546c08f902d5041a8111026f8bf202c9c6f7551775",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.8.zip",
+    "skillArtifactBytes": 41922,
+    "skillArtifactSha256": "bf52f5e94c6a9d8c896e15810ea219ed3d1f15d20929abd8daf5f3ac36b9b366"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "profile": "disposable-runtime",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M3"
+  },
+  "profileIsolation": {
+    "status": "passed-for-mcp-doctor",
+    "testOnlyCycleDataDirectory": true,
+    "testDatabaseInsideDisposableRuntime": true,
+    "defaultUserCycleDataDirectoryAbsentAfterDoctor": true,
+    "realProfileMutationClaim": "not-certified-after-incomplete-agent-setup"
+  },
+  "nativeSurface": {
+    "validHelpGroups": ["agent", "cron", "session", "mcp"],
+    "mcpCommands": ["list", "get", "create", "update", "delete"],
+    "agentUpdateWritableFields": ["new_name", "system_prompt", "persona", "description", "avatar"],
+    "mcpCatalogRequiresApplicationRestart": true
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed-for-mcp-doctor" },
+    { "id": "local-skill-ui", "status": "failed", "finding": "T07-A8-B01" },
+    { "id": "public-git-import", "status": "not_run", "reason": "publication/import was outside authority" },
+    { "id": "mcp-registration", "status": "passed" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "mcp-doctor", "status": "passed" },
+    { "id": "agent-creation", "status": "passed" },
+    { "id": "canonical-agent-profiles", "status": "partial", "passedRoles": 4, "failedRoles": ["security_reviewer"], "finding": "T07-A8-B02" },
+    { "id": "child-roster-allow-deny", "status": "not_run", "blockedBy": "T07-A8-B02" },
+    { "id": "quick-cycle", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "full-cycle", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "repair-blocked-retry-pause-resume", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "application-restart", "status": "passed-for-mcp-catalog" },
+    { "id": "provider-failure", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "concurrent-projects", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "candidate-delivery", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "state-persistence", "status": "not_run", "blockedBy": "T07-A8-B01" },
+    { "id": "uninstall", "status": "not_run", "blockedBy": "T07-A8-B02" },
+    { "id": "critical-battery-20", "status": "not_run", "blockedBy": "T07-A8-B01" }
+  ],
+  "findings": [
+    {
+      "id": "T07-A8-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "fresh local Skill ZIP installation through a supported MiniMax UI surface",
+      "result": "failed",
+      "consequence": "the deterministic Skill ZIP cannot be called a distribution channel on the observed Desktop build"
+    },
+    {
+      "id": "T07-A8-B02",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "five-agent native/profile round-trip to noop",
+      "result": "failed",
+      "consequence": "security reviewer remained stale and full profile readiness could not be claimed"
+    },
+    {
+      "id": "T07-A8-B03",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "full child-role and workflow certification matrix",
+      "result": "not_run",
+      "consequence": "no production behavior or 20-run reliability claim is justified"
+    }
+  ],
+  "forbiddenFallbacksUsed": [],
+  "forbiddenFallbackAttempts": [
+    { "tool": "bash", "result": "rejected", "changedState": false }
+  ],
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}

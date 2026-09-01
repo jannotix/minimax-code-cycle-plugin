@@ -7,10 +7,11 @@ MiniMax Code `3.0.68.134` exposes native `agent`, `session`, and `mcp` managemen
 `plugin`, `skill`, or hook-management group. Cycle therefore uses the supported surfaces that do
 exist:
 
-- local distribution: the user uploads `cycle-skill-<version>.zip` through **Plugins → Personal →
-  Create → Input skill → Upload a skill**;
-- Agent Plugin distribution: MiniMax imports the public Git repository and discovers the Skill and
-  MCP manifest;
+- the deterministic `cycle-skill-<version>.zip` archive is an integrity artifact, not a currently
+  certified MiniMax installation channel: Desktop `3.0.68.134` opens a manual editor from
+  **Plugins → Personal → Create → Input skill** and exposes no ZIP upload control;
+- Agent Plugin distribution remains a public-Git-import candidate that requires its own exact
+  live-install certification;
 - local MCP setup: the coordinator registers `cycle-tools` through native `mavis mcp create` from
   the extracted canonical artifact;
 - five custom agents: native `mavis agent` owns their identity and canonical `agent.md` files own
@@ -48,9 +49,10 @@ session transcripts in a receipt.
 
 ## 2. Register the local MCP when needed
 
-Agent Plugin import may already have registered `cycle-tools`. For a local Skill upload, require the
-user to provide the extracted canonical plugin root. Resolve `dist/server.js` below that root and
-confirm it is a regular file inside the root.
+Agent Plugin import may already have registered `cycle-tools`. No local ZIP upload flow is certified
+on the observed Desktop build. A disposable live test may use a user-supplied extracted canonical
+plugin root, but that proves only MCP registration, never Skill installation or distribution.
+Resolve `dist/server.js` below that root and confirm it is a regular file inside the root.
 
 Use native `mavis mcp create` with:
 
@@ -67,10 +69,13 @@ Cycle-owned stale row; never take over a foreign same-name MCP server.
 
 ## 3. Create agents and install capability profiles
 
-Use only arguments returned by current `agent help`. Native create/update establishes the exact
-name, description, and managed system prompt returned by `cycle_setup spec`. After the native agent
-exists, write the complete returned `profile` bytes to its canonical `agent.md`; do not merge or
-invent fields. Re-read it and require its SHA-256 to match `profileDigest`.
+Use only arguments returned by current `agent help`. Native create establishes the exact name and
+description. After the native agent exists, write the complete returned `profile` bytes to its
+canonical `agent.md`; do not merge or invent fields. Re-read it and require its SHA-256 to match
+`profileDigest` **before** native `agent update` sets the exact managed `system_prompt` returned by
+`cycle_setup spec`. The observed local Mavis runtime rejects a prompt update while `agent.md` and
+the requested system prompt disagree. Do not reverse this order, hand-edit either returned value, or
+use a shell to derive a digest.
 
 The canonical selectors are the security boundary enforced by MiniMax before every child Turn:
 
@@ -88,7 +93,8 @@ engine; role sessions only inspect or propose scoped file edits. Post-task Git r
 rejects executor writes outside the current/completed task scopes.
 
 After every mutation, call `agent get`, re-read `agent.md`, and call `cycle_setup assess`. The result
-must be `noop`. At the end `agent list` contains each expected name exactly once.
+must be `noop`; an `update` result after the profile write means the native prompt round-trip is not
+yet complete. At the end `agent list` contains each expected name exactly once.
 
 Per-agent model YAML is not evidence. Record the inherited session model unless a native
 write/read round-trip proves another model. See https://github.com/MiniMax-AI/minimax-code/issues/124.

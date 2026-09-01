@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.8` — production release is blocked pending a fresh live T07 certification.
+> Development line: `2.0.0-alpha.9` — production release is blocked pending a fresh live T07 certification.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -12,8 +12,10 @@ not be presented as a complete five-role autonomous cycle.
 ## Current, verified surface
 
 The portable package declares one Skill at `skills/cycle/SKILL.md` and one dependency-free stdio MCP
-server in `mcp.json`. Local installation uses the separately verified Skill ZIP plus native MCP
-registration; fresh Desktop discovery remains a T07 gate. The server exposes twelve local tools:
+server in `mcp.json`. The separately verified Skill ZIP is not a certified local installation path:
+Desktop `3.0.68.134` exposes a manual Personal Skill editor rather than ZIP upload. A disposable
+MCP registration can be live-tested independently, but it does not prove Skill discovery. The server
+exposes twelve local tools:
 
 | Tool | Current guarantee |
 |---|---|
@@ -103,8 +105,9 @@ receipts, rollback rules, and publication boundary.
 
 The license remains FSL-1.1-MIT by owner decision. The official MiniMax community registry currently
 requests an open-source license, so registry acceptance is an external blocked gate unless its
-maintainers explicitly accept this license. Until then, the only planned channels are a verified
-GitHub release and a local directory install. Neither channel is authorized for publication yet.
+maintainers explicitly accept this license. Public Git import is the only candidate Agent Plugin
+channel; a local directory or ZIP channel needs separate supported-UI evidence. No channel is
+authorized for publication yet.
 
 The legacy `v1.0.0`–`v1.1.2` archives are not production artifacts and their custom packager remains
 disabled. T06 builds one canonical `minimax-code-cycle-plugin-<version>.tgz` with standard
@@ -113,10 +116,11 @@ sidecars bind the result. The gate then uses the host's independent `tar` implem
 extract it in a second clean directory, verifies every file digest, and starts the extracted MCP
 server for `initialize` and `tools/list` probes.
 
-For the pre-publication local channel, `git archive` builds `cycle-skill-<version>.zip` from the same
-committed Skill tree. The user uploads that ZIP through MiniMax Personal Skills, then explicit setup
-registers `cycle-tools` with native `mavis mcp create` against the extracted canonical TGZ. Public
-Git import remains the post-publication Agent Plugin installation path.
+`git archive` builds `cycle-skill-<version>.zip` from the same committed Skill tree for deterministic
+integrity checking. It must not be advertised as a current local installation channel: live Desktop
+`3.0.68.134` offers a manual Personal Skill editor and no ZIP upload control. Public Git import is
+the only candidate Agent Plugin channel, remains unauthorized for publication, and still requires an
+exact live-import certification.
 
 ## Development checks
 

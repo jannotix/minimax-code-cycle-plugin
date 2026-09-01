@@ -92,6 +92,8 @@ test("the supply-chain verifier uses npm pack and an external tar reader", async
   assert.match(verifier, /provenance does not bind the canonical artifact/u)
   assert.match(verifier, /method: "initialize"/u)
   assert.match(verifier, /method: "tools\/list"/u)
+  assert.match(verifier, /child\.on\("close"/u)
+  assert.match(verifier, /await rm\(clean, \{ force: true, recursive: true \}\)/u)
   assert.match(skillPackager, /"archive", "--format=zip"/u)
   assert.match(skillPackager, /HEAD:skills\/cycle/u)
   assert.match(skillPackager, /unzipSync\(bytes\)/u)
