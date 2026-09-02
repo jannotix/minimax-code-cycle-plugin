@@ -1,6 +1,6 @@
 # Protocol
 
-> Legacy design input. This document is not the active runtime contract for `2.0.0-alpha.10`.
+> Legacy design input. This document is not the active runtime contract for `2.0.0-alpha.11`.
 > See `../../PRODUCTION_RELEASE_PLAN.md`. No workflow state described below may be
 > reported as implemented until its production task and exact-revision evidence are complete.
 

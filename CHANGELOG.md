@@ -2,6 +2,23 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.11] - Unreleased
+
+### Fixed
+
+- Added a mandatory, user-confirmed active `profile_root` and a deterministic per-role
+  `profileRelativePath` to the setup contract. The coordinator can now write only the canonical
+  target without Terminal or shell discovery, then require native `agent get` and
+  `cycle_setup assess: noop`.
+- Retried SQLite's exclusive WAL/startup-migration transition only for bounded lock errors so
+  concurrent first opens converge rather than intermittently failing the production gate.
+
+### Known limitations
+
+- A fresh alpha.11 T07 run must prove all five native roles and live capability rosters. The
+  observed Desktop Personal Skills editor still has no local ZIP upload control, so no local Skill
+  archive distribution channel is certified.
+
 ## [2.0.0-alpha.10] - Unreleased
 
 ### Fixed

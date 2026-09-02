@@ -116,6 +116,10 @@ export function roleSetup(role: string): RoleSetup {
   return found
 }
 
+export function profileRelativePath(role: CycleRole): string {
+  return `agents/${roleSetup(role).agentName}/agent.md`
+}
+
 export function ownershipMarker(role: CycleRole): string {
   return `<!-- cycle-managed:${SETUP_OWNER};schema=${SETUP_SCHEMA};role=${role} -->`
 }

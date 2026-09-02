@@ -128,7 +128,7 @@
   "package": {
     "license": "FSL-1.1-MIT",
     "name": "minimax-code-cycle-plugin",
-    "version": "2.0.0-alpha.10"
+    "version": "2.0.0-alpha.11"
   },
   "runtimeNpmDependencies": [],
   "schema": "cycle.license-inventory.v1"

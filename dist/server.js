@@ -15,7 +15,7 @@ import { chainOf, explain, forget, recall } from "./memory.js";
 import { serve } from "./mcp.js";
 import { pressure } from "./resources.js";
 import { Runtime } from "./runtime.js";
-import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
+import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, profileRelativePath, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
 import { frozenFiles } from "./store/workflows.js";
@@ -41,6 +41,7 @@ const tools = [
             "agent for create/update/noop/conflict, authorize deletion only for a Cycle-owned agent, or " +
             "validate a sanitized readiness receipt. " +
             "For Custom Agents, canonical agent.md is the system-prompt authority; native system_prompt updates are unsupported. " +
+            "The setup caller must supply a user-confirmed active profile root and use each returned profileRelativePath without shell discovery. " +
             "This tool never mutates the MiniMax profile; the Cycle Skill uses the native mavis tool.",
         inputSchema: objectSchema({
             operation: enumSchema(["spec", "assess", "uninstall", "validate_receipt"]),
@@ -264,6 +265,7 @@ function setupOperation(args) {
                     promptDigest: contentDigest(systemPrompt),
                     profile: managedAgentMarkdown(entry.role, body),
                     profileDigest: contentDigest(managedAgentMarkdown(entry.role, body)),
+                    profileRelativePath: profileRelativePath(entry.role),
                     role: entry.role,
                     systemPrompt,
                     systemPromptSource: "canonical-agent.md",
@@ -284,6 +286,7 @@ function setupOperation(args) {
                 localSkillInstall: "not-certified-on-minimax-3.0.68.134",
                 modelStrategy: "session-inherited-unless-native-round-trip-proves-an-agent-model",
                 promptAuthority: "canonical-agent-markdown-only",
+                profileRootPolicy: "explicit-user-confirmed-active-minimax-data-directory",
             },
             namespace: SETUP_NAMESPACE,
             owner: SETUP_OWNER,
@@ -313,6 +316,7 @@ function setupOperation(args) {
                 name: expected.agentName,
                 promptDigest: contentDigest(managedSystemPrompt(role, setupPrompt(role))),
                 profileDigest: contentDigest(managedAgentMarkdown(role, setupPrompt(role))),
+                profileRelativePath: profileRelativePath(role),
                 tools: expected.tools,
             },
             role,

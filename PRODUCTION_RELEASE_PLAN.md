@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.10 live T07 evidence recorded; alpha.11 needs an explicit shell-free profile-root handoff and a fresh live T07**
+Status: **BLOCKED — alpha.11 explicit profile-root contract requires a fresh live T07**
 
-Development version: `2.0.0-alpha.10`
+Development version: `2.0.0-alpha.11`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.10 receipts retained; alpha.10 MCP and explicit-path architect diagnostic passed, but first guided setup used a forbidden terminal fallback | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.10 receipts retained; alpha.11 needs fresh five-role and behavioral evidence | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -264,8 +264,9 @@ though `cycle_setup assess` is already `noop`. Alpha.10 removes that impossible 
 explicit-path diagnostic wrote the canonical file with normal MiniMax file tools, native `agent get`
 reported the resulting prompt, and `cycle_setup assess` returned `noop` without `agent update`.
 However, its first guided setup did not know the profile root and used a forbidden Terminal directory
-listing. Alpha.11 must make that root handoff explicit before a fresh T07. The alpha.7 through
-alpha.10 receipts remain historical evidence and do not certify the next candidate.
+listing. Alpha.11 makes the active root explicit and supplies a per-role relative target before
+native creation. A fresh T07 must prove this candidate. The alpha.7 through alpha.10 receipts remain
+historical evidence and do not certify the next candidate.
 
 ### T08 — Release and distribution gate
 

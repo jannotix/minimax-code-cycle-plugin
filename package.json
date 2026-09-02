@@ -1,6 +1,6 @@
 {
   "name": "minimax-code-cycle-plugin",
-  "version": "2.0.0-alpha.10",
+  "version": "2.0.0-alpha.11",
   "private": true,
   "description": "Production-candidate Cycle control plane for MiniMax Code with native multi-session coordination and evidence-gated delivery.",
   "type": "module",

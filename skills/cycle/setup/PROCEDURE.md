@@ -32,17 +32,24 @@ or prompt-only tool restriction.
 
 ## 1. Preflight — no writes
 
-1. Show the sanitized current profile name and confirm the resolved profile is the intended one.
-2. Call `cycle_setup` with `operation: "spec"`. It returns the five exact agents, their complete
-   canonical `agent.md` bytes and digests, and the `cycle-tools` MCP specification.
-3. Call native `mavis` with `agent help`, `agent list`, `mcp help`, and `mcp list`.
-4. The live contracts must expose deterministic agent create/get/list/delete and MCP
+1. The setup request must include an explicit, absolute `profile_root`: the user-confirmed active
+   MiniMax data directory for this profile. It is neither the plugin root, a task workspace, nor
+   `CYCLE_DATA_DIR`. A disposable certification run supplies its disposable data root. Do not guess
+   or discover this directory through Terminal, a shell, directory traversal, or a profile-store
+   workaround. Keep the absolute path out of receipts.
+2. Show the sanitized current profile name and confirm it is the profile represented by
+   `profile_root`. A missing, relative, or unconfirmed root stops setup before the first mutation.
+3. Call `cycle_setup` with `operation: "spec"`. It returns the five exact agents, their complete
+   canonical `agent.md` bytes and digests, each `profileRelativePath`, and the `cycle-tools` MCP
+   specification.
+4. Call native `mavis` with `agent help`, `agent list`, `mcp help`, and `mcp list`.
+5. The live contracts must expose deterministic agent create/get/list/delete and MCP
    list/get/create/update/delete. A native Custom Agent `system_prompt` update is not a setup
    capability: its canonical `agent.md` is the prompt authority. Missing required operations stop
    setup.
-5. For each expected agent, call `agent get`. Read its canonical `agent.md` when present and pass
+6. For each expected agent, call `agent get`. Read its canonical `agent.md` when present and pass
    native fields plus `observed_agent_markdown` to `cycle_setup assess`.
-6. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
+7. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
    description, transport, command and arguments match this version's specification.
 
 If any agent or MCP collision is foreign, stop before the first mutation. Keep bounded preflight
@@ -72,14 +79,21 @@ Cycle-owned stale row; never take over a foreign same-name MCP server.
 ## 3. Create agents and install capability profiles
 
 Use only arguments returned by current `agent help`. Native create establishes the exact name and
-description. After the native agent exists, write the complete returned `profile` bytes to its
-canonical `agent.md`; do not merge or invent fields. Canonical `agent.md` is the only authority for
-the Custom Agent system prompt and capability selectors. The observed Mavis runtime derives the
-native `agent get` system prompt from that file and rejects `mavis agent update` for
-`system_prompt`. Never call native `agent update` with `system_prompt`, including after a profile
-write. Re-read the file and require its SHA-256 to match `profileDigest`, then call `agent get` and
-require its returned system prompt to equal the `systemPrompt` from `cycle_setup spec`. Do not
-hand-edit either returned value or use a shell to derive a digest.
+description. Before create, form the only permitted profile target by joining the confirmed
+`profile_root` with that role's returned `profileRelativePath`. It must resolve to exactly
+`agents/<managed-name>/agent.md` below `profile_root`; otherwise stop. Native create owns that
+directory. Do not use Terminal, a shell, or directory discovery to find the target.
+
+After the native agent exists, use the normal MiniMax `write` tool to replace only that exact target
+with the complete returned `profile` bytes; do not merge or invent fields. This narrowly scoped
+canonical-file write is the supported capability-profile installation step, not a profile-store
+workaround. Canonical `agent.md` is the only authority for the Custom Agent system prompt and
+capability selectors. The observed Mavis runtime derives the native `agent get` system prompt from
+that file and rejects `mavis agent update` for `system_prompt`. Never call native `agent update`
+with `system_prompt`, including after a profile write. Re-read the file and require its SHA-256 to
+match `profileDigest`, then call `agent get` and require its returned system prompt to equal the
+`systemPrompt` from `cycle_setup spec`. Do not hand-edit either returned value or use a shell to
+derive a digest.
 
 The canonical selectors are the security boundary enforced by MiniMax before every child Turn:
 

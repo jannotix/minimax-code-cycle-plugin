@@ -10,6 +10,7 @@ import {
   managedAgentMarkdown,
   managedSystemPrompt,
   ownershipMarker,
+  profileRelativePath,
   ROLE_SETUP,
   roleSetup,
   roleAllowsTool,
@@ -38,6 +39,10 @@ test("the setup manifest defines five unique, owned, deterministic agents", () =
   assert.deepEqual(manifest.agents.map((entry) => entry.role), ROLE_SETUP.map((entry) => entry.role))
   assert.deepEqual(manifest.agents.map((entry) => entry.name), ROLE_SETUP.map((entry) => entry.agentName))
   assert.deepEqual(manifest.agents.map((entry) => entry.access), ROLE_SETUP.map((entry) => entry.access))
+  assert.deepEqual(
+    ROLE_SETUP.map((entry) => profileRelativePath(entry.role)),
+    ROLE_SETUP.map((entry) => `agents/${entry.agentName}/agent.md`),
+  )
   for (const entry of manifest.agents) {
     assert.match(entry.name, /^cycle-v2-[a-z-]+$/u)
     assert.ok(["executor", "read_only"].includes(entry.access))
@@ -162,12 +167,18 @@ test("the natural-language setup is explicit, native-only, reversible, and hones
   assert.match(procedure, /manual editor/iu)
   assert.doesNotMatch(procedure, /Upload a skill/iu)
   assert.match(procedure, /mcp create/iu)
+  assert.match(procedure, /setup request must include an explicit,\s+absolute `profile_root`/iu)
+  assert.match(procedure, /profileRelativePath/iu)
+  assert.match(procedure, /Do not use Terminal, a shell, or directory discovery/iu)
   assert.match(procedure, /canonical `agent\.md` is the only authority/iu)
-  assert.match(procedure, /Never call native `agent update` with `system_prompt`/iu)
-  const profileWrite = procedure.indexOf("write the complete returned `profile` bytes")
+  assert.match(procedure, /Never call native `agent update`\s+with `system_prompt`/iu)
+  const profileTarget = procedure.indexOf("only permitted profile target")
+  const profileWrite = procedure.indexOf("with the complete returned `profile` bytes")
   const nativeReadBack = procedure.indexOf("then call `agent get` and")
   const noopAssessment = procedure.indexOf("The result must be `noop`")
+  assert.ok(profileTarget >= 0)
   assert.ok(profileWrite >= 0)
+  assert.ok(profileWrite > profileTarget, "the canonical target must be formed before it is written")
   assert.ok(nativeReadBack > profileWrite, "canonical agent.md must be read back through native agent get")
   assert.ok(noopAssessment > nativeReadBack, "read-back must be assessed before setup can continue")
   assert.doesNotMatch(procedure, /native `agent update` sets the exact managed `system_prompt`/iu)
@@ -192,25 +203,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.10",
+    pluginVersion: "2.0.0-alpha.11",
     profile: "cycle-t04",
     schema: "cycle.mavis-setup-receipt.v2",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.10").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.11").status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.10"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.11"),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.10"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.11"),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.10"),
+    }, "2.0.0-alpha.11"),
     /role\/name mismatch/u,
   )
 })

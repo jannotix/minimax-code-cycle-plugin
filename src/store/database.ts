@@ -47,8 +47,8 @@ export class Database {
     }
 
     database.exec("pragma foreign_keys = ON")
-    if (options.path !== ":memory:") database.exec("pragma journal_mode = WAL")
-    const migrated = migrate(database, existing)
+    if (options.path !== ":memory:") retryBusyStartup(() => database.exec("pragma journal_mode = WAL"))
+    const migrated = retryBusyStartup(() => migrate(database, existing))
 
     // A newer process may have migrated the shared store while this one waited for the write lock.
     // Re-check after migration and fail safe rather than claiming this build owns the newer schema.
@@ -156,15 +156,41 @@ function readSchemaVersion(database: DatabaseSync): number {
   return typeof row?.user_version === "number" ? row.user_version : 0
 }
 
+const STARTUP_LOCK_DELAYS_MS = [5, 10, 20, 40, 80, 160, 320, 640, 1_280, 2_560, 5_120, 10_240] as const
+const STARTUP_WAIT = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT))
+
+function retryBusyStartup<T>(operation: () => T): T {
+  for (const delay of STARTUP_LOCK_DELAYS_MS) {
+    try {
+      return operation()
+    } catch (error) {
+      if (!isBusyDatabaseError(error)) throw error
+      Atomics.wait(STARTUP_WAIT, 0, 0, delay)
+    }
+  }
+  return operation()
+}
+
+function isBusyDatabaseError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false
+  const sqlite = error as { errcode?: unknown; errstr?: unknown; message?: unknown }
+  return sqlite.errcode === 5 || /database is (?:busy|locked)/iu.test(
+    `${typeof sqlite.errstr === "string" ? sqlite.errstr : ""} ${typeof sqlite.message === "string" ? sqlite.message : ""}`,
+  )
+}
+
 function migrate(database: DatabaseSync, from: number): number {
   if (from > CURRENT_SCHEMA_VERSION) return from
 
   for (const migration of [...MIGRATIONS].sort((left, right) => left.version - right.version)) {
-    database.exec("begin immediate")
+    let transactionOpen = false
     try {
+      database.exec("begin immediate")
+      transactionOpen = true
       const current = readSchemaVersion(database)
       if (current >= migration.version) {
         database.exec("commit")
+        transactionOpen = false
         continue
       }
       if (current !== migration.version - 1) {
@@ -173,8 +199,10 @@ function migrate(database: DatabaseSync, from: number): number {
       database.exec(migration.sql)
       database.exec(`pragma user_version = ${migration.version}`)
       database.exec("commit")
+      transactionOpen = false
     } catch (error) {
-      database.exec("rollback")
+      if (transactionOpen) database.exec("rollback")
+      if (isBusyDatabaseError(error)) throw error
       throw new StoreError(`migration ${migration.version} (${migration.name}) failed`, {
         cause: error,
       })

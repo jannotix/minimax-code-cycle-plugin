@@ -58,6 +58,9 @@ export function roleSetup(role) {
         throw new Error(`unknown Cycle setup role: ${role}`);
     return found;
 }
+export function profileRelativePath(role) {
+    return `agents/${roleSetup(role).agentName}/agent.md`;
+}
 export function ownershipMarker(role) {
     return `<!-- cycle-managed:${SETUP_OWNER};schema=${SETUP_SCHEMA};role=${role} -->`;
 }

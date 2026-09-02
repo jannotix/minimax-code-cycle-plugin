@@ -1,8 +1,7 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.10` — production release is blocked: T07 confirms the MCP
-> handshake, but the setup procedure still needs an explicit shell-free profile-root handoff and
-> MiniMax exposes no supported local Skill archive installation surface.
+> Development line: `2.0.0-alpha.11` — production release is blocked pending a fresh live T07
+> and a supported local Skill archive installation surface.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -62,6 +61,9 @@ For Custom Agents, canonical `agent.md` is the sole authority for both the syste
 capability selectors. Setup writes and digests that exact file, then requires native `agent get` and
 `cycle_setup assess` to round-trip to `noop`. It never calls native `agent update` with
 `system_prompt`: the observed runtime rejects that mutation and treats `agent.md` as authoritative.
+The explicit setup request must also supply the active MiniMax `profile_root`; each `cycle_setup`
+entry supplies a fixed `profileRelativePath`, so the coordinator can target only
+`profile_root/agents/<managed-name>/agent.md` without Terminal discovery.
 
 MiniMax Code `3.0.68` exposes agent management to model sessions through the native tool, not the
 installed connector CLI. Setup therefore refuses CLI, undocumented HTTP, and direct database/file
