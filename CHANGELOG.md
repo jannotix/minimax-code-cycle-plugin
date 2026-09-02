@@ -12,9 +12,13 @@ All notable changes to Cycle for MiniMax Code are documented here.
 
 ### Known limitations
 
-- A fresh alpha.12 T07 run must prove the persisted owner argument, profile-scoped storage, live
-  child rosters, and the remaining behavioral matrix. The observed Desktop Personal Skills editor
-  still has no local ZIP upload control, so no local Skill archive distribution channel is certified.
+- Alpha.12 T07 verified persisted MCP ownership, profile-scoped storage, five role profiles, and
+  live child rosters. Public Git import remains unauthorized/uncertified, and the observed Desktop
+  Personal Skills editor still has no local ZIP upload control, so no distribution channel is
+  certified.
+- Workflow recovery, delivery, provider/concurrency behavior, uninstall, and the 20-run critical
+  battery remain release gates. A manual executor write probe did not count because its parent used
+  a forbidden terminal workspace check.
 
 ## [2.0.0-alpha.11] - Unreleased
 

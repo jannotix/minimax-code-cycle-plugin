@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.12 persisted-MCP ownership and profile-scoped-storage contract requires a fresh live T07**
+Status: **BLOCKED — alpha.12 partial live T07 evidence recorded; distribution and full workflow certification remain gated**
 
 Development version: `2.0.0-alpha.12`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.11 receipts retained; alpha.12 needs fresh owner-argument, profile-storage, and behavioral evidence | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.12 receipts retained; alpha.12 passed MCP ownership/storage, five role setup, and live rosters, but distribution/workflow gates remain | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -276,8 +276,9 @@ proved that Mavis discards configured MCP environment and description fields, le
 database to the default user location until recovered. Alpha.12 must align this unsupported metadata
 claim with the host's actual persistence contract: an exact persisted owner argument identifies the
 row, and inherited `MINIMAX_DATA_DIR` gives disposable profiles an isolated Cycle store when Mavis
-cannot forward `CYCLE_DATA_DIR`. A fresh T07 must prove this candidate. The alpha.7 through alpha.11
-receipts remain historical evidence and do not certify the next candidate.
+cannot forward `CYCLE_DATA_DIR`. Alpha.12 live evidence passed those seams, including all five child
+rosters, but no local ZIP install surface and no authorized Git-import run exist. The alpha.7 through
+alpha.12 receipts remain historical evidence and do not certify a distributable candidate.
 
 ### T08 — Release and distribution gate
 
