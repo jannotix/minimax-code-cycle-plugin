@@ -2,6 +2,21 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.13] - Unreleased
+
+### Changed
+
+- Froze a fresh candidate after alpha.12 evidence became historical. Every active version surface,
+  generated supply-chain inventory, and package provenance is rebound to alpha.13.
+- Recorded the supported MiniMax Personal Skill editor's bounded discovery and restart-persistence
+  seam separately. That account-level probe is not an artifact installation or distribution claim.
+
+### Known limitations
+
+- Alpha.13 has no fresh live artifact-install, MCP, role, workflow, recovery, delivery, uninstall,
+  or repeat-critical-battery certification. It remains blocked pending a supported, authorized public
+  Git import and the complete T07 matrix.
+
 ## [2.0.0-alpha.12] - Unreleased
 
 ### Fixed

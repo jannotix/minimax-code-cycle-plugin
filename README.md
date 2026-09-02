@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.12` — production release is blocked: T07 has verified the native
-> MCP and role seams, but MiniMax has no supported local Skill archive installation surface and the
-> public Git-import route remains unauthorized and uncertified.
+> Development line: `2.0.0-alpha.13` — production release is blocked: the alpha.13 candidate has
+> no live artifact-install evidence, MiniMax has no supported local Skill archive installation
+> surface, and the public Git-import route remains unauthorized and uncertified.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -15,9 +15,10 @@ not be presented as a complete five-role autonomous cycle.
 
 The portable package declares one Skill at `skills/cycle/SKILL.md` and one dependency-free stdio MCP
 server in `mcp.json`. The separately verified Skill ZIP is not a certified local installation path:
-Desktop `3.0.68.134` exposes a manual Personal Skill editor rather than ZIP upload. A disposable
-MCP registration can be live-tested independently, but it does not prove Skill discovery. The server
-exposes twelve local tools:
+Desktop `3.0.68.134` exposes a manual Personal Skill editor rather than ZIP upload. A manually
+created Personal Skill has proven host discovery and restart persistence, but it is not the packaged
+Cycle Skill and cannot prove artifact installation or distribution. The server exposes twelve local
+tools:
 
 | Tool | Current guarantee |
 |---|---|
