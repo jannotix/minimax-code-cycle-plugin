@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "task": "T07-H1",
+  "recordedAt": "2026-09-03",
+  "candidate": {
+    "commit": "95b79d4d674d430fb0ad7d71b7a61b5f4c6ed52b",
+    "version": "2.0.0-alpha.14"
+  },
+  "upstreamIssue": {
+    "repository": "MiniMax-AI/minimax-code",
+    "number": 138,
+    "url": "https://github.com/MiniMax-AI/minimax-code/issues/138",
+    "title": "Agent Plugin Skills cannot enforce parent tool restrictions during setup"
+  },
+  "verdict": "BLOCKED",
+  "requiredHostCapability": [
+    "host-enforced parent Skill tool allowlist or denylist",
+    "or a supported non-prompt native setup API"
+  ],
+  "releaseEffect": "Autonomous native-only setup remains unclaimable until the host boundary is available and live-certified.",
+  "sanitised": true
+}
