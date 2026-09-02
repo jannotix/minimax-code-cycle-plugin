@@ -1,0 +1,84 @@
+{
+  "schema": "cycle.t07.manual-personal-skill-discovery.v1",
+  "recordedAt": "2026-09-02T21:00:28+02:00",
+  "verdict": "PASS_HOST_DISCOVERY_ONLY",
+  "scope": "manual Personal Skill discovery and persistence only",
+  "candidateContext": {
+    "sourceCommit": "c282264f191365e2c755a585f01b514b1cad2852",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.12.tgz",
+    "artifactBytes": 1897358,
+    "artifactSha256": "2cfd63a23df041fd5c5ff7fd2b9a657088ea4fe9bf40ce52b23a26064728a71d",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.12.zip",
+    "skillArtifactBytes": 43391,
+    "skillArtifactSha256": "a82ea6cc23bc36fdc32d607c9206dd8826de6d19330690c60d9d115e5a872aea",
+    "artifactInstalled": false,
+    "manualProbePackageEquivalent": false
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "liveModel": "MiniMax-M3",
+    "mavisRuntime": "temporary",
+    "personalSkillScope": "account-level"
+  },
+  "checks": [
+    {
+      "id": "manual-personal-skill-create",
+      "status": "passed"
+    },
+    {
+      "id": "manual-personal-skill-search",
+      "status": "passed"
+    },
+    {
+      "id": "natural-language-discovery-first-task",
+      "status": "passed",
+      "evidence": "host displayed the named Skill read before the expected marker reply"
+    },
+    {
+      "id": "complete-desktop-restart",
+      "status": "passed"
+    },
+    {
+      "id": "manual-personal-skill-persistence",
+      "status": "passed"
+    },
+    {
+      "id": "natural-language-discovery-post-restart",
+      "status": "passed"
+    },
+    {
+      "id": "artifact-installation",
+      "status": "not_proven",
+      "reason": "the Personal editor accepts text fields, not the deterministic Cycle archive"
+    },
+    {
+      "id": "artifact-equivalence",
+      "status": "not_proven",
+      "reason": "the bounded probe is intentionally not the packaged Cycle Skill"
+    },
+    {
+      "id": "cycle-workflow-matrix",
+      "status": "not_run",
+      "blockedBy": "T07-A12-B01"
+    },
+    {
+      "id": "personal-skill-cleanup",
+      "status": "pending_owner_action_time_confirmation"
+    }
+  ],
+  "remainingFindings": [
+    "T07-A12-B01",
+    "T07-A12-B02",
+    "T07-A12-B03"
+  ],
+  "releaseVerdict": "BLOCKED",
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}
