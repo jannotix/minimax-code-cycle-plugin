@@ -215,25 +215,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.13",
+    pluginVersion: "2.0.0-alpha.14",
     profile: "cycle-t04",
     schema: "cycle.mavis-setup-receipt.v2",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.13").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.14").status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.13"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.14"),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.13"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.14"),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.13"),
+    }, "2.0.0-alpha.14"),
     /role\/name mismatch/u,
   )
 })

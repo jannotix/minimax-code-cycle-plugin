@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.13 candidate freeze; distribution and fresh full T07 certification remain gated**
+Status: **BLOCKED — alpha.14 deterministic candidate freeze; distribution and fresh full T07 certification remain gated**
 
-Development version: `2.0.0-alpha.13`
+Development version: `2.0.0-alpha.14`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.12 receipts are historical; a manual Personal Skill proved host discovery only; alpha.13 has no artifact-install receipt | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.12 receipts are historical; a manual Personal Skill proved host discovery only; alpha.14 has no artifact-install receipt | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -279,8 +279,9 @@ row, and inherited `MINIMAX_DATA_DIR` gives disposable profiles an isolated Cycl
 cannot forward `CYCLE_DATA_DIR`. Alpha.12 live evidence passed those seams, including all five child
 rosters, but no local ZIP install surface and no authorized Git-import run exist. The alpha.7 through
 Alpha.12 receipts remain historical evidence and do not certify a distributable candidate. T07R6
-freezes alpha.13 after the bounded manual Personal Skill discovery probe; that host seam does not
-install or prove the alpha.13 artifact, so fresh alpha.13 T07 evidence is required before T08.
+found that its alpha.13 local Skill ZIP changed bytes between same-SHA builds, so alpha.13 is
+superseded. T07R7 freezes alpha.14 with sorted committed blobs and fixed ZIP metadata; fresh alpha.14
+T07 evidence is still required before T08.
 
 ### T08 — Release and distribution gate
 

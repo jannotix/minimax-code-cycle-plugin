@@ -1,12 +1,17 @@
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
+import { execFile } from "node:child_process"
+import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
+import { promisify } from "node:util"
 
 // @ts-expect-error dependency-free release scripts are checked through their public exports
 import { collect, FORBIDDEN, ROOT, runtimePackage, violations } from "../scripts/artifact-manifest.mjs"
 // @ts-expect-error dependency-free release scripts are checked through their public exports
 import { findSecrets } from "../scripts/secret-scan.mjs"
+
+const execFileAsync = promisify(execFile)
 
 test("the package allowlist contains every runtime root and refuses development material", async () => {
   const paths = (await collect()) as string[]
@@ -94,9 +99,31 @@ test("the supply-chain verifier uses npm pack and an external tar reader", async
   assert.match(verifier, /method: "tools\/list"/u)
   assert.match(verifier, /child\.on\("close"/u)
   assert.match(verifier, /await rm\(clean, \{ force: true, recursive: true \}\)/u)
-  assert.match(skillPackager, /"archive", "--format=zip"/u)
+  assert.match(skillPackager, /zipSync\(archiveEntries/u)
+  assert.match(skillPackager, /1980-01-01T00:00:00\.000Z/u)
   assert.match(skillPackager, /HEAD:skills\/cycle/u)
   assert.match(skillPackager, /unzipSync\(bytes\)/u)
+})
+
+test("the local Skill ZIP is byte-stable across two builds of the same commit", async () => {
+  const source = JSON.parse(await readFile(join(ROOT as string, "package.json"), "utf8"))
+  const first = await mkdtemp(join(tmpdir(), "cycle-skill-repro-a-"))
+  const second = await mkdtemp(join(tmpdir(), "cycle-skill-repro-b-"))
+  try {
+    const args = [join(ROOT as string, "scripts", "package-local-skill.mjs")]
+    await execFileAsync(process.execPath, [...args, "--output", first], { cwd: ROOT as string })
+    await execFileAsync(process.execPath, [...args, "--output", second], { cwd: ROOT as string })
+    const archiveName = `cycle-skill-${source.version}.zip`
+    assert.deepEqual(
+      await readFile(join(first, archiveName)),
+      await readFile(join(second, archiveName)),
+    )
+    const provenance = JSON.parse(await readFile(join(first, `${archiveName}.provenance.json`), "utf8"))
+    assert.equal(provenance.buildType, "deterministic-fflate-zip")
+  } finally {
+    await rm(first, { force: true, recursive: true })
+    await rm(second, { force: true, recursive: true })
+  }
 })
 
 test("CI runs the core gate on Windows, macOS, and Linux at the Node floor", async () => {

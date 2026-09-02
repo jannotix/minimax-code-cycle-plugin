@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.13` — production release is blocked: the alpha.13 candidate has
+> Development line: `2.0.0-alpha.14` — production release is blocked: the alpha.14 candidate has
 > no live artifact-install evidence, MiniMax has no supported local Skill archive installation
 > surface, and the public Git-import route remains unauthorized and uncertified.
 

@@ -2,6 +2,20 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.14] - Unreleased
+
+### Fixed
+
+- Replaced the timestamp-bearing `git archive --format=zip` local Skill builder with a sorted,
+  fixed-metadata ZIP built from committed Skill blobs. The supply-chain suite now produces two
+  independent archives and requires byte-for-byte equality.
+
+### Known limitations
+
+- Alpha.14 has no fresh live artifact-install, MCP, role, workflow, recovery, delivery, uninstall,
+  or repeat-critical-battery certification. It remains blocked pending a supported, authorized public
+  Git import and the complete T07 matrix.
+
 ## [2.0.0-alpha.13] - Unreleased
 
 ### Changed
@@ -13,9 +27,8 @@ All notable changes to Cycle for MiniMax Code are documented here.
 
 ### Known limitations
 
-- Alpha.13 has no fresh live artifact-install, MCP, role, workflow, recovery, delivery, uninstall,
-  or repeat-critical-battery certification. It remains blocked pending a supported, authorized public
-  Git import and the complete T07 matrix.
+- Alpha.13 discovered that `git archive --format=zip` changes Skill archive bytes between same-SHA
+  builds. It is superseded by alpha.14 and must not be distributed.
 
 ## [2.0.0-alpha.12] - Unreleased
 

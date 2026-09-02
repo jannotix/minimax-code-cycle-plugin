@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.13` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.14` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -80,11 +80,12 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-T07R6 freezes a fresh alpha.13 candidate after the alpha.12 historical receipts and the bounded
-manual Personal Skill discovery probe. It retains canonical MiniMax capability profiles, a persisted
+T07R7 freezes a fresh alpha.14 candidate after correcting local Skill archive reproducibility. The
+archive is constructed from sorted committed blobs with fixed ZIP metadata, and two same-commit builds
+must have identical bytes. The candidate retains canonical MiniMax capability profiles, a persisted
 MCP owner argument, an explicit active-profile-root handoff, and the Custom Agent `agent.md` prompt
 authority. It does not certify that MiniMax Desktop installs this artifact, enforces those profiles,
-dispatches agents, or completes browser/provider/concurrency flows on a real profile. Fresh alpha.13
+dispatches agents, or completes browser/provider/concurrency flows on a real profile. Fresh alpha.14
 T07 live certification remains a release gate. Until all applicable gates pass on one exact artifact,
 the product is not production-ready and its release is blocked.
 
