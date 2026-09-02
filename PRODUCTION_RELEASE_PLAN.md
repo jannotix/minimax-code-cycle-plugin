@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.11 live T07 evidence recorded; alpha.12 must align MCP metadata/isolation with the fields MiniMax actually persists**
+Status: **BLOCKED — alpha.12 persisted-MCP ownership and profile-scoped-storage contract requires a fresh live T07**
 
-Development version: `2.0.0-alpha.11`
+Development version: `2.0.0-alpha.12`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.11 receipts retained; alpha.11 five-role profile setup passed but Mavis discarded MCP env/description metadata | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.11 receipts retained; alpha.12 needs fresh owner-argument, profile-storage, and behavioral evidence | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -196,6 +196,12 @@ native `agent create/get/list/delete` operations whose current arguments are dis
 the receipt records the inherited session model unless a native write/read round-trip proves another
 model.
 
+MiniMax `3.0.68.134` persists native MCP name, type, enabled state, command, and arguments, but
+discards MCP description and environment metadata even after native update. T07R5 uses an exact
+persisted Node owner argument as the only MCP ownership marker. `CYCLE_DATA_DIR` remains an explicit
+parent-process override; otherwise inherited `MINIMAX_DATA_DIR` gives a disposable profile its Cycle
+data root without depending on unsupported Mavis environment forwarding.
+
 MiniMax `3.0.68.134` exposes no native hook-management surface. T07R therefore uses the runtime's
 canonical custom-agent selectors: read-only roles allow only `read`, `grep`, and `glob`; executor
 adds `write` and `edit`; every role has empty MCP and Skill selectors. Shell/Git, delegation,
@@ -268,7 +274,9 @@ listing. Alpha.11 makes the active root explicit and supplies a per-role relativ
 native creation; its five-role live round-trip passed without shell or `agent update`. The same run
 proved that Mavis discards configured MCP environment and description fields, leaking its doctor
 database to the default user location until recovered. Alpha.12 must align this unsupported metadata
-claim with the host's actual persistence contract before a fresh T07. The alpha.7 through alpha.11
+claim with the host's actual persistence contract: an exact persisted owner argument identifies the
+row, and inherited `MINIMAX_DATA_DIR` gives disposable profiles an isolated Cycle store when Mavis
+cannot forward `CYCLE_DATA_DIR`. A fresh T07 must prove this candidate. The alpha.7 through alpha.11
 receipts remain historical evidence and do not certify the next candidate.
 
 ### T08 — Release and distribution gate

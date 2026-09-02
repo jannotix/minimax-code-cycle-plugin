@@ -137,6 +137,7 @@ function report(
 ): unknown {
   return {
     configuration: {
+      dataDirectorySource: runtime.dataDirectorySource,
       gateStrictness: runtime.configuration.gateStrictness,
       invalid: runtime.configuration.invalid,
       maxRepairCycles: runtime.configuration.maxRepairCycles,

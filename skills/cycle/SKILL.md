@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.11` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.12` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -39,6 +39,8 @@ Do not load every reference for a simple inspection.
    Setup additionally requires the user-confirmed active `profile_root`; join it only with the
    `profileRelativePath` returned by `cycle_setup spec`, never with a path found through Terminal
    or a shell.
+   MiniMax persists MCP identity through name/type/enabled/command/arguments, not environment or
+   description fields. Use the returned owner argument; do not claim Mavis persisted `CYCLE_DATA_DIR`.
 4. Start or reconcile one durable workflow, then call `cycle_coordinator next`. Execute exactly one
    returned action and reread state. The coordinator never invents a transition.
 5. Bind every role submission to the native child `session_id`. One session serves one workflow
@@ -78,8 +80,9 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-T07R4 uses canonical MiniMax capability profiles, an explicit active-profile-root handoff, and the
-Custom Agent `agent.md` prompt authority; it also retains the deterministic local Skill ZIP. It does
+T07R5 uses canonical MiniMax capability profiles, a persisted MCP owner argument, an explicit
+active-profile-root handoff, and the Custom Agent `agent.md` prompt authority; it also retains the
+deterministic local Skill ZIP. It does
 not certify that MiniMax Desktop enforces
 those profiles, dispatches agents,
 or completes browser/provider/concurrency flows on a real profile. Fresh T07 live certification

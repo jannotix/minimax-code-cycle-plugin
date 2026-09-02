@@ -2,7 +2,7 @@ import { isAbsolute, join, relative } from "node:path"
 
 import { AdmissionController } from "./admission.ts"
 import { readConfiguration, type Configuration } from "./config.ts"
-import { resolveDataDirectory } from "./paths.ts"
+import { resolveDataDirectoryResolution, type DataDirectorySource } from "./paths.ts"
 import { identifyProject, type Project } from "./project.ts"
 import { CpuSampler, readResources, type ResourceReading } from "./resources.ts"
 import { Database } from "./store/database.ts"
@@ -14,6 +14,7 @@ export class Runtime {
   readonly admission = new AdmissionController()
   readonly configuration: Configuration
   readonly dataDirectory: string
+  readonly dataDirectorySource: DataDirectorySource
 
   readonly #sampler = new CpuSampler()
   #database: Database | undefined
@@ -21,7 +22,9 @@ export class Runtime {
 
   constructor(environment: NodeJS.ProcessEnv = process.env) {
     this.configuration = readConfiguration(environment)
-    this.dataDirectory = resolveDataDirectory(this.configuration.dataDirectory, environment)
+    const resolution = resolveDataDirectoryResolution(this.configuration.dataDirectory, environment)
+    this.dataDirectory = resolution.path
+    this.dataDirectorySource = resolution.source
   }
 
   project(projectRoot: string): Project {

@@ -2,6 +2,20 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.12] - Unreleased
+
+### Fixed
+
+- Removed unsupported Mavis MCP description/environment persistence from the native setup contract.
+  Native ownership now uses an exact, persisted Node owner argument, and the control plane derives
+  profile-scoped storage from inherited `MINIMAX_DATA_DIR` when `CYCLE_DATA_DIR` is unavailable.
+
+### Known limitations
+
+- A fresh alpha.12 T07 run must prove the persisted owner argument, profile-scoped storage, live
+  child rosters, and the remaining behavioral matrix. The observed Desktop Personal Skills editor
+  still has no local ZIP upload control, so no local Skill archive distribution channel is certified.
+
 ## [2.0.0-alpha.11] - Unreleased
 
 ### Fixed

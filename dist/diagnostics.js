@@ -102,6 +102,7 @@ export async function diagnose(runtime, projectRoot, version) {
 function report(runtime, projectId, version, findings, store) {
     return {
         configuration: {
+            dataDirectorySource: runtime.dataDirectorySource,
             gateStrictness: runtime.configuration.gateStrictness,
             invalid: runtime.configuration.invalid,
             maxRepairCycles: runtime.configuration.maxRepairCycles,

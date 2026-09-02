@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { test } from "node:test"
 
-import { PathError, resolveDataDirectory } from "../src/paths.ts"
+import { PathError, resolveDataDirectory, resolveDataDirectoryResolution } from "../src/paths.ts"
 import { identifyProject } from "../src/project.ts"
 
 test("project identity requires an explicit absolute directory and is stable", () => {
@@ -33,6 +33,14 @@ test("data paths are durable per-platform locations rather than plugin data", ()
   assert.equal(
     resolveDataDirectory(undefined, { HOME: "/home/u", XDG_DATA_HOME: "/var/data/u" }, "linux"),
     "/var/data/u/cycle-minimax",
+  )
+  assert.deepEqual(
+    resolveDataDirectoryResolution(undefined, { MINIMAX_DATA_DIR: "C:\\profile" }, "win32"),
+    { path: "C:\\profile\\Cycle for MiniMax Code", source: "minimax_data_dir" },
+  )
+  assert.deepEqual(
+    resolveDataDirectoryResolution("./cycle-data", { MINIMAX_DATA_DIR: "C:\\profile" }, "win32"),
+    { path: resolve("./cycle-data"), source: "cycle_data_dir" },
   )
   assert.throws(() => resolveDataDirectory(undefined, {}, "win32"), PathError)
 })

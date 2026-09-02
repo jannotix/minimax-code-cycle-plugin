@@ -14,6 +14,7 @@
     "name": "cycle-tools",
     "transport": "stdio",
     "command": "node",
-    "argsFromPluginRoot": ["dist/server.js"]
+    "argsFromPluginRoot": ["dist/server.js"],
+    "ownerArgument": "--cycle-managed=minimax-code-cycle-plugin"
   }
 }

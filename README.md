@@ -1,8 +1,7 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.11` — production release is blocked: its T07 proved five
-> shell-free role profiles, but MiniMax discarded MCP environment/description metadata and no
-> supported local Skill archive installation surface exists.
+> Development line: `2.0.0-alpha.12` — production release is blocked pending a fresh live T07
+> and a supported local Skill archive installation surface.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -65,6 +64,12 @@ capability selectors. Setup writes and digests that exact file, then requires na
 The explicit setup request must also supply the active MiniMax `profile_root`; each `cycle_setup`
 entry supplies a fixed `profileRelativePath`, so the coordinator can target only
 `profile_root/agents/<managed-name>/agent.md` without Terminal discovery.
+
+MiniMax `3.0.68.134` persists native MCP type, enabled state, command, and arguments, but discards
+MCP description and environment metadata. Cycle therefore identifies a native `cycle-tools` row by
+its exact Node owner argument rather than an unpersisted description. `CYCLE_DATA_DIR` still wins
+when a parent process supplies it; otherwise an inherited `MINIMAX_DATA_DIR` gives the control plane
+a profile-scoped data directory, while ordinary hosts use the documented platform default.
 
 MiniMax Code `3.0.68` exposes agent management to model sessions through the native tool, not the
 installed connector CLI. Setup therefore refuses CLI, undocumented HTTP, and direct database/file

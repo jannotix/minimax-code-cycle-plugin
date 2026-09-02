@@ -36,7 +36,9 @@ or prompt-only tool restriction.
    MiniMax data directory for this profile. It is neither the plugin root, a task workspace, nor
    `CYCLE_DATA_DIR`. A disposable certification run supplies its disposable data root. Do not guess
    or discover this directory through Terminal, a shell, directory traversal, or a profile-store
-   workaround. Keep the absolute path out of receipts.
+   workaround. MiniMax cannot persist a `CYCLE_DATA_DIR` value through native MCP configuration;
+   its test launcher instead supplies this root as inherited `MINIMAX_DATA_DIR`. Keep absolute paths
+   out of receipts.
 2. Show the sanitized current profile name and confirm it is the profile represented by
    `profile_root`. A missing, relative, or unconfirmed root stops setup before the first mutation.
 3. Call `cycle_setup` with `operation: "spec"`. It returns the five exact agents, their complete
@@ -44,13 +46,15 @@ or prompt-only tool restriction.
    specification.
 4. Call native `mavis` with `agent help`, `agent list`, `mcp help`, and `mcp list`.
 5. The live contracts must expose deterministic agent create/get/list/delete and MCP
-   list/get/create/update/delete. A native Custom Agent `system_prompt` update is not a setup
+   list/get/create/delete. A native Custom Agent `system_prompt` update is not a setup
    capability: its canonical `agent.md` is the prompt authority. Missing required operations stop
    setup.
 6. For each expected agent, call `agent get`. Read its canonical `agent.md` when present and pass
    native fields plus `observed_agent_markdown` to `cycle_setup assess`.
 7. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
-   description, transport, command and arguments match this version's specification.
+   persisted type, enabled state, command, and both arguments match the returned specification:
+   resolved `dist/server.js` followed by `ownerArgument`. Native Mavis does not persist description
+   or environment metadata, so neither can establish ownership.
 
 If any agent or MCP collision is foreign, stop before the first mutation. Keep bounded preflight
 snapshots for rollback, but never place raw prompts, absolute paths, credentials, private config, or
@@ -68,13 +72,20 @@ Use native `mavis mcp create` with:
 - name `cycle-tools`;
 - transport `stdio`;
 - command `node`;
-- one argument: the resolved `dist/server.js`;
-- description containing `cycle-managed:minimax-code-cycle-plugin` and this plugin version;
+- two arguments: the resolved `dist/server.js`, then the exact returned `ownerArgument`;
 - enabled `true`.
 
+MiniMax `3.0.68.134` drops `description` and `env` fields supplied through both native create and
+update. Do not send or rely on either field. `CYCLE_DATA_DIR` takes precedence only when the parent
+process itself supplies it. Otherwise Cycle uses inherited `MINIMAX_DATA_DIR` as the active
+profile-scoped data root; a disposable launch must set it to `profile_root` and `cycle_doctor` must
+report `dataDirectorySource: "minimax_data_dir"`. A standard profile with neither value uses the
+documented per-platform Cycle data directory.
+
 Immediately call `mcp get`, then invoke `cycle_doctor` through the connected MCP. A configuration
-row without a successful MiniMax-owned handshake is not installed. Update only a previously
-Cycle-owned stale row; never take over a foreign same-name MCP server.
+row without a successful MiniMax-owned handshake or the exact persisted owner argument is not
+installed. Never use `mcp update` to repair metadata that MiniMax does not persist, and never take
+over a foreign same-name MCP server.
 
 ## 3. Create agents and install capability profiles
 
@@ -159,7 +170,8 @@ Rollback changes only this run made:
 1. Delete newly created agents only after `cycle_setup uninstall` authorizes each current native
    snapshot.
 2. Restore prior Cycle-owned agent fields and canonical profile bytes for updated agents.
-3. Delete a newly created `cycle-tools` row, or restore the prior Cycle-owned row.
+3. Delete a newly created `cycle-tools` row only when its exact persisted owner argument still
+   matches; otherwise leave it in place and report rollback as blocked.
 4. Re-run agent and MCP get/list checks. Any incomplete rollback is `blocked`.
 
 Explicit uninstall requires a separate user request. Delete only marker-owned agents and the

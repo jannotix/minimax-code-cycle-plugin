@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.11";
+const VERSION = "2.0.0-alpha.12";
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");
@@ -29,9 +29,9 @@ function run(program, args, options = {}) {
   });
 }
 
-function mcpExchange(messages) {
+function mcpExchange(messages, serverArgs = []) {
   return new Promise((resolveResult, reject) => {
-    const child = spawn(process.execPath, [join(ROOT, "dist", "server.js")], {
+    const child = spawn(process.execPath, [join(ROOT, "dist", "server.js"), ...serverArgs], {
       cwd: ROOT,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -153,7 +153,7 @@ test("the Agent Plugin manifests remain parseable and expose only the portable c
   assert.equal(mcpJson.$schema, "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json");
   assert.deepEqual(Object.keys(mcpJson.mcpServers), ["cycle-tools"]);
   assert.deepEqual(mcpJson.mcpServers["cycle-tools"], {
-    args: ["./dist/server.js"],
+    args: ["./dist/server.js", "--cycle-managed=minimax-code-cycle-plugin"],
     command: "node",
     type: "stdio",
   });
@@ -246,4 +246,20 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("arbitrate"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("deliver"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("reconcile"));
+});
+
+test("the MCP accepts the persisted MiniMax owner argument", async () => {
+  const [initialized] = await mcpExchange([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        capabilities: {},
+        clientInfo: { name: "test", version: "1" },
+        protocolVersion: "2025-06-18",
+      },
+    },
+  ], ["--cycle-managed=minimax-code-cycle-plugin"]);
+  assert.equal(initialized.result.serverInfo.version, VERSION);
 });

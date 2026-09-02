@@ -27,6 +27,7 @@ test("the setup manifest defines five unique, owned, deterministic agents", () =
     readFileSync(join(ROOT, "skills", "cycle", "setup", "manifest.json"), "utf8"),
   ) as {
     agents: { access: string; mcpServers: string[]; name: string; prompt: string; role: string; skills: string[]; tools: string[] }[]
+    mcp: { argsFromPluginRoot: string[]; command: string; name: string; ownerArgument: string; transport: string }
     namespace: string
     owner: string
     schema: string
@@ -34,6 +35,13 @@ test("the setup manifest defines five unique, owned, deterministic agents", () =
   assert.equal(manifest.schema, SETUP_SCHEMA)
   assert.equal(manifest.namespace, SETUP_NAMESPACE)
   assert.equal(manifest.owner, SETUP_OWNER)
+  assert.deepEqual(manifest.mcp, {
+    argsFromPluginRoot: ["dist/server.js"],
+    command: "node",
+    name: "cycle-tools",
+    ownerArgument: "--cycle-managed=minimax-code-cycle-plugin",
+    transport: "stdio",
+  })
   assert.equal(manifest.agents.length, 5)
   assert.equal(new Set(manifest.agents.map((entry) => entry.name)).size, 5)
   assert.deepEqual(manifest.agents.map((entry) => entry.role), ROLE_SETUP.map((entry) => entry.role))
@@ -170,6 +178,10 @@ test("the natural-language setup is explicit, native-only, reversible, and hones
   assert.match(procedure, /setup request must include an explicit,\s+absolute `profile_root`/iu)
   assert.match(procedure, /profileRelativePath/iu)
   assert.match(procedure, /Do not use Terminal, a shell, or directory discovery/iu)
+  assert.match(procedure, /ownerArgument/iu)
+  assert.match(procedure, /drops `description` and `env` fields/iu)
+  assert.match(procedure, /dataDirectorySource: "minimax_data_dir"/iu)
+  assert.doesNotMatch(procedure, /description containing `cycle-managed:minimax-code-cycle-plugin`/iu)
   assert.match(procedure, /canonical `agent\.md` is the only authority/iu)
   assert.match(procedure, /Never call native `agent update`\s+with `system_prompt`/iu)
   const profileTarget = procedure.indexOf("only permitted profile target")
@@ -203,25 +215,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.11",
+    pluginVersion: "2.0.0-alpha.12",
     profile: "cycle-t04",
     schema: "cycle.mavis-setup-receipt.v2",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.11").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.12").status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.11"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.12"),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.11"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.12"),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.11"),
+    }, "2.0.0-alpha.12"),
     /role\/name mismatch/u,
   )
 })

@@ -4,7 +4,7 @@
     "cycle-tools": {
       "type": "stdio",
       "command": "node",
-      "args": ["./dist/server.js"]
+      "args": ["./dist/server.js", "--cycle-managed=minimax-code-cycle-plugin"]
     }
   }
 }

@@ -99,6 +99,7 @@ const tools: readonly ToolDefinition[] = [
       "validate a sanitized readiness receipt. " +
       "For Custom Agents, canonical agent.md is the system-prompt authority; native system_prompt updates are unsupported. " +
       "The setup caller must supply a user-confirmed active profile root and use each returned profileRelativePath without shell discovery. " +
+      "On MiniMax 3.0.68.134, MCP env and description fields are not persisted; ownership uses the returned managed owner argument. " +
       "This tool never mutates the MiniMax profile; the Cycle Skill uses the native mavis tool.",
     inputSchema: objectSchema(
       {
@@ -382,8 +383,8 @@ function setupOperation(args: Record<string, unknown>): unknown {
       mcp: {
         argsFromPluginRoot: ["dist/server.js"],
         command: "node",
-        description: `cycle-managed:${SETUP_OWNER};version=${VERSION}`,
         name: "cycle-tools",
+        ownerArgument: `--cycle-managed=${SETUP_OWNER}`,
         transport: "stdio",
       },
       host: {
@@ -391,6 +392,8 @@ function setupOperation(args: Record<string, unknown>): unknown {
         capabilityProfile: "canonical-agent-markdown",
         liveCapabilityProof: "required-before-production",
         localSkillInstall: "not-certified-on-minimax-3.0.68.134",
+        mcpMetadataPersistence: "name-type-enabled-command-args-only-on-minimax-3.0.68.134",
+        mcpOwnership: "managed-owner-argument",
         modelStrategy: "session-inherited-unless-native-round-trip-proves-an-agent-model",
         promptAuthority: "canonical-agent-markdown-only",
         profileRootPolicy: "explicit-user-confirmed-active-minimax-data-directory",

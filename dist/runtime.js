@@ -1,7 +1,7 @@
 import { isAbsolute, join, relative } from "node:path";
 import { AdmissionController } from "./admission.js";
 import { readConfiguration } from "./config.js";
-import { resolveDataDirectory } from "./paths.js";
+import { resolveDataDirectoryResolution } from "./paths.js";
 import { identifyProject } from "./project.js";
 import { CpuSampler, readResources } from "./resources.js";
 import { Database } from "./store/database.js";
@@ -10,12 +10,15 @@ export class Runtime {
     admission = new AdmissionController();
     configuration;
     dataDirectory;
+    dataDirectorySource;
     #sampler = new CpuSampler();
     #database;
     #failure;
     constructor(environment = process.env) {
         this.configuration = readConfiguration(environment);
-        this.dataDirectory = resolveDataDirectory(this.configuration.dataDirectory, environment);
+        const resolution = resolveDataDirectoryResolution(this.configuration.dataDirectory, environment);
+        this.dataDirectory = resolution.path;
+        this.dataDirectorySource = resolution.source;
     }
     project(projectRoot) {
         const project = identifyProject(projectRoot);

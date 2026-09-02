@@ -114,7 +114,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.11")
+    assert.equal(identity.serverInfo.version, "2.0.0-alpha.12")
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
@@ -152,11 +152,13 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
         agentApi: string
         capabilityProfile: string
         localSkillInstall: string
+        mcpMetadataPersistence: string
+        mcpOwnership: string
         modelStrategy: string
         promptAuthority: string
         profileRootPolicy: string
       }
-      mcp: { description: string; name: string; transport: string }
+      mcp: { argsFromPluginRoot: string[]; command: string; name: string; ownerArgument: string; transport: string }
       schema: string
     }
     assert.equal(setup.schema, "cycle.mavis-setup.v2")
@@ -165,12 +167,14 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     assert.equal(setup.host.capabilityProfile, "canonical-agent-markdown")
     assert.equal(setup.host.promptAuthority, "canonical-agent-markdown-only")
     assert.equal(setup.host.profileRootPolicy, "explicit-user-confirmed-active-minimax-data-directory")
+    assert.equal(setup.host.mcpMetadataPersistence, "name-type-enabled-command-args-only-on-minimax-3.0.68.134")
+    assert.equal(setup.host.mcpOwnership, "managed-owner-argument")
     assert.equal(setup.host.localSkillInstall, "not-certified-on-minimax-3.0.68.134")
     assert.deepEqual(setup.mcp, {
       argsFromPluginRoot: ["dist/server.js"],
       command: "node",
-      description: "cycle-managed:minimax-code-cycle-plugin;version=2.0.0-alpha.11",
       name: "cycle-tools",
+      ownerArgument: "--cycle-managed=minimax-code-cycle-plugin",
       transport: "stdio",
     })
     assert.ok(setup.agents.every((entry) => entry.systemPromptSource === "canonical-agent.md"))
@@ -188,7 +192,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     }))
     const installedReceipt = {
       agents: receiptAgents,
-      pluginVersion: "2.0.0-alpha.11",
+      pluginVersion: "2.0.0-alpha.12",
       profile: "cycle-t04",
       schema: "cycle.mavis-setup-receipt.v2",
       status: "installed_unverified",
@@ -402,6 +406,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       arguments: { project_root: projectA },
       name: "cycle_doctor",
     })) as {
+      configuration: { dataDirectorySource: string }
       ok: boolean
       store: {
         admission: { resources: { cpuLoad: number | null } }
@@ -412,6 +417,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       }
     }
     assert.equal(doctor.ok, true)
+    assert.equal(doctor.configuration.dataDirectorySource, "cycle_data_dir")
     assert.equal(doctor.store.schemaVersion, 8)
     assert.equal(doctor.store.goals.total, 1)
     assert.equal(doctor.store.graph.files, expectedIndexedFiles)
