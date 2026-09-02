@@ -13,9 +13,11 @@ All notable changes to Cycle for MiniMax Code are documented here.
 
 ### Known limitations
 
-- A fresh alpha.10 T07 run must still prove all five native roles and live capability rosters. The
-  observed Desktop Personal Skills editor still has no local ZIP upload control, so no local Skill
-  archive distribution channel is certified.
+- Alpha.10 T07 proved the no-`agent update` round-trip only when the canonical `agent.md` target was
+  supplied explicitly. Its first guided setup used a forbidden terminal path-discovery fallback, so
+  alpha.11 must make that root handoff explicit before a fresh role-certification run.
+- The observed Desktop Personal Skills editor still has no local ZIP upload control, so no local
+  Skill archive distribution channel is certified.
 
 ## [2.0.0-alpha.9] - Unreleased
 

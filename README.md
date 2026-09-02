@@ -1,7 +1,8 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.10` — production release is blocked pending fresh live T07
-> certification and a supported local Skill archive installation surface.
+> Development line: `2.0.0-alpha.10` — production release is blocked: T07 confirms the MCP
+> handshake, but the setup procedure still needs an explicit shell-free profile-root handoff and
+> MiniMax exposes no supported local Skill archive installation surface.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it

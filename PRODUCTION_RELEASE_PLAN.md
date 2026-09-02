@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.10 procedure correction requires a fresh live T07**
+Status: **BLOCKED — alpha.10 live T07 evidence recorded; alpha.11 needs an explicit shell-free profile-root handoff and a fresh live T07**
 
 Development version: `2.0.0-alpha.10`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.9 receipts retained; alpha.10 needs fresh role setup and behavioral evidence | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.10 receipts retained; alpha.10 MCP and explicit-path architect diagnostic passed, but first guided setup used a forbidden terminal fallback | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -260,10 +260,12 @@ The alpha.8 live probe proved a MiniMax-owned MCP handshake after a full applica
 also proved that local ZIP Skill upload is absent from the observed UI and that complete role setup
 was not reconciled. Alpha.9 confirmed the MCP handshake and data isolation, then proved that native
 `agent update` rejects a Custom Agent prompt update after the canonical `agent.md` is written even
-though `cycle_setup assess` is already `noop`. Alpha.10 removes that impossible mutation: it writes
-the canonical file, requires native `agent get` to report the resulting prompt, and requires
-`cycle_setup assess: noop`. A fresh T07 must prove this candidate. The alpha.7, alpha.8, and alpha.9
-receipts remain historical evidence and do not certify the next candidate.
+though `cycle_setup assess` is already `noop`. Alpha.10 removes that impossible mutation: an
+explicit-path diagnostic wrote the canonical file with normal MiniMax file tools, native `agent get`
+reported the resulting prompt, and `cycle_setup assess` returned `noop` without `agent update`.
+However, its first guided setup did not know the profile root and used a forbidden Terminal directory
+listing. Alpha.11 must make that root handoff explicit before a fresh T07. The alpha.7 through
+alpha.10 receipts remain historical evidence and do not certify the next candidate.
 
 ### T08 — Release and distribution gate
 

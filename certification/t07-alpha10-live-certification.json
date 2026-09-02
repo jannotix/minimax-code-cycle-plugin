@@ -1,0 +1,89 @@
+{
+  "schema": "cycle.t07.live-certification.v3",
+  "recordedAt": "2026-09-02T18:18:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "c66cc5f338bfc880ff8aae22dbcdefc2e4c80353",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.10.tgz",
+    "artifactVersion": "2.0.0-alpha.10",
+    "artifactBytes": 1894751,
+    "artifactSha256": "daea731af2d026a8658977fa3edeccbe114cc2ff187aab1d6b342de94385d7dc",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.10.zip",
+    "skillArtifactBytes": 42424,
+    "skillArtifactSha256": "3525ba8706542b27fa507f942ed2d1f8c572cf0e32c113132fc89c16c39506e1"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "profile": "disposable-runtime",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M3"
+  },
+  "profileIsolation": {
+    "status": "passed",
+    "testOnlyCycleDataDirectory": true,
+    "testDatabaseInsideDisposableRuntime": true,
+    "defaultUserCycleDataDirectoryAbsentAfterCleanup": true,
+    "realMcpRowAbsentAfterCleanup": true,
+    "realCycleAgentCountAfterCleanup": 0,
+    "temporaryDirectoriesMovedToRecycleBin": 1
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "local-skill-ui", "status": "failed", "finding": "T07-A10-B01" },
+    { "id": "public-git-import", "status": "not_run", "reason": "publication/import was outside authority" },
+    { "id": "mcp-registration", "status": "passed" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "mcp-doctor", "status": "passed" },
+    { "id": "architect-first-run", "status": "failed", "finding": "T07-A10-B02" },
+    { "id": "architect-explicit-path-diagnostic", "status": "passed", "note": "non-certification diagnostic only" },
+    { "id": "five-role-setup", "status": "not_run", "blockedBy": "T07-A10-B02" },
+    { "id": "child-roster-allow-deny", "status": "not_run", "blockedBy": "T07-A10-B02" },
+    { "id": "quick-cycle", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "full-cycle", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "repair-blocked-retry-pause-resume", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "provider-failure", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "concurrent-projects", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "candidate-delivery", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "state-persistence", "status": "not_run", "blockedBy": "T07-A10-B01" },
+    { "id": "uninstall", "status": "not_run", "blockedBy": "T07-A10-B02" },
+    { "id": "critical-battery-20", "status": "not_run", "blockedBy": "T07-A10-B01" }
+  ],
+  "findings": [
+    {
+      "id": "T07-A10-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "fresh local Skill archive installation through a supported MiniMax UI surface",
+      "result": "failed",
+      "consequence": "the deterministic Skill archive is not a certified distribution channel"
+    },
+    {
+      "id": "T07-A10-B02",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "executable shell-free five-role native setup procedure",
+      "result": "failed",
+      "consequence": "the procedure does not supply a canonical profile root, causing the initial live setup to use a forbidden terminal fallback"
+    },
+    {
+      "id": "T07-A10-B03",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "complete child-role and workflow certification matrix",
+      "result": "not_run",
+      "consequence": "no production behavior or repeatability claim is justified"
+    }
+  ],
+  "forbiddenFallbacksUsed": ["read-only-terminal-directory-discovery"],
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}
