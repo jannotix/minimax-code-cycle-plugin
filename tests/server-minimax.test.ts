@@ -114,7 +114,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.9")
+    assert.equal(identity.serverInfo.version, "2.0.0-alpha.10")
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
@@ -144,9 +144,16 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
         profile: string
         profileDigest: string
         systemPrompt: string
+        systemPromptSource: string
         tools: string[]
       }[]
-      host: { agentApi: string; capabilityProfile: string; localSkillInstall: string; modelStrategy: string }
+      host: {
+        agentApi: string
+        capabilityProfile: string
+        localSkillInstall: string
+        modelStrategy: string
+        promptAuthority: string
+      }
       mcp: { description: string; name: string; transport: string }
       schema: string
     }
@@ -154,14 +161,16 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     assert.equal(setup.agents.length, 5)
     assert.equal(setup.host.agentApi, "native-mavis-tool-only")
     assert.equal(setup.host.capabilityProfile, "canonical-agent-markdown")
+    assert.equal(setup.host.promptAuthority, "canonical-agent-markdown-only")
     assert.equal(setup.host.localSkillInstall, "not-certified-on-minimax-3.0.68.134")
     assert.deepEqual(setup.mcp, {
       argsFromPluginRoot: ["dist/server.js"],
       command: "node",
-      description: "cycle-managed:minimax-code-cycle-plugin;version=2.0.0-alpha.9",
+      description: "cycle-managed:minimax-code-cycle-plugin;version=2.0.0-alpha.10",
       name: "cycle-tools",
       transport: "stdio",
     })
+    assert.ok(setup.agents.every((entry) => entry.systemPromptSource === "canonical-agent.md"))
     assert.match(setup.host.modelStrategy, /session-inherited/u)
     const receiptAgents = setup.agents.map((entry) => ({
       configDigest: entry.profileDigest,
@@ -175,7 +184,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     }))
     const installedReceipt = {
       agents: receiptAgents,
-      pluginVersion: "2.0.0-alpha.9",
+      pluginVersion: "2.0.0-alpha.10",
       profile: "cycle-t04",
       schema: "cycle.mavis-setup-receipt.v2",
       status: "installed_unverified",

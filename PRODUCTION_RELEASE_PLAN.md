@@ -1,8 +1,8 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.9 live T07 evidence recorded; alpha.10 remediation requires a fresh live T07**
+Status: **BLOCKED — alpha.10 procedure correction requires a fresh live T07**
 
-Development version: `2.0.0-alpha.9`
+Development version: `2.0.0-alpha.10`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7/alpha.8 receipts retained; alpha.9 MCP live handshake passed but distribution and native-prompt-update gates blocked | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.9 receipts retained; alpha.10 needs fresh role setup and behavioral evidence | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -190,9 +190,11 @@ No setup action runs from plugin installation alone.
 
 MiniMax `3.0.68` exposes agent management through the native model tool, not the installed connector
 CLI. Setup preflights all five names, refuses foreign collisions before mutation, and uses only
-native `agent create/update/get/list/delete` operations whose current arguments are discovered with
-`agent help`. Per-agent model YAML is not evidence: the receipt records the inherited session model
-unless a native write/read round-trip proves another model.
+native `agent create/get/list/delete` operations whose current arguments are discovered with
+`agent help`. Canonical `agent.md` is the Custom Agent prompt authority; a native
+`agent update system_prompt` is not a supported recovery path. Per-agent model YAML is not evidence:
+the receipt records the inherited session model unless a native write/read round-trip proves another
+model.
 
 MiniMax `3.0.68.134` exposes no native hook-management surface. T07R therefore uses the runtime's
 canonical custom-agent selectors: read-only roles allow only `read`, `grep`, and `glob`; executor
@@ -258,9 +260,10 @@ The alpha.8 live probe proved a MiniMax-owned MCP handshake after a full applica
 also proved that local ZIP Skill upload is absent from the observed UI and that complete role setup
 was not reconciled. Alpha.9 confirmed the MCP handshake and data isolation, then proved that native
 `agent update` rejects a Custom Agent prompt update after the canonical `agent.md` is written even
-though `cycle_setup assess` is already `noop`. Alpha.10 must remove that impossible step before a
-fresh T07. The alpha.7, alpha.8, and alpha.9 receipts remain historical evidence and do not certify
-the next candidate.
+though `cycle_setup assess` is already `noop`. Alpha.10 removes that impossible mutation: it writes
+the canonical file, requires native `agent get` to report the resulting prompt, and requires
+`cycle_setup assess: noop`. A fresh T07 must prove this candidate. The alpha.7, alpha.8, and alpha.9
+receipts remain historical evidence and do not certify the next candidate.
 
 ### T08 — Release and distribution gate
 

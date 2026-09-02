@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.9` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.10` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -34,6 +34,8 @@ Do not load every reference for a simple inspection.
    undocumented HTTP endpoint, direct agent-store edit, or inline role substitute.
    The receipt must bind byte-exact canonical agent capability profiles whose allowlists exclude
    shell, delegation, `mavis`, MCP, memory, and unknown tools.
+   For Custom Agents, canonical `agent.md` is also the sole system-prompt authority: never call
+   native `agent update` with `system_prompt`.
 4. Start or reconcile one durable workflow, then call `cycle_coordinator next`. Execute exactly one
    returned action and reread state. The coordinator never invents a transition.
 5. Bind every role submission to the native child `session_id`. One session serves one workflow
@@ -73,8 +75,9 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-T07R replaces unsupported hook setup with canonical MiniMax capability profiles and adds a standard
-local Skill ZIP. It does not certify that MiniMax Desktop enforces those profiles, dispatches agents,
+T07R3 uses canonical MiniMax capability profiles and the Custom Agent `agent.md` prompt authority;
+it also retains the deterministic local Skill ZIP. It does not certify that MiniMax Desktop enforces
+those profiles, dispatches agents,
 or completes browser/provider/concurrency flows on a real profile. Fresh T07 live certification
 remains a release gate. Until all
 applicable gates pass on one exact artifact, the product is not production-ready and its release is

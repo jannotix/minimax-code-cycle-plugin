@@ -116,7 +116,10 @@ export function assessAgent(role, expectedBody, observed, observedAgentMarkdown)
         !normalize(observedAgentMarkdown).includes(ownershipMarker(role))) {
         return { action: "conflict", reason: "agent profile is not owned by this Cycle setup" };
     }
-    return { action: "update", reason: "managed prompt, description, or capability profile is stale" };
+    return {
+        action: "update",
+        reason: "managed canonical profile or native description is stale; rewrite agent.md and do not update system_prompt",
+    };
 }
 export function assessUninstall(role, observed) {
     if (observed === undefined)

@@ -62,11 +62,13 @@ test("setup assessment is create, update, noop, or conflict without taking over 
     name: spec.agentName,
     systemPrompt: "not managed by Cycle",
   }).action, "conflict")
-  assert.equal(assessAgent(role, body, {
+  const stale = assessAgent(role, body, {
     description: "stale",
     name: spec.agentName,
     systemPrompt,
-  }).action, "update")
+  })
+  assert.equal(stale.action, "update")
+  assert.match(stale.reason, /rewrite agent\.md and do not update system_prompt/u)
   assert.equal(assessAgent(role, body, {
     description: spec.description,
     name: spec.agentName,
@@ -160,10 +162,15 @@ test("the natural-language setup is explicit, native-only, reversible, and hones
   assert.match(procedure, /manual editor/iu)
   assert.doesNotMatch(procedure, /Upload a skill/iu)
   assert.match(procedure, /mcp create/iu)
+  assert.match(procedure, /canonical `agent\.md` is the only authority/iu)
+  assert.match(procedure, /Never call native `agent update` with `system_prompt`/iu)
   const profileWrite = procedure.indexOf("write the complete returned `profile` bytes")
-  const promptUpdate = procedure.indexOf("native `agent update` sets the exact managed `system_prompt`")
+  const nativeReadBack = procedure.indexOf("then call `agent get` and")
+  const noopAssessment = procedure.indexOf("The result must be `noop`")
   assert.ok(profileWrite >= 0)
-  assert.ok(promptUpdate > profileWrite, "canonical agent.md must precede the native system_prompt update")
+  assert.ok(nativeReadBack > profileWrite, "canonical agent.md must be read back through native agent get")
+  assert.ok(noopAssessment > nativeReadBack, "read-back must be assessed before setup can continue")
+  assert.doesNotMatch(procedure, /native `agent update` sets the exact managed `system_prompt`/iu)
 
   const modelsText = readFileSync(join(ROOT, "skills", "cycle", "config", "models.example.json"), "utf8")
   const models = JSON.parse(modelsText) as { roles: Record<string, string>; strategy: string }
@@ -185,25 +192,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.9",
+    pluginVersion: "2.0.0-alpha.10",
     profile: "cycle-t04",
     schema: "cycle.mavis-setup-receipt.v2",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.9").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.10").status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.9"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.10"),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.9"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.10"),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.9"),
+    }, "2.0.0-alpha.10"),
     /role\/name mismatch/u,
   )
 })

@@ -96,6 +96,7 @@ const tools: readonly ToolDefinition[] = [
       "Return the native Mavis agent setup specification, deterministically assess one observed " +
       "agent for create/update/noop/conflict, authorize deletion only for a Cycle-owned agent, or " +
       "validate a sanitized readiness receipt. " +
+      "For Custom Agents, canonical agent.md is the system-prompt authority; native system_prompt updates are unsupported. " +
       "This tool never mutates the MiniMax profile; the Cycle Skill uses the native mavis tool.",
     inputSchema: objectSchema(
       {
@@ -371,6 +372,7 @@ function setupOperation(args: Record<string, unknown>): unknown {
           profileDigest: contentDigest(managedAgentMarkdown(entry.role, body)),
           role: entry.role,
           systemPrompt,
+          systemPromptSource: "canonical-agent.md",
           tools: entry.tools,
         }
       }),
@@ -387,6 +389,7 @@ function setupOperation(args: Record<string, unknown>): unknown {
         liveCapabilityProof: "required-before-production",
         localSkillInstall: "not-certified-on-minimax-3.0.68.134",
         modelStrategy: "session-inherited-unless-native-round-trip-proves-an-agent-model",
+        promptAuthority: "canonical-agent-markdown-only",
       },
       namespace: SETUP_NAMESPACE,
       owner: SETUP_OWNER,

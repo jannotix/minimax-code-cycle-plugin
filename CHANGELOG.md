@@ -2,6 +2,21 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.10] - Unreleased
+
+### Fixed
+
+- Made canonical Custom Agent `agent.md` the explicit and sole system-prompt authority in the
+  setup procedure and `cycle_setup` specification. Setup now writes, hashes, reads back, and
+  requires `cycle_setup assess: noop`; it never attempts the unsupported native
+  `agent update system_prompt` mutation.
+
+### Known limitations
+
+- A fresh alpha.10 T07 run must still prove all five native roles and live capability rosters. The
+  observed Desktop Personal Skills editor still has no local ZIP upload control, so no local Skill
+  archive distribution channel is certified.
+
 ## [2.0.0-alpha.9] - Unreleased
 
 ### Changed

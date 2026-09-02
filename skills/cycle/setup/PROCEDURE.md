@@ -36,8 +36,10 @@ or prompt-only tool restriction.
 2. Call `cycle_setup` with `operation: "spec"`. It returns the five exact agents, their complete
    canonical `agent.md` bytes and digests, and the `cycle-tools` MCP specification.
 3. Call native `mavis` with `agent help`, `agent list`, `mcp help`, and `mcp list`.
-4. The live contracts must expose deterministic agent create/update/get/delete and MCP
-   list/get/create/update/delete. Missing operations stop setup.
+4. The live contracts must expose deterministic agent create/get/list/delete and MCP
+   list/get/create/update/delete. A native Custom Agent `system_prompt` update is not a setup
+   capability: its canonical `agent.md` is the prompt authority. Missing required operations stop
+   setup.
 5. For each expected agent, call `agent get`. Read its canonical `agent.md` when present and pass
    native fields plus `observed_agent_markdown` to `cycle_setup assess`.
 6. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
@@ -71,11 +73,13 @@ Cycle-owned stale row; never take over a foreign same-name MCP server.
 
 Use only arguments returned by current `agent help`. Native create establishes the exact name and
 description. After the native agent exists, write the complete returned `profile` bytes to its
-canonical `agent.md`; do not merge or invent fields. Re-read it and require its SHA-256 to match
-`profileDigest` **before** native `agent update` sets the exact managed `system_prompt` returned by
-`cycle_setup spec`. The observed local Mavis runtime rejects a prompt update while `agent.md` and
-the requested system prompt disagree. Do not reverse this order, hand-edit either returned value, or
-use a shell to derive a digest.
+canonical `agent.md`; do not merge or invent fields. Canonical `agent.md` is the only authority for
+the Custom Agent system prompt and capability selectors. The observed Mavis runtime derives the
+native `agent get` system prompt from that file and rejects `mavis agent update` for
+`system_prompt`. Never call native `agent update` with `system_prompt`, including after a profile
+write. Re-read the file and require its SHA-256 to match `profileDigest`, then call `agent get` and
+require its returned system prompt to equal the `systemPrompt` from `cycle_setup spec`. Do not
+hand-edit either returned value or use a shell to derive a digest.
 
 The canonical selectors are the security boundary enforced by MiniMax before every child Turn:
 
@@ -92,9 +96,11 @@ unknown future tools. Deterministic tests and proofs run in the parent through t
 engine; role sessions only inspect or propose scoped file edits. Post-task Git reconciliation still
 rejects executor writes outside the current/completed task scopes.
 
-After every mutation, call `agent get`, re-read `agent.md`, and call `cycle_setup assess`. The result
-must be `noop`; an `update` result after the profile write means the native prompt round-trip is not
-yet complete. At the end `agent list` contains each expected name exactly once.
+After every native create or profile-file write, call `agent get`, re-read `agent.md`, and call
+`cycle_setup assess`. The result must be `noop`. If `assess` returns `update` after the byte-exact
+profile write and native read-back, stop setup as `blocked`: the canonical profile did not produce a
+trusted native round-trip. Do not use native `agent update` with `system_prompt` as recovery. At the
+end `agent list` contains each expected name exactly once.
 
 Per-agent model YAML is not evidence. Record the inherited session model unless a native
 write/read round-trip proves another model. See https://github.com/MiniMax-AI/minimax-code/issues/124.

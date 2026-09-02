@@ -1,7 +1,7 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.9` — production release is blocked: alpha.9 T07 found an
-> incompatible native prompt-update step and no supported local Skill archive install surface.
+> Development line: `2.0.0-alpha.10` — production release is blocked pending fresh live T07
+> certification and a supported local Skill archive installation surface.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it
@@ -56,6 +56,11 @@ agents through MiniMax's native `mavis` tool. `cycle_setup` supplies byte-exact 
 profile write itself.
 Setup is idempotent and uninstall deletes only marker-owned agents while preserving the durable
 Cycle database.
+
+For Custom Agents, canonical `agent.md` is the sole authority for both the system prompt and the
+capability selectors. Setup writes and digests that exact file, then requires native `agent get` and
+`cycle_setup assess` to round-trip to `noop`. It never calls native `agent update` with
+`system_prompt`: the observed runtime rejects that mutation and treats `agent.md` as authoritative.
 
 MiniMax Code `3.0.68` exposes agent management to model sessions through the native tool, not the
 installed connector CLI. Setup therefore refuses CLI, undocumented HTTP, and direct database/file
