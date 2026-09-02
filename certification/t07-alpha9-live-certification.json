@@ -1,0 +1,92 @@
+{
+  "schema": "cycle.t07.live-certification.v3",
+  "recordedAt": "2026-09-02T15:36:59+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "47705c621b3d3c84a36d61d38c267486f8d05e97",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.9.tgz",
+    "artifactVersion": "2.0.0-alpha.9",
+    "artifactBytes": 1893559,
+    "artifactSha256": "3db26aac1fb4dbc2656acf81bbe563837413adace26dd28149be4c40c4807b17",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.9.zip",
+    "skillArtifactBytes": 42213,
+    "skillArtifactSha256": "a3f01c1f96a5b886f36055ed610c6a7298db768e1ff1ab4a99069e03f9973df3"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "profile": "disposable-runtime",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M3"
+  },
+  "profileIsolation": {
+    "status": "passed",
+    "testOnlyCycleDataDirectory": true,
+    "testDatabaseInsideDisposableRuntime": true,
+    "defaultUserCycleDataDirectoryAbsentAfterDoctor": true,
+    "realMcpRowAbsentAfterCleanup": true,
+    "realCycleAgentCountAfterCleanup": 0,
+    "temporaryDirectoriesMovedToRecycleBin": 3
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "local-skill-ui", "status": "failed", "finding": "T07-A9-B01" },
+    { "id": "public-git-import", "status": "not_run", "reason": "publication/import was outside authority" },
+    { "id": "mcp-registration", "status": "passed" },
+    { "id": "mcp-environment-isolation", "status": "passed" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "mcp-doctor", "status": "passed" },
+    { "id": "role-preflight", "status": "passed" },
+    { "id": "architect-profile-file", "status": "passed" },
+    { "id": "architect-native-prompt-update", "status": "failed", "finding": "T07-A9-B02" },
+    { "id": "five-role-setup", "status": "not_run", "blockedBy": "T07-A9-B02" },
+    { "id": "child-roster-allow-deny", "status": "not_run", "blockedBy": "T07-A9-B02" },
+    { "id": "quick-cycle", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "full-cycle", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "repair-blocked-retry-pause-resume", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "provider-failure", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "concurrent-projects", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "candidate-delivery", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "state-persistence", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "uninstall", "status": "not_run", "blockedBy": "T07-A9-B02" },
+    { "id": "critical-battery-20", "status": "not_run", "blockedBy": "T07-A9-B01" },
+    { "id": "disposable-cleanup", "status": "passed", "method": "moved-to-recycle-bin" }
+  ],
+  "findings": [
+    {
+      "id": "T07-A9-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "fresh local Skill archive installation through a supported MiniMax UI surface",
+      "result": "failed",
+      "consequence": "the deterministic Skill archive is not a certified distribution channel"
+    },
+    {
+      "id": "T07-A9-B02",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "executable five-role native setup procedure",
+      "result": "failed",
+      "consequence": "the mandatory native system_prompt update is rejected even though the canonical agent.md already produces a noop assessment"
+    },
+    {
+      "id": "T07-A9-B03",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "complete child-role and workflow certification matrix",
+      "result": "not_run",
+      "consequence": "no production behavior or repeatability claim is justified"
+    }
+  ],
+  "forbiddenFallbacksUsed": [],
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}

@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.8 live T07 evidence recorded; alpha.9 remediation requires a fresh live T07**
+Status: **BLOCKED — alpha.9 live T07 evidence recorded; alpha.10 remediation requires a fresh live T07**
 
 Development version: `2.0.0-alpha.9`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7 receipt retained; alpha.8 MCP live handshake passed but distribution/setup gates blocked; alpha.9 recertification pending | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7/alpha.8 receipts retained; alpha.9 MCP live handshake passed but distribution and native-prompt-update gates blocked | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -256,9 +256,11 @@ was used. See `certification/t07-live-certification.json` and
 
 The alpha.8 live probe proved a MiniMax-owned MCP handshake after a full application restart, but it
 also proved that local ZIP Skill upload is absent from the observed UI and that complete role setup
-was not reconciled. Alpha.9 corrects the setup order: write and byte-verify canonical `agent.md`
-before native `agent update` writes the matching `system_prompt`. The alpha.7 and alpha.8 receipts
-remain historical evidence and do not certify alpha.9.
+was not reconciled. Alpha.9 confirmed the MCP handshake and data isolation, then proved that native
+`agent update` rejects a Custom Agent prompt update after the canonical `agent.md` is written even
+though `cycle_setup assess` is already `noop`. Alpha.10 must remove that impossible step before a
+fresh T07. The alpha.7, alpha.8, and alpha.9 receipts remain historical evidence and do not certify
+the next candidate.
 
 ### T08 — Release and distribution gate
 

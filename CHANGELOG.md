@@ -13,6 +13,12 @@ All notable changes to Cycle for MiniMax Code are documented here.
   Skill editor, not a local Skill ZIP upload control. The deterministic ZIP remains an integrity
   artifact, not a certified installation channel.
 
+### Known limitations
+
+- Alpha.9 live T07 found that native `mavis agent update` rejects a Custom Agent `system_prompt`
+  update after the canonical `agent.md` already yields a `noop` assessment. The release remains
+  blocked pending a new procedure version and fresh live certification.
+
 ## [2.0.0-alpha.8] - Unreleased
 
 ### Changed
