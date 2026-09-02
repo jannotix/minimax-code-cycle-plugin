@@ -1,0 +1,55 @@
+{
+  "schema": "cycle.t07.git-import-certification.v1",
+  "recordedAt": "2026-09-03T01:15:07+02:00",
+  "verdict": "PARTIAL",
+  "candidate": {
+    "sourceCommit": "95b79d4d674d430fb0ad7d71b7a61b5f4c6ed52b",
+    "publicBranch": "main",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.14.tgz",
+    "artifactBytes": 1897838,
+    "artifactSha256": "5ec0c27f79066fc25a3ce823d2e11b9be0442677c6dcdf5da77d6814f11cfbcb",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.14.zip",
+    "skillArtifactBytes": 41919,
+    "skillArtifactSha256": "2b35cd5467e72a555124671cf9fa659bcb33fdf845dee623a5037abf3f1802ba"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "liveModel": "MiniMax-M3",
+    "mavisRuntime": "temporary"
+  },
+  "checks": [
+    { "id": "public-main-source", "status": "passed" },
+    { "id": "git-import-preview-manifest", "status": "passed", "version": "2.0.0-alpha.14", "skills": 1, "mcpServers": 1 },
+    { "id": "git-import-native-action", "status": "passed" },
+    { "id": "imported-plugin-catalog", "status": "passed" },
+    { "id": "application-restart-persistence", "status": "passed" },
+    { "id": "imported-skill-selection", "status": "passed" },
+    { "id": "imported-mcp-cycle-doctor", "status": "passed", "version": "2.0.0-alpha.14", "schemaVersion": 8, "ok": true },
+    { "id": "installed-checkout-byte-digest", "status": "not_proven", "reason": "host UI does not expose the imported file tree hash" },
+    { "id": "local-skill-zip-install", "status": "unsupported", "reason": "host exposes no local archive upload surface" },
+    { "id": "full-t07-workflow-matrix", "status": "not_run" }
+  ],
+  "remainingGates": [
+    "executor-allowed-write",
+    "quick-cycle",
+    "full-cycle",
+    "repair-blocked-retry-pause-resume",
+    "provider-failure",
+    "concurrent-projects",
+    "candidate-delivery",
+    "state-persistence",
+    "uninstall",
+    "critical-battery-20",
+    "post-publication-clean-install"
+  ],
+  "releaseVerdict": "BLOCKED",
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}

@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.14 deterministic candidate freeze; distribution and fresh full T07 certification remain gated**
+Status: **BLOCKED — alpha.14 public Git import and MCP activation passed; full T07 certification remains gated**
 
 Development version: `2.0.0-alpha.14`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.12 receipts are historical; a manual Personal Skill proved host discovery only; alpha.14 has no artifact-install receipt | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.12 receipts are historical; alpha.14 public Git import, restart persistence, and imported MCP doctor passed; full workflow matrix remains | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -280,8 +280,10 @@ cannot forward `CYCLE_DATA_DIR`. Alpha.12 live evidence passed those seams, incl
 rosters, but no local ZIP install surface and no authorized Git-import run exist. The alpha.7 through
 Alpha.12 receipts remain historical evidence and do not certify a distributable candidate. T07R6
 found that its alpha.13 local Skill ZIP changed bytes between same-SHA builds, so alpha.13 is
-superseded. T07R7 freezes alpha.14 with sorted committed blobs and fixed ZIP metadata; fresh alpha.14
-T07 evidence is still required before T08.
+superseded. T07R7 freezes alpha.14 with sorted committed blobs and fixed ZIP metadata. Its
+owner-authorized public Git import, restart persistence, and imported MCP doctor are recorded in
+`certification/T07_ALPHA14_GIT_IMPORT_CERTIFICATION.md`; the remaining full alpha.14 T07 matrix is
+still required before T08.
 
 ### T08 — Release and distribution gate
 
