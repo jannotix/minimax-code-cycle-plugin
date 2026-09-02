@@ -1,0 +1,33 @@
+{
+  "schema": "cycle.t07.setup-attempt.v1",
+  "recordedAt": "2026-09-03T01:26:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "95b79d4d674d430fb0ad7d71b7a61b5f4c6ed52b",
+    "artifactVersion": "2.0.0-alpha.14",
+    "artifactSha256": "5ec0c27f79066fc25a3ce823d2e11b9be0442677c6dcdf5da77d6814f11cfbcb",
+    "skillArtifactSha256": "2b35cd5467e72a555124671cf9fa659bcb33fdf845dee623a5037abf3f1802ba"
+  },
+  "checks": [
+    { "id": "imported-skill-setup-spec", "status": "passed" },
+    { "id": "parent-terminal-absent", "status": "failed", "reason": "selected Skill executed a Terminal directory-discovery command" },
+    { "id": "setup-run-validity", "status": "failed", "reason": "run stopped after forbidden Terminal execution" },
+    { "id": "managed-agent-profiles-after-stop", "status": "passed", "value": 0 },
+    { "id": "temporary-project-mutations-after-stop", "status": "passed", "value": 0 }
+  ],
+  "finding": {
+    "id": "T07-A14-B01",
+    "severity": "high",
+    "requirement": "native-only, shell-free managed-role setup from the imported Skill",
+    "consequence": "parent capability selection is not safely constrained by the imported plugin"
+  },
+  "releaseVerdict": "BLOCKED",
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}

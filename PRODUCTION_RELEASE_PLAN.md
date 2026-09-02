@@ -283,7 +283,11 @@ found that its alpha.13 local Skill ZIP changed bytes between same-SHA builds, s
 superseded. T07R7 freezes alpha.14 with sorted committed blobs and fixed ZIP metadata. Its
 owner-authorized public Git import, restart persistence, and imported MCP doctor are recorded in
 `certification/T07_ALPHA14_GIT_IMPORT_CERTIFICATION.md`; the remaining full alpha.14 T07 matrix is
-still required before T08.
+still required before T08. The first imported-Skill setup attempt is recorded in
+`certification/T07_ALPHA14_SETUP_ATTEMPT.md`: despite an explicit profile-root handoff and no-shell
+contract, the parent selected Terminal to locate plugin files. It made no role or project mutation,
+but blocks autonomous native-only setup until the host can constrain the parent roster or expose a
+supported non-prompt setup surface.
 
 ### T08 — Release and distribution gate
 
