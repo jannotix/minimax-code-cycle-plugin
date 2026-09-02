@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code Production Release Plan
 
-Status: **BLOCKED — alpha.11 explicit profile-root contract requires a fresh live T07**
+Status: **BLOCKED — alpha.11 live T07 evidence recorded; alpha.12 must align MCP metadata/isolation with the fields MiniMax actually persists**
 
 Development version: `2.0.0-alpha.11`
 
@@ -84,7 +84,7 @@ history.
 | Resource admission | yes | yes at T01 | measured reserves and fair leases |
 | Automated tests | 466 executed at reference SHA (465 pass, 1 platform skip) | T00–T06 map; 323 executed locally (322 pass, 1 platform skip) | requirement-mapped suite |
 | CI and packaging | yes | canonical TGZ verified locally; pinned three-OS core workflow configured but not remotely run | OS matrix, allowlist, SBOM, checksums, provenance |
-| Live MiniMax receipt | n/a | alpha.7–alpha.10 receipts retained; alpha.11 needs fresh five-role and behavioral evidence | clean install and behavioral matrix |
+| Live MiniMax receipt | n/a | alpha.7–alpha.11 receipts retained; alpha.11 five-role profile setup passed but Mavis discarded MCP env/description metadata | clean install and behavioral matrix |
 
 No row moves to `yes` from documentation or an agent report. A deterministic test, direct runtime
 observation, or an exact artifact receipt is required.
@@ -265,8 +265,11 @@ explicit-path diagnostic wrote the canonical file with normal MiniMax file tools
 reported the resulting prompt, and `cycle_setup assess` returned `noop` without `agent update`.
 However, its first guided setup did not know the profile root and used a forbidden Terminal directory
 listing. Alpha.11 makes the active root explicit and supplies a per-role relative target before
-native creation. A fresh T07 must prove this candidate. The alpha.7 through alpha.10 receipts remain
-historical evidence and do not certify the next candidate.
+native creation; its five-role live round-trip passed without shell or `agent update`. The same run
+proved that Mavis discards configured MCP environment and description fields, leaking its doctor
+database to the default user location until recovered. Alpha.12 must align this unsupported metadata
+claim with the host's actual persistence contract before a fresh T07. The alpha.7 through alpha.11
+receipts remain historical evidence and do not certify the next candidate.
 
 ### T08 — Release and distribution gate
 

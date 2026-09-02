@@ -15,9 +15,11 @@ All notable changes to Cycle for MiniMax Code are documented here.
 
 ### Known limitations
 
-- A fresh alpha.11 T07 run must prove all five native roles and live capability rosters. The
-  observed Desktop Personal Skills editor still has no local ZIP upload control, so no local Skill
-  archive distribution channel is certified.
+- Alpha.11 T07 proved the five shell-free role profiles, but MiniMax `mcp create/update` discarded
+  the configured environment and description. Alpha.12 must align the MCP contract with fields the
+  host actually persists and prevent any default-user-data leak in disposable certification.
+- The observed Desktop Personal Skills editor still has no local ZIP upload control, so no local
+  Skill archive distribution channel is certified.
 
 ## [2.0.0-alpha.10] - Unreleased
 

@@ -1,0 +1,89 @@
+{
+  "schema": "cycle.t07.live-certification.v3",
+  "recordedAt": "2026-09-02T18:58:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "b657fc79b29d6b4784f7e9fcc5524b93a5a467d9",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.11.tgz",
+    "artifactVersion": "2.0.0-alpha.11",
+    "artifactBytes": 1896364,
+    "artifactSha256": "e13939c3c3b01d0ad8e4b48731f028d0b4f9a4a264864df486ad72377e47eadb",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.11.zip",
+    "skillArtifactBytes": 42914,
+    "skillArtifactSha256": "4b92b7967eeffde71a3d263d1a6c45fa6d8d8f8d3e7d9719280491ed1a55ee58"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "profile": "disposable-runtime",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M3"
+  },
+  "profileIsolation": {
+    "status": "failed_then_restored",
+    "testOnlyMiniMaxProfile": true,
+    "mcpEnvironmentPersisted": false,
+    "realDefaultCycleDataCreatedDuringTest": true,
+    "realDefaultCycleDataMovedToRecycleBin": true,
+    "realMcpRowAbsentAfterCleanup": true,
+    "realCycleAgentCountAfterCleanup": 0,
+    "temporaryDirectoriesMovedToRecycleBin": 2
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "local-skill-ui", "status": "failed", "finding": "T07-A11-B01" },
+    { "id": "public-git-import", "status": "not_run", "reason": "publication/import was outside authority" },
+    { "id": "mcp-registration", "status": "partial", "finding": "T07-A11-B02" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "mcp-doctor", "status": "passed" },
+    { "id": "mcp-environment-isolation", "status": "failed", "finding": "T07-A11-B02" },
+    { "id": "five-role-setup", "status": "passed" },
+    { "id": "child-roster-allow-deny", "status": "not_run", "blockedBy": "T07-A11-B02" },
+    { "id": "quick-cycle", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "full-cycle", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "repair-blocked-retry-pause-resume", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "provider-failure", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "concurrent-projects", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "candidate-delivery", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "state-persistence", "status": "not_run", "blockedBy": "T07-A11-B01" },
+    { "id": "uninstall", "status": "not_run", "blockedBy": "T07-A11-B02" },
+    { "id": "critical-battery-20", "status": "not_run", "blockedBy": "T07-A11-B01" }
+  ],
+  "findings": [
+    {
+      "id": "T07-A11-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "fresh local Skill archive installation through a supported MiniMax UI surface",
+      "result": "failed",
+      "consequence": "the deterministic Skill archive is not a certified distribution channel"
+    },
+    {
+      "id": "T07-A11-B02",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "test-only MCP environment and exact native ownership metadata",
+      "result": "failed",
+      "consequence": "MiniMax discarded environment and description fields, causing the server to create real default user data"
+    },
+    {
+      "id": "T07-A11-B03",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "complete child-role and workflow certification matrix",
+      "result": "not_run",
+      "consequence": "no production behavior or repeatability claim is justified"
+    }
+  ],
+  "forbiddenFallbacksUsed": [],
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}
