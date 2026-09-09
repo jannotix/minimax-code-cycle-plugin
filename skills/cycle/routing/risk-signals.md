@@ -1,61 +1,65 @@
 # Routing
 
-`/cycle run [auto|quick|full]` selects a route. The route determines
-which gates run. `auto` picks a route from deterministic risk signals.
-The signals are derived from the original request, the project, and the
-graph index, never from the agent's prior state.
+The control plane picks the route when a workflow starts. The coordinator passes
+the exact request, the known affected paths and a preference; `cycle_workflow
+start` returns the mode it chose and the rationale it chose it on. No role and no
+coordinator judgement participates: the same request against the same paths
+produces the same route every time.
 
-## Route definitions
+There is no command surface. The preference is a field on `start`, and it takes
+`auto`, `quick` or `full`.
 
-| Route | Plan | Execution | Verification | Reviews | Arbitration |
-|---|---|---|---|---|---|
-| `quick` | skipped unless `/cycle plan` was used | one bounded task | mandatory gate | skipped | yes (one) |
-| `full` | yes | one or more bounded tasks | mandatory gates | both reviewers | yes |
-| `auto` | decided by signals | decided by signals | always | decided by signals | always |
+## What each preference does
 
-`auto` never picks `quick` for changes that touch more than one layer,
-changes that require schema or migration, or changes the user explicitly
-marked as cross-layer or critical.
+| Preference | Result |
+|---|---|
+| `full` | The full cycle, always. Recorded as user-promoted, and no signal is evaluated. |
+| `quick` | The quick route, even when signals fired. The signals that fired are still recorded in the rationale, so a route the user forced is visible as forced. |
+| `auto` | The full cycle when any critical signal fires, the quick route when none does. |
 
-## Risk signals
+## What the signals are
 
-The route is the worst signal wins. If any signal is `high`, the route
-is `full`. If any signal is `medium` and none is `high`, the route is
-`full`. If all signals are `low`, the route is `quick`.
+A signal is a substring of the lowercased request, or a pattern over a path.
+Nothing is weighted and nothing is scored: one signal is enough to promote an
+`auto` request to the full cycle.
 
-| Signal | low | medium | high |
-|---|---|---|---|
-| Layer count (request mentions) | 1 | 2 | 3 or more |
-| Persistence change | no | new table or column | migration affecting existing data |
-| External API change | no | additive | breaking |
-| Authentication or authorization change | no | new role | permission model change |
-| Dependency addition | no | patch or minor | new direct dependency |
-| User-visible surface area | one path | two or more paths | new screen or flow |
-| Reversibility | trivially revertable | rebase-able | requires manual rollback |
-| Test coverage of the area | high | medium | low or none |
-| Project age in the project memory | well-known pattern | seen once | novel for the project |
-| User explicit signal | "quick" | none | "full" or "critical" or "cross-layer" |
+Request markers, by category: authentication, authorization, cryptography,
+secrets, persistence, payments, personal data, release, rewrite.
 
-The route is reported to the user in plain language before the workflow
-starts. The user can override with `quick` or `full` on the command line
-to skip the signal evaluation.
+The markers are stems, not words, and they cover several languages at once —
+`autentic` reads Italian, Spanish and Portuguese together. A cycle that answers
+in the language of the request has to route on it too, or a payment change
+described in any language but English takes the quick route with nothing said.
 
-## When `quick` is wrong
+Path patterns, by category: persistence (`migrations/`, `schema/`, `.sql`),
+packaging (`installer/`, `packaging/`, `release/`, `Dockerfile`), deployment
+(`deploy/`, `k8s/`, `helm/`, `terraform/`), dependencies (manifest and lock
+files), and CI (`.github/workflows/`).
 
-`quick` skips the plan and the reviewers. The executor's evidence is the
-only gate before the arbiter. A `quick` workflow that ends `rejected` by
-the arbiter because of a layering issue or a missing review was the
-wrong route. The route decision is recorded in the audit ledger and
-included in the workflow's `data` for the arbiter to inspect.
+Paths come from two places: the affected paths the caller supplied, and the paths
+written in the request itself. Routing runs before anything is planned, so the
+caller usually has no file list yet; the one place a path is already known is
+where the person wrote it. Without reading the request, the path rules could only
+ever be tested against an empty list, which is a guard that reads as armed and
+never fires.
 
-The user can request a route promotion at any point: the cycle
-`/cycle review` command takes a `quick` candidate and runs the two
-reviewers. The reviewers' findings are added to the existing evidence
-and the arbiter re-evaluates.
+More than ten distinct paths adds the `breadth` category on its own.
 
-## Determinism
+## Why the markers are narrow
 
-The signal evaluation is deterministic. The same request against the
-same project state produces the same route. There is no agent judgment
-in the routing decision. If the user believes the route is wrong, they
-override; the override is recorded.
+A rule that fires on `api` or `update` sends every request to the full cycle,
+which turns the quick route into decoration and makes the product too expensive
+to use for the small changes it should stay out of the way for. The markers are
+deliberately specific, and the cost of that is real: a critical change described
+in words none of them match takes the quick route. The quick route still freezes
+an exact candidate, runs the mandatory gates and passes an arbiter, so it is
+bounded rather than ungoverned — but it has no independent review, and that is
+the difference the signals exist to decide.
+
+## When the route was wrong
+
+The route is recorded with the workflow and is part of what the arbiter sees. A
+quick candidate the arbiter rejects on something two independent reviewers would
+have caught is evidence the signals missed a category. Report that; do not widen
+a marker to make one request behave, because a marker widened for one request
+routes every future request that happens to contain the word.

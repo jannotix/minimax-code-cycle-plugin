@@ -25,8 +25,8 @@ have to add one.
 
 ## Optional gates
 
-Optional gates are recorded as evidence and surfaced in the
-`/cycle evidence` listing. They do not block the workflow.
+Optional gates are recorded as evidence and returned by `cycle_workflow`
+alongside the mandatory ones. They do not block the workflow.
 
 | Gate | When |
 |---|---|
@@ -39,8 +39,8 @@ Optional gates are recorded as evidence and surfaced in the
 
 - `passed` is set only when the gate's verification command exits zero
   and produces no fatal signal in the output digest. A warning in the
-  output is not a fatal signal; the project may declare specific
-  warnings as fatal in `~/.mavis/cycle/config.json`.
+  output is not a fatal signal, and there is no setting that promotes one:
+  a project that wants a warning to fail makes its own command exit non-zero.
 - `failed` is set when the command exits non-zero or the output contains
   a fatal signal. The evidence record's `output_digest` lets a reviewer
   or the arbiter inspect the failure without re-running the command.

@@ -88,6 +88,6 @@ runs the study with two or more participants, and the user records
 the outcome. The workflow proceeds only when the user records a
 satisfactory outcome.
 
-A user study is opt-in. The project opts in by setting
-`quality.user_study: true` in `.cycle/cycle.config.json`. The
-default is `false`.
+A user study is opt-in and there is no setting that enables it: the control
+plane has no such option, so it happens only when the user asks for it in the
+request. Absent that, it does not happen.

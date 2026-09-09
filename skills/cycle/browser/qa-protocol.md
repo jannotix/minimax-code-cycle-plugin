@@ -1,79 +1,78 @@
-# Browser QA protocol
+# Browser evidence
 
-The Cycle browser QA path produces real evidence about the user-visible
-behavior of a candidate. The executor drives the browser. The reviewers
-read the artifacts. The reviewers never drive the browser.
+An interface change is proved by a flow that was actually driven and by the
+accessibility tree that flow produced. The rule that shapes everything below is
+that the party being gated does not supply the evidence: the coordinator drives
+the flow, and the independent functional reviewer judges what it produced.
 
-## When the protocol applies
+## Who does what
 
-The protocol applies when the candidate touches a user-visible surface
-of a web application. A change to a backend endpoint that the UI does
-not yet call does not require browser evidence. A change to a CLI
-binary does not require browser evidence. A change to a static page that
-is served unchanged does not require browser evidence.
+| Party | Role in this protocol |
+|---|---|
+| Executor | Never drives a browser. Its capability profile has no browser tool. It returns `browser: null`. |
+| Coordinator | Drives the flow itself and submits the captured snapshot with the reviewer's one-use capture token. |
+| Functional reviewer | Asks for the capture, then judges the evidence the coordinator returns. |
 
-The executor decides applicability and records the decision in the
-`task_summary` for the affected task. A reviewer that disagrees with the
-applicability decision escalates a finding.
+The executor cannot clear its own gate. If a capture reaches the control plane
+attributed to the executor, it is recorded under `browser:executor-report` and
+`accessibility:executor-report`, neither of which is mandatory and neither of
+which satisfies the interface layer. The summary says so in words: *self-reported,
+recorded for the reviewers, and it does not satisfy the interface layer*. That is
+not a punishment, it is the only honest reading — over stdio the control plane
+cannot tell a real tree from an invented one, so a capture is worth exactly the
+independence of whoever produced it.
 
-## Session lifecycle
+## The two-stage exchange
 
-1. The executor opens a session. The session has a dedicated user-data
-   directory under `.cycle/browser/<session-id>/` and a dedicated CDP
-   endpoint.
-2. The session is sandboxed. The browser cannot reach the host network
-   without an explicit origin approval. Loopback addresses
-   (`localhost`, `127.0.0.1`, `::1`) are allowed without approval.
-3. The executor navigates, interacts, and captures. The reviewers never
-   interact. A reviewer's interaction with the browser is a violation of
-   the read-only reviewer contract.
-4. The session is closed before the workflow advances to the reviewers.
-   The closure writes a `browser_closed` evidence record with the
-   session id and a list of artifacts.
+1. The functional reviewer returns `browser_capture` with `snapshot: null`. That
+   is a request, not evidence.
+2. The coordinator drives the affected flow, then calls
+   `cycle_workflow submit_browser_evidence` with the real snapshot, the
+   reviewer's native `session_id`, and the one-use `capture_token` minted for
+   that role when the candidate was frozen.
+3. The control plane redeems the token. A submission without one carries no
+   mandatory weight, because a role could otherwise clear a gate by naming itself.
+4. The coordinator resumes that same reviewer session with the new evidence
+   identifiers, and only then accepts its strict verdict.
 
-## Artifacts
+The token is single use and bound to the candidate. A repaired candidate is a new
+candidate, so it mints new tokens and the reviewer session is fresh.
 
-Each browser evidence record attaches:
+## What the snapshot must contain
 
-- A screenshot at the moment of capture (PNG, ≤ 2 MiB).
-- The DOM snapshot at the moment of capture (HTML, ≤ 4 MiB).
-- The console log filtered to errors and warnings (≤ 1 MiB).
-- The network log filtered to non-static assets (≤ 2 MiB).
-- The diff against the previous capture, if the project has a visual
-  baseline in `.cycle/baselines/`.
+Exactly three fields, and no others:
 
-The artifacts are stored under `.cycle/browser/<session-id>/<step>/`.
-They are referenced by the evidence record and remain accessible for the
-duration of the workflow. After the workflow completes, the user can
-choose to keep or purge the artifacts in `~/.mavis/cycle/config.json`.
+- `capturedFlow` — the flow that was driven, in words.
+- `url` — where it was driven.
+- `nodes` — the accessibility tree, each node carrying `role`, `name`, `level`
+  and `children`.
 
-## Origin approval
+A snapshot with an unexpected key is rejected rather than trimmed. There are no
+screenshots, DOM dumps, console logs or network logs in this contract: the
+detectors read the tree, so those artifacts would be weight without a reader.
 
-When the executor needs to navigate to a non-loopback origin, the
-executor prompts the user with:
+## What the detectors find
 
-- The origin URL.
-- The reason the test needs the origin.
-- The duration the origin will be reachable.
+They are deterministic, run in the parent, involve no model, and cost nothing.
+The same tree gives the same findings twice.
 
-The user accepts or denies. The acceptance is recorded as a
-`permission_decision` event in the audit ledger with the origin, the
-duration, and the user's response. The session enforces the duration:
-when the duration expires, further navigation to that origin is denied
-and the session is closed.
+| Rule | Severity |
+|---|---|
+| `a11y/unnamed-control` — an interactive control with no accessible name | high |
+| `a11y/unnamed-image` — an image with no accessible name | medium |
+| `a11y/empty-heading` — a heading with no text | medium |
+| `a11y/duplicate-main` — more than one main landmark | medium |
+| `a11y/heading-order` — a gap in the heading outline | low |
+| `a11y/no-main-landmark` — nothing to skip to | low |
 
-## Failure modes
+One high finding fails `accessibility:affected-user-flow`, because a control a
+screen reader cannot announce is not shipped work. Medium and low findings are
+recorded in the same evidence for the reviewers to weigh, and do not block.
 
-- The browser cannot start. The executor reports `status: blocked` with
-  the browser error. The user is asked to verify the browser
-  installation.
-- The origin is not approved. The executor reports `status: blocked`
-  with the unapproved origin. The user is asked to approve or to
-  change the candidate to a different test surface.
-- The screenshot or DOM capture fails. The executor retries once. A
-  second failure reports `status: failed` for the evidence and the
-  reviewer or the arbiter decides whether the workflow can advance
-  without that capture.
-- The browser session is left open after a crash. The next
-  `/cycle:resume` closes the orphan session before advancing the
-  workflow.
+## When the capability is missing
+
+The coordinator reports browser capability as `available`, `unavailable` or
+`unknown` on every `cycle_coordinator next`. When the change touches an interface
+file and the capability is not `available`, the workflow stops. It does not
+proceed with the gate marked skipped, and `unknown` is not treated as available:
+a gate that cannot run has not passed.

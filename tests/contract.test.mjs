@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -88,7 +88,30 @@ test("the public contract does not advertise unsupported commands or marketplace
   }
   assert.match(readme, /production release is blocked/iu);
   assert.match(skill, /not production-ready/iu);
+
+  // Every packaged Skill file, not only the two entry documents. A model reading the Skill tree
+  // acts on what it finds there, and a legacy header saying "this is not normative" is prose in
+  // the same file as the instruction it disclaims. A command this host has never had must not
+  // reach the artifact at all.
+  const skillRoot = join(ROOT, "skills");
+  for (const path of await markdownUnder(skillRoot)) {
+    const text = await readFile(path, "utf8");
+    assert.doesNotMatch(
+      text,
+      commandToken,
+      `${relative(ROOT, path)} advertises a command this host does not have`,
+    );
+  }
 });
+
+async function markdownUnder(directory, into = []) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const full = join(directory, entry.name);
+    if (entry.isDirectory()) await markdownUnder(full, into);
+    else if (entry.name.endsWith(".md")) into.push(full);
+  }
+  return into;
+}
 
 test("unsupported graph operations fail explicitly", async () => {
   const root = await mkdtemp(join(tmpdir(), "cycle-minimax-contract-"));

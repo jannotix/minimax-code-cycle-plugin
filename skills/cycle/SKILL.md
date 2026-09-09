@@ -98,5 +98,6 @@ the product is not production-ready and its release is blocked.
   obtain a pass.
 - Never push, tag, publish, open a release, or modify a marketplace without separate authorization.
 
-`../../PRODUCTION_RELEASE_PLAN.md` is the release source of truth. `PROTOCOL.md` remains legacy
-design context; current schemas are enforced by the MCP code and the templates under `templates/`.
+`../../PRODUCTION_RELEASE_PLAN.md` is the release source of truth. The current schemas are enforced
+by the MCP code and by the templates under `templates/`; nothing in this Skill describes a contract
+the control plane does not hold.

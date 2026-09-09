@@ -10,9 +10,9 @@ prompts and the security reviewer's triage.
 
 ## Levels
 
-There are four compactness levels. The user picks one in
-`~/.mavis/cycle/config.json` under `quality.compactness`. The default
-is `balanced`.
+There are four compactness levels. The control plane reads no compactness
+setting: this is guidance the executor applies, and `balanced` is what it
+applies unless the request itself asks for something else.
 
 | Level | When to pick | Effect on the executor |
 |---|---|---|
