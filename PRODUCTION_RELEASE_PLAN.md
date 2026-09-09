@@ -95,8 +95,8 @@ observation, or an exact artifact receipt is required.
   current supported stable build at final release.
 - macOS: exactly `compatible but untested` until native Desktop evidence is recorded.
 - Linux: Node control-plane CI only; no MiniMax Code Desktop claim.
-- Node.js: 22 is the runtime floor; release testing includes the floor and the current development
-  version.
+- Node.js: 22.13.0 is the runtime floor, because `node:sqlite` is unflagged only from that version;
+  release testing runs on exactly the floor and on the current development version.
 
 The owner keeps FSL-1.1-MIT unchanged. Direct GitHub distribution may proceed only after all
 technical gates and owner publication approval. A local distribution channel remains blocked until

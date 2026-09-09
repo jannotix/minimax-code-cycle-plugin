@@ -35,8 +35,9 @@ tools:
 | `cycle_memory` | Recalls compact project knowledge, explains evidence provenance, walks supersession chains, and explicitly revokes without deletion. |
 | `cycle_goal` | Manages immutable objectives, versioned plans, workflow milestones, bounded continuations, pause/resume, and explicit completion approval. |
 
-The MCP server requires Node.js 22 or later on `PATH`. It makes no network calls and has no runtime
-package dependencies.
+The MCP server requires Node.js 22.13.0 or later on `PATH`: the store is built on `node:sqlite`,
+which is unflagged only from that version. It makes no network calls and has no runtime package
+dependencies.
 
 ## Not available in this alpha
 
@@ -159,7 +160,8 @@ integration.
 ## Compatibility target
 
 - Development and live certification target: MiniMax Code Desktop `3.0.68` on Windows.
-- Node.js: 22 or later; development checks currently run on Node.js 26.
+- Node.js: 22.13.0 or later, proven on exactly that version in CI; development checks currently run
+  on Node.js 26.
 - macOS: `compatible but untested` until a separate native Desktop receipt exists.
 - Linux: core Node checks may run in CI; MiniMax Code Desktop is not claimed on Linux.
 

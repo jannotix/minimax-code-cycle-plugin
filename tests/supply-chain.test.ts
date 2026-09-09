@@ -128,10 +128,21 @@ test("the local Skill ZIP is byte-stable across two builds of the same commit", 
 
 test("CI runs the core gate on Windows, macOS, and Linux at the Node floor", async () => {
   const workflow = await readFile(join(ROOT as string, ".github", "workflows", "ci.yml"), "utf8")
+  const source = JSON.parse(await readFile(join(ROOT as string, "package.json"), "utf8"))
   for (const os of ["windows-latest", "macos-latest", "ubuntu-latest"]) assert.match(workflow, new RegExp(os, "u"))
   assert.match(workflow, /node-version: 22/u)
   assert.match(workflow, /npm ci --ignore-scripts/u)
   assert.match(workflow, /npm run check/u)
+
+  // `engines` names the oldest Node the shipped runtime supports, and a floor nothing ever runs on
+  // is a claim rather than a guarantee: a matrix pinned to a major installs the newest patch and
+  // never meets the version the manifest promises. The exact floor must be pinned in the workflow
+  // and the built store loaded on it, because `node:sqlite` is what sets the floor and refusing to
+  // open is how a wrong one is discovered — by a user, otherwise.
+  const floor = String(source.engines.node).replace(/^>=/u, "")
+  assert.match(floor, /^\d+\.\d+\.\d+$/u)
+  assert.match(workflow, new RegExp(`node-version: "${floor.replaceAll(".", "\\.")}"`, "u"))
+  assert.match(workflow, /dist\/store\/database\.js/u)
   const actionUses = [...workflow.matchAll(/uses:\s+[^@\s]+@([^\s]+)/gu)].map((match) => match[1])
   assert.ok(actionUses.length >= 2)
   assert.ok(actionUses.every((revision) => /^[a-f0-9]{40}$/u.test(revision ?? "")))

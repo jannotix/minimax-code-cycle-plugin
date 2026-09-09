@@ -2,7 +2,7 @@
 name: cycle
 description: Run, resume, inspect, set up, or uninstall Cycle for MiniMax Code through its native Mavis role sessions and evidence-gated MCP control plane. Use when the user explicitly asks for Cycle, a governed multi-role implementation, Cycle status/recovery, or Cycle native setup. Requires verified role separation and never substitutes a single-session implementation.
 license: FSL-1.1-MIT
-compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22 or later. Agent Plugin Git import and local ZIP channels require separate live certification; Desktop 3.0.68.134 exposes a manual Personal Skill editor, not ZIP upload. Live Desktop recertification remains pending.
+compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22.13.0 or later. Agent Plugin Git import and local ZIP channels require separate live certification; Desktop 3.0.68.134 exposes a manual Personal Skill editor, not ZIP upload. Live Desktop recertification remains pending.
 ---
 
 # Cycle for MiniMax Code

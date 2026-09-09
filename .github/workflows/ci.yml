@@ -30,3 +30,25 @@ jobs:
         run: npm run check
       - name: Audit runtime dependencies
         run: npm audit --omit=dev
+
+  # The matrix above installs the newest 22.x, so it never meets the version `engines` promises.
+  # `node:sqlite` is what sets that floor — it is unflagged only from 22.13.0 — and a store that
+  # cannot open is not a defect a user should be the first to find. The floor is therefore pinned
+  # exactly and the shipped runtime is loaded on it.
+  floor:
+    name: Node floor / 22.13.0
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the exact revision
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      - name: Use exactly the declared floor
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install build dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Build the shipped runtime
+        run: npm run build
+      - name: The shipped store opens on the oldest supported Node
+        run: node --input-type=module -e "await import('./dist/store/database.js'); console.log('node:sqlite is available unflagged')"
