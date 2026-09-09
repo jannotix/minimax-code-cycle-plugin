@@ -125,8 +125,6 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       "cycle_workflow",
       "cycle_history",
       "cycle_limits",
-      "cycle_verify_audit",
-      "cycle_freeze_candidate",
       "cycle_graph_index",
       "cycle_graph_query",
       "cycle_memory",

@@ -17,7 +17,7 @@ The portable package declares one Skill at `skills/cycle/SKILL.md` and one depen
 server in `mcp.json`. The separately verified Skill ZIP is not a certified local installation path:
 Desktop `3.0.68.134` exposes a manual Personal Skill editor rather than ZIP upload. A manually
 created Personal Skill has proven host discovery and restart persistence, but it is not the packaged
-Cycle Skill and cannot prove artifact installation or distribution. The server exposes twelve local
+Cycle Skill and cannot prove artifact installation or distribution. The server exposes ten local
 tools:
 
 | Tool | Current guarantee |
@@ -28,8 +28,6 @@ tools:
 | `cycle_workflow` | Drives durable planning, scoped task reconciliation, exact candidate freeze, verification, reviews, arbitration, delivery, and recovery. |
 | `cycle_history` | Lists project-scoped history, verifies the global append-only chain and checkpoints, and signs the current head with Ed25519. |
 | `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
-| `cycle_verify_audit` | Checks internal SHA-256 chain consistency in an existing JSONL ledger. It does not authenticate the ledger's origin. |
-| `cycle_freeze_candidate` | Produces a legacy diagnostic manifest. It is not an immutable production candidate and must not authorize delivery. |
 | `cycle_graph_index` | Incrementally indexes supported source with bundled Tree-sitter WASM grammars; unchanged files are not read and unsafe links are skipped. |
 | `cycle_graph_query` | Provides exact symbol lookup, confidence-tagged neighbours, impact traversal, bounded scope bundles, and graph status. |
 | `cycle_memory` | Recalls compact project knowledge, explains evidence provenance, walks supersession chains, and explicitly revokes without deletion. |

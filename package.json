@@ -29,10 +29,7 @@
     "package": "node scripts/package.mjs",
     "package:skill": "node scripts/package-local-skill.mjs",
     "package:verify": "node scripts/supply-chain.mjs",
-    "package:release": "node scripts/supply-chain.mjs --require-clean",
-    "verify-audit": "node scripts/verify-audit.mjs",
-    "inspect-ledger": "node scripts/inspect-ledger.mjs",
-    "freeze-candidate": "node scripts/freeze-candidate.mjs"
+    "package:release": "node scripts/supply-chain.mjs --require-clean"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

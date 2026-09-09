@@ -20,7 +20,6 @@ export const ALLOWED = [
   { extensions: [".md"], kind: "tree", path: "agents" },
   { extensions: [".md", ".json", ".mjs"], kind: "tree", path: "skills" },
   { extensions: [".js"], kind: "tree", path: "dist" },
-  { extensions: [".mjs"], kind: "tree", path: "scripts", names: ["freeze-candidate.mjs", "verify-audit.mjs"] },
   { extensions: [".cjs", ".wasm", ".json"], kind: "tree", path: "vendor" },
 ]
 
@@ -33,10 +32,8 @@ export const FORBIDDEN = [
   { reason: "dependency tree", test: (path) => /(^|\/)node_modules(\/|$)/u.test(path) },
   { reason: "version control", test: (path) => /(^|\/)\.git(\/|$)|(^|\/)\.gitignore$/u.test(path) },
   { reason: "credential file", test: (path) => /\.(env|key|pem|p12|pfx)$/u.test(path) },
-  { reason: "development script", test: (path) => path.startsWith("scripts/") && !RUNTIME_SCRIPTS.has(path) },
+  { reason: "development script", test: (path) => path.startsWith("scripts/") },
 ]
-
-const RUNTIME_SCRIPTS = new Set(["scripts/freeze-candidate.mjs", "scripts/verify-audit.mjs"])
 
 export async function collect(root = ROOT) {
   const files = []

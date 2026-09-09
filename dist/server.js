@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path";
+import { dirname, isAbsolute, join, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { release } from "./admission.js";
 import { nextCoordinatorAction } from "./coordinator.js";
@@ -23,7 +22,6 @@ import { readHistory, verifyHistory } from "./store/history.js";
 import { amendWorkflow, arbitrateWorkflow, bindWorkflowRoleSession, candidateEvidence, controlWorkflow, deliverWorkflowCandidate, freezeWorkflowCandidate, reconcileWorkflow, reportTask, requireProjectWorkflow, startWorkflow, submitBrowserEvidence, submitPlan, submitReviewVerdict, submitSecurityProof, verifyWorkflowCandidate, workflowStatus, } from "./workflow/service.js";
 import { VERSION } from "./version.js";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SCRIPTS = join(ROOT, "scripts");
 const runtime = new Runtime();
 const tools = [
     {
@@ -152,34 +150,6 @@ const tools = [
             workflow_id: stringSchema("Workflow identifier for lease mutation."),
         }, ["operation", "project_root"]),
         run: async (args) => await limitsOperation(args),
-    },
-    {
-        name: "cycle_verify_audit",
-        description: "Check the internal sequence and SHA-256 links of a legacy Cycle JSONL ledger contained " +
-            "inside project_root. This does not authenticate origin.",
-        inputSchema: objectSchema({
-            project_root: stringSchema("Absolute project directory."),
-            path: stringSchema("Project-relative or contained absolute ledger path."),
-        }, ["project_root", "path"]),
-        run: async (args) => {
-            const root = projectRoot(args);
-            const path = contained(root, requiredString(args, "path"));
-            const result = await runScript("verify-audit.mjs", [path], 30_000);
-            return { summary: result.stdout.trim() };
-        },
-    },
-    {
-        name: "cycle_freeze_candidate",
-        description: "Produce the legacy diagnostic manifest for base_revision..HEAD. This is not an immutable " +
-            "production freeze and cannot authorize delivery.",
-        inputSchema: objectSchema({
-            project_root: stringSchema("Absolute project directory."),
-            base_revision: stringSchema("Git revision to compare with HEAD."),
-        }, ["project_root", "base_revision"]),
-        run: async (args) => {
-            const result = await runScript("freeze-candidate.mjs", [projectRoot(args), "--base", requiredString(args, "base_revision")], 30_000);
-            return JSON.parse(result.stdout);
-        },
     },
     {
         name: "cycle_graph_index",
@@ -616,13 +586,6 @@ function identifiers(args, key, maximum, maximumBytes = 256) {
 function projectRoot(args) {
     return runtime.project(requiredString(args, "project_root")).path;
 }
-function contained(root, value) {
-    const absolute = isAbsolute(value) ? resolve(value) : resolve(root, value);
-    const fromRoot = relative(root, absolute);
-    if (fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot)))
-        return absolute;
-    throw new Error("path must remain inside project_root");
-}
 function requiredString(args, key) {
     const value = args[key];
     if (typeof value !== "string" || value.trim().length === 0)
@@ -719,48 +682,4 @@ function arraySchema(description, maxItems) {
         ...(maxItems === undefined ? {} : { maxItems }),
         type: "array",
     };
-}
-function runScript(script, args, timeoutMs) {
-    const outputLimit = 4 * 1024 * 1024;
-    return new Promise((resolveResult, reject) => {
-        const child = spawn(process.execPath, [join(SCRIPTS, script), ...args], {
-            cwd: ROOT,
-            shell: false,
-            stdio: ["ignore", "pipe", "pipe"],
-            windowsHide: true,
-        });
-        let stderr = "";
-        let stdout = "";
-        let failure;
-        const timeout = setTimeout(() => {
-            failure = new Error(`${script} exceeded ${timeoutMs}ms`);
-            child.kill();
-        }, timeoutMs);
-        const capture = (current, chunk) => {
-            const next = current + chunk.toString("utf8");
-            if (Buffer.byteLength(next, "utf8") > outputLimit) {
-                if (failure === undefined) {
-                    failure = new Error(`${script} exceeded the ${outputLimit}-byte output limit`);
-                    child.kill();
-                }
-                return current;
-            }
-            return next;
-        };
-        child.stdout.on("data", (chunk) => (stdout = capture(stdout, chunk)));
-        child.stderr.on("data", (chunk) => (stderr = capture(stderr, chunk)));
-        child.on("error", (error) => {
-            clearTimeout(timeout);
-            reject(error);
-        });
-        child.on("close", (code) => {
-            clearTimeout(timeout);
-            if (failure !== undefined)
-                reject(failure);
-            else if (code === 0)
-                resolveResult({ stderr, stdout });
-            else
-                reject(new Error(`${script} exited ${code}: ${stderr.trim() || "no error output"}`));
-        });
-    });
 }

@@ -19,8 +19,6 @@ test("the package allowlist contains every runtime root and refuses development 
     "plugin.json",
     "mcp.json",
     "dist/server.js",
-    "scripts/freeze-candidate.mjs",
-    "scripts/verify-audit.mjs",
     "skills/cycle/SKILL.md",
     "skills/cycle/setup/manifest.json",
     "vendor/manifest.json",
