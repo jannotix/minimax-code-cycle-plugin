@@ -1,11 +1,45 @@
+import { realpathSync } from "node:fs"
 import { homedir } from "node:os"
-import { posix, resolve, win32 } from "node:path"
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, win32 } from "node:path"
 
 export type DataDirectorySource = "cycle_data_dir" | "minimax_data_dir" | "platform_default"
 
 export interface DataDirectoryResolution {
   readonly path: string
   readonly source: DataDirectorySource
+}
+
+/**
+ * The on-disk spelling of a path, so two spellings of one directory compare equal. A junction, a
+ * symlink or a Windows 8.3 short name makes `resolve` disagree with `realpath`, and a containment
+ * check built on that disagreement silently passes exactly what it exists to refuse.
+ *
+ * The path need not exist: the nearest existing ancestor is canonicalized and the remaining
+ * segments are rejoined, because a directory must never be created merely to be compared — least
+ * of all one that is about to be rejected.
+ */
+export function canonicalPath(path: string): string {
+  const absolute = resolve(path)
+  const tail: string[] = []
+  let current = absolute
+  for (;;) {
+    try {
+      return join(realpathSync.native(current), ...tail)
+    } catch {
+      const parent = dirname(current)
+      // The filesystem root resolved to nothing, so there is no canonical spelling to be had and
+      // the lexical one is the honest answer.
+      if (parent === current) return absolute
+      tail.unshift(basename(current))
+      current = parent
+    }
+  }
+}
+
+/** Whether `child` is `parent` itself or lies below it, judged on canonical spellings. */
+export function containsPath(parent: string, child: string): boolean {
+  const inside = relative(canonicalPath(parent), canonicalPath(child))
+  return inside === "" || (!inside.startsWith("..") && !isAbsolute(inside))
 }
 
 export class PathError extends Error {

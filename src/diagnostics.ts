@@ -1,6 +1,5 @@
-import { isAbsolute, relative } from "node:path"
-
 import type { Runtime } from "./runtime.ts"
+import { containsPath } from "./paths.ts"
 import { identifyProject } from "./project.ts"
 import { keyPermissions, verifyCheckpoints } from "./store/checkpoints.ts"
 import { graphSize } from "./store/graph.ts"
@@ -30,8 +29,7 @@ export async function diagnose(runtime: Runtime, projectRoot: string, version: s
     })
   }
 
-  const inside = relative(project.path, runtime.dataDirectory)
-  if (inside === "" || (!inside.startsWith("..") && !isAbsolute(inside))) {
+  if (containsPath(project.path, runtime.dataDirectory)) {
     findings.push({
       code: "storage.inside_project",
       message: "the durable data directory must be outside project_root",

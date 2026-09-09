@@ -1,5 +1,27 @@
+import { realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { posix, resolve, win32 } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, win32 } from "node:path";
+export function canonicalPath(path) {
+    const absolute = resolve(path);
+    const tail = [];
+    let current = absolute;
+    for (;;) {
+        try {
+            return join(realpathSync.native(current), ...tail);
+        }
+        catch {
+            const parent = dirname(current);
+            if (parent === current)
+                return absolute;
+            tail.unshift(basename(current));
+            current = parent;
+        }
+    }
+}
+export function containsPath(parent, child) {
+    const inside = relative(canonicalPath(parent), canonicalPath(child));
+    return inside === "" || (!inside.startsWith("..") && !isAbsolute(inside));
+}
 export class PathError extends Error {
     constructor(message) {
         super(message);

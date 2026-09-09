@@ -1,10 +1,10 @@
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 
-import { diagnose } from "../src/diagnostics.ts"
+import { diagnose, type DiagnosticFinding } from "../src/diagnostics.ts"
 import { Runtime } from "../src/runtime.ts"
 import { verifyCheckpoints } from "../src/store/checkpoints.ts"
 import { readHistory, verifyHistory } from "../src/store/history.ts"
@@ -90,8 +90,14 @@ test("a workflow survives restart, stays project-scoped, and signs cancellation"
     }, 2_000)
     assert.notEqual(next.workflow.id, restored?.workflow.id)
 
-    const doctor = await diagnose(second, projectA, "test") as { ok: boolean; store: { schemaVersion: number } }
-    assert.equal(doctor.ok, true)
+    const doctor = await diagnose(second, projectA, "test") as {
+      findings: readonly DiagnosticFinding[]
+      ok: boolean
+      store: { schemaVersion: number }
+    }
+    // Named, because `false !== true` on a runner nobody can attach to says only that something is
+    // wrong. Which finding fired is the whole diagnosis.
+    assert.equal(doctor.ok, true, `doctor reported ${JSON.stringify(doctor.findings)}`)
     assert.equal(doctor.store.schemaVersion, 8)
   } finally {
     second.close()
@@ -183,6 +189,36 @@ test("workflow operations refuse a durable data directory inside the project", a
     assert.equal(doctor.ok, false)
     assert.ok(doctor.findings.some((finding) => finding.code === "storage.inside_project"))
     assert.equal(existsSync(join(scratch, ".cycle-data")), false)
+  } finally {
+    runtime.close()
+    rmSync(scratch, { force: true, recursive: true })
+  }
+})
+
+test("the refusal holds when the project is reached through a link", async () => {
+  const scratch = mkdtempSync(join(tmpdir(), "cycle-minimax-linked-"))
+  const real = join(scratch, "real")
+  const link = join(scratch, "link")
+  mkdirSync(real)
+  // A junction on Windows, a symlink elsewhere: one directory under two spellings. Without it the
+  // check compares a canonical path against itself and proves nothing, which is why the developer
+  // machine passed while Windows and macOS runners did not.
+  symlinkSync(real, link, "junction")
+  assert.notEqual(link, realpathSync.native(link))
+
+  const runtime = new Runtime({ ...process.env, CYCLE_DATA_DIR: join(link, ".cycle-data") })
+  try {
+    assert.throws(
+      () => startWorkflow(runtime, { projectRoot: link, request: "do work" }),
+      /must be outside project_root/u,
+    )
+    const doctor = await diagnose(runtime, link, "test") as {
+      findings: readonly { code: string }[]
+      ok: boolean
+    }
+    assert.equal(doctor.ok, false)
+    assert.ok(doctor.findings.some((finding) => finding.code === "storage.inside_project"))
+    assert.equal(existsSync(join(real, ".cycle-data")), false)
   } finally {
     runtime.close()
     rmSync(scratch, { force: true, recursive: true })

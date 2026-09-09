@@ -1,7 +1,7 @@
-import { isAbsolute, join, relative } from "node:path";
+import { join } from "node:path";
 import { AdmissionController } from "./admission.js";
 import { readConfiguration } from "./config.js";
-import { resolveDataDirectoryResolution } from "./paths.js";
+import { canonicalPath, containsPath, resolveDataDirectoryResolution, } from "./paths.js";
 import { identifyProject } from "./project.js";
 import { CpuSampler, readResources } from "./resources.js";
 import { Database } from "./store/database.js";
@@ -17,13 +17,12 @@ export class Runtime {
     constructor(environment = process.env) {
         this.configuration = readConfiguration(environment);
         const resolution = resolveDataDirectoryResolution(this.configuration.dataDirectory, environment);
-        this.dataDirectory = resolution.path;
+        this.dataDirectory = canonicalPath(resolution.path);
         this.dataDirectorySource = resolution.source;
     }
     project(projectRoot) {
         const project = identifyProject(projectRoot);
-        const inside = relative(project.path, this.dataDirectory);
-        if (inside === "" || (!inside.startsWith("..") && !isAbsolute(inside))) {
+        if (containsPath(project.path, this.dataDirectory)) {
             throw new Error("the durable data directory must be outside project_root");
         }
         return project;

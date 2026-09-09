@@ -1,4 +1,4 @@
-import { isAbsolute, relative } from "node:path";
+import { containsPath } from "./paths.js";
 import { identifyProject } from "./project.js";
 import { keyPermissions, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
@@ -18,8 +18,7 @@ export async function diagnose(runtime, projectRoot, version) {
             severity: "error",
         });
     }
-    const inside = relative(project.path, runtime.dataDirectory);
-    if (inside === "" || (!inside.startsWith("..") && !isAbsolute(inside))) {
+    if (containsPath(project.path, runtime.dataDirectory)) {
         findings.push({
             code: "storage.inside_project",
             message: "the durable data directory must be outside project_root",
