@@ -7,6 +7,19 @@ durable role-session bindings: `resume_role` means native `mavis session send` t
 `dispatch_role` means no current-candidate session is bound and a fresh task is required. Never
 replay delivery or a role submission merely because the previous response was lost.
 
+A workflow found in `delivery` is one of three things, and `reconcile` tells them apart rather than
+calling all three interrupted:
+
+- a promotion that was journaled and crashed part way finishes from the approved bytes;
+- a promotion that never began is run through the same path the cycle uses, which re-verifies every
+  approved byte before committing, so a tree that moved refuses it;
+- an attempt that ran and aborted is left alone and reported, because that is the one case a person
+  has to look at first.
+
+A session that ends before delivery leaves the second of those, so it is the ordinary ending of a
+non-interactive run and not an edge. Read the state `reconcile` returns; do not deliver again on top
+of it.
+
 ## Provider or native session failure
 
 If task creation, session send, or the provider fails with a known terminal error, call

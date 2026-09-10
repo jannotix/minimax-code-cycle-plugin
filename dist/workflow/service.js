@@ -3,7 +3,7 @@ import { parseSnapshot } from "../evidence/accessibility.js";
 import { browserEvidence } from "../evidence/browser.js";
 import { captureCandidate } from "../evidence/candidate.js";
 import { changedFiles } from "../evidence/changes.js";
-import { commitMessage, DeliveryAborted, manifestWithEvidence, promote, recoverDelivery, } from "../evidence/delivery.js";
+import { commitMessage, DeliveryAborted, deliveryOf, manifestWithEvidence, promote, recoverDelivery, } from "../evidence/delivery.js";
 import { verify as verifyEvidence } from "../evidence/engine.js";
 import { proofEvidence, proofGateName } from "../evidence/proof-evidence.js";
 import { runProof } from "../evidence/proof.js";
@@ -13,7 +13,7 @@ import { issueCaptureCapabilities, redeemCaptureCapability } from "../store/capa
 import { signCheckpoint } from "../store/checkpoints.js";
 import { loadEvidence, recordEvidence } from "../store/evidence.js";
 import { goalOfWorkflow } from "../store/goals.js";
-import { appendHistory } from "../store/history.js";
+import { appendHistory, lastEvent } from "../store/history.js";
 import { newId } from "../store/ids.js";
 import { bindRoleSession, candidateReviewerSessions, roleSessions, } from "../store/role-sessions.js";
 import { activeWorkflowForRequest, createWorkflow, frozenFiles, lastRefusal, latestWorkflow, loadPlan, loadRequest, loadReviews, loadTasks, loadWorkflow, recordArbitration, recordCandidate, requestDigestOf, savePlan, saveWorkflow, setTaskState, submitReview, } from "../store/workflows.js";
@@ -510,6 +510,12 @@ export async function reconcileWorkflow(runtime, projectRoot, workflowId, now = 
             });
             signCheckpoint(database, runtime.dataDirectory, now);
             return { found: true, goal, memories: learned, recovered, state: next.state };
+        }
+        if (deliveryOf(database, workflow.id) === undefined &&
+            lastEvent(database, workflow.id, "delivery.aborted") === undefined) {
+            const delivered = await deliverWorkflowCandidate(runtime, projectRoot, workflow.id, now);
+            const current = loadWorkflow(database, workflow.id);
+            return { delivered, found: true, state: current?.state ?? workflow.state, workflowId: workflow.id };
         }
     }
     return { found: true, state: workflow.state, workflowId: workflow.id };

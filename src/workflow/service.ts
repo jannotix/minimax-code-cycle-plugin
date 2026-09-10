@@ -6,6 +6,7 @@ import { changedFiles } from "../evidence/changes.ts"
 import {
   commitMessage,
   DeliveryAborted,
+  deliveryOf,
   manifestWithEvidence,
   promote,
   recoverDelivery,
@@ -22,7 +23,7 @@ import { signCheckpoint } from "../store/checkpoints.ts"
 import type { Database } from "../store/database.ts"
 import { loadEvidence, recordEvidence } from "../store/evidence.ts"
 import { goalOfWorkflow } from "../store/goals.ts"
-import { appendHistory } from "../store/history.ts"
+import { appendHistory, lastEvent } from "../store/history.ts"
 import { newId } from "../store/ids.ts"
 import {
   bindRoleSession,
@@ -737,6 +738,29 @@ export async function reconcileWorkflow(
       })
       signCheckpoint(database, runtime.dataDirectory, now)
       return { found: true, goal, memories: learned, recovered, state: next.state }
+    }
+
+    // No journal row, and no abort in the history: the approval was recorded and a promotion never
+    // began. A crash mid-write and a call that never arrived leave the same journal — none, or one
+    // half-written — but they are opposites to act on. The first must not be retried. The second is
+    // safe, and `promote` re-verifies every approved byte before it commits, so the plane refuses
+    // this itself if the tree has moved since.
+    //
+    // The journal alone cannot tell them apart, and neither can it separate either from a delivery
+    // that ran and aborted: `promote` checks the bytes before it journals, so an abort leaves no
+    // row. The history can, because the plane records `delivery.aborted` by name, and an aborted
+    // attempt is the one case a person has to look at first.
+    //
+    // Reading only the journal, reconcile called every one of these interrupted and refused to
+    // finish work that was safe to finish. In a session that ends before delivery the workflow dies
+    // with the session, so this was the ordinary way a cycle ended, not the edge.
+    if (
+      deliveryOf(database, workflow.id) === undefined &&
+      lastEvent(database, workflow.id, "delivery.aborted") === undefined
+    ) {
+      const delivered = await deliverWorkflowCandidate(runtime, projectRoot, workflow.id, now)
+      const current = loadWorkflow(database, workflow.id)
+      return { delivered, found: true, state: current?.state ?? workflow.state, workflowId: workflow.id }
     }
   }
   return { found: true, state: workflow.state, workflowId: workflow.id }

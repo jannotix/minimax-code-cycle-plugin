@@ -16,6 +16,7 @@ import { Runtime } from "../src/runtime.ts"
 import { captureCandidate, CandidateRefused } from "../src/evidence/candidate.ts"
 import { changedFiles, parseStatus } from "../src/evidence/changes.ts"
 import { candidateManifest } from "../src/store/workflows.ts"
+import { deliveryOf } from "../src/evidence/delivery.ts"
 import { verifyCheckpoints } from "../src/store/checkpoints.ts"
 import { readHistory } from "../src/store/history.ts"
 import { roleSessions } from "../src/store/role-sessions.ts"
@@ -518,6 +519,64 @@ test("reconcile finishes a journaled delivery from approved bytes after restart"
     assert.equal(item.git("status", "--porcelain"), "")
   } finally {
     item.close()
+  }
+})
+
+/**
+ * A crash mid-write and a call that never arrived leave the same journal — none — and they are
+ * opposites to act on. Reading only the journal, reconcile called both "interrupted" and refused to
+ * finish work that was safe to finish, leaving approved changes uncommitted beside a note saying
+ * not to retry.
+ *
+ * This is not an edge case. In a session that ends before delivery the workflow dies with the
+ * session, so a promotion that never began is the ordinary way a cycle ends.
+ */
+test("reconcile finishes a delivery that never began", async () => {
+  const item = fixture()
+  try {
+    const { workflowId } = await quickToDelivery(item)
+    const baseline = item.git("rev-parse", "HEAD")
+
+    // Approved, in delivery, and nothing beyond that: no journal row, no abort in the history.
+    assert.equal(deliveryOf(item.runtime.requireStore(), workflowId), undefined)
+
+    const result = await reconcileWorkflow(item.runtime, item.root, workflowId) as {
+      delivered?: { state: string }
+      state: string
+    }
+    assert.equal(result.state, "completed")
+    assert.notEqual(item.git("rev-parse", "HEAD"), baseline)
+    assert.equal(item.git("status", "--porcelain"), "")
+    assert.equal(item.read("src/app.js"), "export const answer = 42\n")
+  } finally {
+    item.close()
+  }
+})
+
+// The other half: an attempt that ran and aborted is the one case a person has to look at first,
+// so reconcile must not quietly retry it.
+test("reconcile leaves a delivery that ran and aborted to a person", async () => {
+  const item = fixture({ "safe/app.txt": "baseline\n" })
+  const outside = mkdtempSync(join(tmpdir(), "cycle-minimax-t02-aborted-"))
+  try {
+    const { workflowId } = await quickToDelivery(item, "safe/app.txt")
+    rmSync(join(item.root, "safe"), { force: true, recursive: true })
+    writeFileSync(join(outside, "app.txt"), "outside\n")
+    symlinkSync(outside, join(item.root, "safe"), process.platform === "win32" ? "junction" : "dir")
+
+    const attempt = await deliverWorkflowCandidate(item.runtime, item.root, workflowId) as {
+      aborted: string
+    }
+    assert.ok(attempt.aborted)
+    const baseline = item.git("rev-parse", "HEAD")
+
+    const result = await reconcileWorkflow(item.runtime, item.root, workflowId) as { state: string }
+    assert.equal(result.state, "delivery", "an aborted attempt is not finished behind the user")
+    assert.equal(item.git("rev-parse", "HEAD"), baseline)
+    assert.equal(readFileSync(join(outside, "app.txt"), "utf8"), "outside\n")
+  } finally {
+    item.close()
+    rmSync(outside, { force: true, recursive: true })
   }
 })
 
