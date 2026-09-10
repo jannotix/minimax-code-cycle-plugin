@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -14,8 +15,14 @@ import { graphSize, indexedFiles, neighbours, nodesByName } from "../src/store/g
 
 const PROJECT = "p1"
 
+/**
+ * A fixture is a git repository because the indexer only indexes one: git's own list is the ignore
+ * policy, and a directory git will not answer for is refused rather than walked. Untracked files
+ * count, so nothing here needs committing.
+ */
 async function fixture(files: Record<string, string>): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), "cycle-intel-"))
+  execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" })
   for (const [path, content] of Object.entries(files)) {
     const full = join(root, path)
     await mkdir(dirname(full), { recursive: true })
@@ -405,6 +412,9 @@ test("indexing and parsing never follow a symbolic-link or junction boundary", a
   const outside = join(scratch, "outside")
   mkdirSync(root)
   mkdirSync(outside)
+  // A repository, because the indexer only indexes one. The subject here is the link boundary, and
+  // a root git will not answer for is refused before any of it is reached.
+  execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" })
   writeFileSync(join(root, "inside.ts"), "export function inside() { return 1 }")
   writeFileSync(join(outside, "leak.ts"), "export function leaked() { return 2 }")
   symlinkSync(outside, join(root, "linked"), process.platform === "win32" ? "junction" : "dir")
@@ -436,6 +446,37 @@ test("a worker startup failure falls back to bounded in-process parsing", async 
     assert.equal(result.nodes.some((node) => node.name === "alpha"), true)
   } finally {
     await poolWithoutWorkers.dispose()
+    rmSync(root, { force: true, recursive: true })
+  }
+})
+
+/**
+ * Git's own list is the ignore policy, and there is no second one to fall back to. A walk carries
+ * its own coarser rules, so an ignored `.env` or a generated file entered the graph and was then
+ * read by `impactOf` and the essentiality gate as though git had listed it.
+ *
+ * The half that matters more is the second assertion: treating "git would not answer" as "the
+ * repository is empty" deletes every file already indexed.
+ */
+test("a directory git will not list is refused, and the graph already built survives it", async () => {
+  const root = await fixture({ "src/a.ts": `export function alpha() { return 1 }` })
+  const database = new Database({ path: ":memory:" })
+  try {
+    const first = await index(database, root)
+    assert.equal(first.refused, undefined)
+    assert.ok(first.files > 0)
+    const built = graphSize(database, PROJECT)
+
+    // Removing .git is what a repository git refuses to answer for looks like from here.
+    rmSync(join(root, ".git"), { force: true, recursive: true })
+
+    const second = await index(database, root)
+    assert.ok(second.refused !== undefined, "the refusal is reported")
+    assert.match(second.refused ?? "", /git|repository/iu)
+    assert.equal(second.removed, 0, "a refusal removes nothing")
+    assert.deepEqual(graphSize(database, PROJECT), built, "the graph built earlier is untouched")
+  } finally {
+    database.close()
     rmSync(root, { force: true, recursive: true })
   }
 })
