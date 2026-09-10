@@ -3,7 +3,7 @@ import { parseSnapshot } from "../evidence/accessibility.js";
 import { browserEvidence } from "../evidence/browser.js";
 import { captureCandidate } from "../evidence/candidate.js";
 import { changedFiles } from "../evidence/changes.js";
-import { commitMessage, DeliveryAborted, promote, recoverDelivery, } from "../evidence/delivery.js";
+import { commitMessage, DeliveryAborted, manifestWithEvidence, promote, recoverDelivery, } from "../evidence/delivery.js";
 import { verify as verifyEvidence } from "../evidence/engine.js";
 import { proofEvidence, proofGateName } from "../evidence/proof-evidence.js";
 import { runProof } from "../evidence/proof.js";
@@ -16,7 +16,7 @@ import { goalOfWorkflow } from "../store/goals.js";
 import { appendHistory } from "../store/history.js";
 import { newId } from "../store/ids.js";
 import { bindRoleSession, candidateReviewerSessions, roleSessions, } from "../store/role-sessions.js";
-import { activeWorkflowForRequest, candidateManifest, createWorkflow, frozenFiles, lastRefusal, latestWorkflow, loadPlan, loadRequest, loadReviews, loadTasks, loadWorkflow, recordArbitration, recordCandidate, requestDigestOf, savePlan, saveWorkflow, setTaskState, submitReview, } from "../store/workflows.js";
+import { activeWorkflowForRequest, createWorkflow, frozenFiles, lastRefusal, latestWorkflow, loadPlan, loadRequest, loadReviews, loadTasks, loadWorkflow, recordArbitration, recordCandidate, requestDigestOf, savePlan, saveWorkflow, setTaskState, submitReview, } from "../store/workflows.js";
 import { apply, isTerminal, TransitionError } from "./machine.js";
 import { parsePlan } from "./plan.js";
 import { route } from "./routing.js";
@@ -577,8 +577,8 @@ function verdictContext(database, workflow, role) {
 }
 function deliveryMessage(database, workflow, candidateId) {
     const request = loadRequest(database, workflow.id)?.originalText ?? "deliver approved candidate";
-    const manifest = candidateManifest(database, candidateId);
-    if (manifest === undefined)
+    const manifest = manifestWithEvidence(database, candidateId);
+    if (manifest === null)
         throw new WorkflowError("candidate manifest not found");
     return commitMessage(request, manifest, workflow.id);
 }

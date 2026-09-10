@@ -6,6 +6,7 @@ import { changedFiles } from "../evidence/changes.ts"
 import {
   commitMessage,
   DeliveryAborted,
+  manifestWithEvidence,
   promote,
   recoverDelivery,
 } from "../evidence/delivery.ts"
@@ -31,7 +32,6 @@ import {
 } from "../store/role-sessions.ts"
 import {
   activeWorkflowForRequest,
-  candidateManifest,
   createWorkflow,
   frozenFiles,
   lastRefusal,
@@ -821,8 +821,10 @@ function verdictContext(database: Database, workflow: StoredWorkflow, role: stri
 
 function deliveryMessage(database: Database, workflow: StoredWorkflow, candidateId: string): string {
   const request = loadRequest(database, workflow.id)?.originalText ?? "deliver approved candidate"
-  const manifest = candidateManifest(database, candidateId)
-  if (manifest === undefined) throw new WorkflowError("candidate manifest not found")
+  // The same manifest promotion journals, not the stored row: the row is frozen before verification
+  // and names no evidence, so reading it here made every commit claim zero gates.
+  const manifest = manifestWithEvidence(database, candidateId)
+  if (manifest === null) throw new WorkflowError("candidate manifest not found")
   return commitMessage(request, manifest, workflow.id)
 }
 

@@ -405,6 +405,38 @@ test("an approval over a live rejection is recorded and routed, not thrown away"
   }
 })
 
+/**
+ * The manifest is frozen before verification runs, so the evidence list it carries is empty by
+ * construction. Promotion enriched its own copy for the journal while the commit message read the
+ * stored row, so every commit said it rested on zero gates beside a journal listing several.
+ *
+ * Asserting the number rather than only the trailers around it is what keeps the two paths reading
+ * the same manifest.
+ */
+test("the commit names the gates it actually rests on", async () => {
+  const item = fixture()
+  try {
+    const { workflowId } = await quickToDelivery(item)
+    const recorded = candidateEvidence(item.runtime, item.root, workflowId) as {
+      evidence: readonly { id: string }[]
+    }
+    assert.ok(recorded.evidence.length > 0, "the candidate must have evidence to name")
+
+    const delivered = await deliverWorkflowCandidate(item.runtime, item.root, workflowId) as {
+      state: string
+    }
+    assert.equal(delivered.state, "completed")
+
+    const message = item.git("log", "-1", "--format=%B")
+    const claimed = Number(/on (\d+) recorded gates/u.exec(message)?.[1] ?? "-1")
+    assert.equal(claimed, recorded.evidence.length, `the commit says: ${message}`)
+    assert.match(message, /Base-revision: [a-f0-9]{7,}/u)
+    assert.match(message, new RegExp(`Cycle-workflow: ${workflowId}`, "u"))
+  } finally {
+    item.close()
+  }
+})
+
 test("scope reconciliation rejects writes outside the current or completed task scopes", async () => {
   const item = fixture()
   try {
