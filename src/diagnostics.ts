@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+
 import type { Runtime } from "./runtime.ts"
 import { containsPath } from "./paths.ts"
 import { identifyProject } from "./project.ts"
@@ -6,10 +9,52 @@ import { graphSize } from "./store/graph.ts"
 import { verifyHistory } from "./store/history.ts"
 import { CURRENT_SCHEMA_VERSION } from "./store/migrations.ts"
 
+/**
+ * The floor is a patch version, not a major one: the store is built on `node:sqlite`, which is
+ * unflagged only from 22.13.0. Comparing the major alone accepted 22.0 through 22.12, where the
+ * doctor reported a healthy runtime and the store then failed to open — a diagnostic that passes
+ * and is contradicted by the thing it diagnoses.
+ *
+ * Read from `package.json` rather than written here a second time, because two declarations of one
+ * floor is what let `engines` say 22.13.0 while this went on accepting 22.0.
+ */
+const FALLBACK_MINIMUM_NODE = "22.13.0"
+
 export interface DiagnosticFinding {
   readonly code: string
   readonly message: string
   readonly severity: "error" | "warn"
+}
+
+/** The floor `engines` declares, or the last-known one if the manifest cannot be read. */
+export async function minimumNode(): Promise<string> {
+  try {
+    const manifest = join(import.meta.dirname, "..", "package.json")
+    const declared: unknown = JSON.parse(await readFile(manifest, "utf8")).engines?.node
+    return /\d+(?:\.\d+){0,2}/u.exec(String(declared ?? ""))?.[0] ?? FALLBACK_MINIMUM_NODE
+  } catch {
+    return FALLBACK_MINIMUM_NODE
+  }
+}
+
+/** Major, minor and patch, so a floor of 22.13.0 is not satisfied by 22.0. */
+export function belowMinimumNode(version: string, floor: string): boolean {
+  const parts = (value: string): number[] => {
+    const found = /(\d+)(?:\.(\d+))?(?:\.(\d+))?/u.exec(value)
+    if (found === null) return []
+    return [found[1], found[2], found[3]].map((part) => Number(part ?? 0))
+  }
+
+  const running = parts(version)
+  const required = parts(floor)
+  // A version this cannot read is reported rather than assumed adequate: unknown is not healthy.
+  if (running.length === 0 || required.length === 0) return true
+
+  for (const [index, needed] of required.entries()) {
+    const have = running[index] ?? 0
+    if (have !== needed) return have < needed
+  }
+  return false
 }
 
 export async function diagnose(runtime: Runtime, projectRoot: string, version: string): Promise<unknown> {
@@ -20,11 +65,13 @@ export async function diagnose(runtime: Runtime, projectRoot: string, version: s
     findings.push({ code: "config.invalid", message, severity: "error" })
   }
 
-  const major = Number(process.versions.node.split(".")[0])
-  if (!Number.isInteger(major) || major < 22) {
+  const floor = await minimumNode()
+  if (belowMinimumNode(process.versions.node, floor)) {
     findings.push({
       code: "runtime.node",
-      message: `Node ${process.versions.node} is below the required 22`,
+      message:
+        `Node ${process.versions.node} is below the required ${floor}. The store is built on ` +
+        "node:sqlite, which is unflagged only from that version, so it will not open.",
       severity: "error",
     })
   }

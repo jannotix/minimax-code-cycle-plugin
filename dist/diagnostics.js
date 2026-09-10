@@ -1,20 +1,52 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { containsPath } from "./paths.js";
 import { identifyProject } from "./project.js";
 import { keyPermissions, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
 import { verifyHistory } from "./store/history.js";
 import { CURRENT_SCHEMA_VERSION } from "./store/migrations.js";
+const FALLBACK_MINIMUM_NODE = "22.13.0";
+export async function minimumNode() {
+    try {
+        const manifest = join(import.meta.dirname, "..", "package.json");
+        const declared = JSON.parse(await readFile(manifest, "utf8")).engines?.node;
+        return /\d+(?:\.\d+){0,2}/u.exec(String(declared ?? ""))?.[0] ?? FALLBACK_MINIMUM_NODE;
+    }
+    catch {
+        return FALLBACK_MINIMUM_NODE;
+    }
+}
+export function belowMinimumNode(version, floor) {
+    const parts = (value) => {
+        const found = /(\d+)(?:\.(\d+))?(?:\.(\d+))?/u.exec(value);
+        if (found === null)
+            return [];
+        return [found[1], found[2], found[3]].map((part) => Number(part ?? 0));
+    };
+    const running = parts(version);
+    const required = parts(floor);
+    if (running.length === 0 || required.length === 0)
+        return true;
+    for (const [index, needed] of required.entries()) {
+        const have = running[index] ?? 0;
+        if (have !== needed)
+            return have < needed;
+    }
+    return false;
+}
 export async function diagnose(runtime, projectRoot, version) {
     const project = identifyProject(projectRoot);
     const findings = [];
     for (const message of runtime.configuration.invalid) {
         findings.push({ code: "config.invalid", message, severity: "error" });
     }
-    const major = Number(process.versions.node.split(".")[0]);
-    if (!Number.isInteger(major) || major < 22) {
+    const floor = await minimumNode();
+    if (belowMinimumNode(process.versions.node, floor)) {
         findings.push({
             code: "runtime.node",
-            message: `Node ${process.versions.node} is below the required 22`,
+            message: `Node ${process.versions.node} is below the required ${floor}. The store is built on ` +
+                "node:sqlite, which is unflagged only from that version, so it will not open.",
             severity: "error",
         });
     }
