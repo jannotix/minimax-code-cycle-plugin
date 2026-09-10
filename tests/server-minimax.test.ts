@@ -63,7 +63,10 @@ class McpClient {
     const queued = this.#queued.shift()
     if (queued !== undefined) return Promise.resolve(queued)
     return new Promise((resolveResponse, reject) => {
-      const timeout = setTimeout(() => reject(new Error("MCP response timed out")), 5_000)
+      // Generous on purpose: see the note in contract.test.mjs. This waits on what the plane
+      // answers, not on how fast it answers, and five seconds under parallel test files turned a
+      // loaded machine into a coin flip.
+      const timeout = setTimeout(() => reject(new Error("MCP response timed out")), 30_000)
       this.#waiters.push((response) => {
         clearTimeout(timeout)
         resolveResponse(response)

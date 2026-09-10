@@ -37,10 +37,14 @@ function mcpExchange(messages, serverArgs = []) {
     });
     const responses = [];
     let buffer = "";
+    // Generous on purpose. `node --test` runs the files in parallel, three of them spawn a server,
+    // and this asserts what the handshake answers rather than how quickly. At five seconds the
+    // suite failed roughly every other run on a loaded machine, which makes a green meaningless and
+    // a red unreadable. A server that is genuinely hung is still caught, thirty seconds later.
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error("MCP contract probe timed out"));
-    }, 5_000);
+    }, 30_000);
 
     child.stdout.on("data", (chunk) => {
       buffer += chunk.toString("utf8");
