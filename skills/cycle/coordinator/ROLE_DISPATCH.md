@@ -41,7 +41,16 @@ receives implementation/review output except the bounded repair reason when repl
 - Security reviewer: a `proof_request` intermediate result is submitted with its native session ID
   only when proof execution is explicitly enabled. Resume the same session with the proof evidence,
   then submit its strict verdict.
-- Arbiter: submit its strict verdict with `arbitrate` and its session ID.
+- Arbiter: brief it with the reviews `cycle_workflow evidence` returns for the candidate — both
+  decisions, their findings and their repair targets — and state the rule that a rejection binds. A
+  resumed run reads them from there exactly as a fresh one does; an arbiter briefed without them
+  judges a candidate without knowing it was already rejected. Then submit its strict verdict with
+  `arbitrate` and its session ID.
+
+  An approval over a live rejection is not an error to retry. The plane records it verbatim, refuses
+  it by name and routes to repair toward the target the rejecting reviewer asked for. Read the
+  returned state and continue from it; re-dispatching the same arbiter with the same prompt produces
+  the same verdict.
 
 The control plane is the schema validator. On a rejected plan/verdict/envelope, send the exact error
 to the same bound session and request only corrected JSON. Allow at most two schema corrections for

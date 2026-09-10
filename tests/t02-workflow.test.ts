@@ -30,6 +30,7 @@ import {
   submitPlan,
   submitReviewVerdict,
   verifyWorkflowCandidate,
+  workflowStatus,
 } from "../src/workflow/service.ts"
 
 interface Fixture {
@@ -306,6 +307,99 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
       state: string
     }
     assert.equal(delivered.state, "completed")
+  } finally {
+    item.close()
+  }
+})
+
+// A rejection by either reviewer binds. The arbiter judges against the original request, not over
+// the reviewers, so an approval that contradicts a live rejection cannot become a delivery — but
+// refusing it with a throw records nothing, and the coordinator then re-dispatches the same arbiter
+// with the same prompt, which produces the same verdict, forever. The refusal has to land in the
+// record and route to repair, the way an approval over failing gates already does.
+test("an approval over a live rejection is recorded and routed, not thrown away", async () => {
+  const item = fixture()
+  try {
+    const workflow = startWorkflow(item.runtime, {
+      preference: "full",
+      projectRoot: item.root,
+      request: "Implement payment processing",
+    }).workflow
+    submitPlan(item.runtime, item.root, workflow.id, plan(), "bind-architect")
+    item.write("src/payment.js", "export const paid = true\n")
+    await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "implemented", "bind-executor")
+    await freezeWorkflowCandidate(item.runtime, item.root, workflow.id)
+    await verifyWorkflowCandidate(item.runtime, item.root, workflow.id)
+
+    const recorded = candidateEvidence(item.runtime, item.root, workflow.id) as {
+      evidence: readonly { id: string }[]
+      requirements: readonly string[]
+    }
+    const evidenceIds = recorded.evidence.map((entry) => entry.id)
+    submitReviewVerdict(
+      item.runtime, item.root, workflow.id, "functional_reviewer",
+      approved(recorded.requirements, evidenceIds), "bind-functional",
+    )
+    submitReviewVerdict(
+      item.runtime, item.root, workflow.id, "security_reviewer",
+      {
+        decision: "rejected",
+        findings: [{ evidence_ids: evidenceIds.slice(0, 1), severity: "high", summary: "equal names tie-break is undefined" }],
+        repair_target: "execution",
+        requirements: recorded.requirements.map((requirementId) => ({
+          evidence_ids: evidenceIds.slice(0, 1),
+          requirement_id: requirementId,
+          status: "unsatisfied",
+        })),
+      },
+      "bind-security",
+    )
+
+    // The arbiter is shown both reviews before it decides, so a resumed run can hand them over the
+    // way a fresh one does.
+    const forArbiter = candidateEvidence(item.runtime, item.root, workflow.id) as {
+      reviews: readonly { decision: string; findings: readonly unknown[]; role: string }[]
+    }
+    assert.deepEqual(
+      [...forArbiter.reviews]
+        .map((review) => [review.role, review.decision])
+        .sort((left, right) => left[0]!.localeCompare(right[0]!)),
+      [
+        ["functional_reviewer", "approved"],
+        ["security_reviewer", "rejected"],
+      ],
+    )
+    assert.equal(
+      forArbiter.reviews.find((review) => review.role === "security_reviewer")?.findings.length,
+      1,
+      "the arbiter must see what the reviewer objected to, not only that it objected",
+    )
+
+    const arbitration = arbitrateWorkflow(
+      item.runtime, item.root, workflow.id,
+      approved(recorded.requirements, evidenceIds), "bind-arbiter",
+    ) as { decision: string; refusal: string | null; state: string }
+
+    assert.equal(arbitration.decision, "approved")
+    assert.notEqual(arbitration.refusal, null)
+    assert.match(String(arbitration.refusal), /security_reviewer/u)
+    // The reject transition parks the workflow in repair; the target it carries is where the
+    // repair aims, and it is the one the rejecting reviewer asked for.
+    assert.equal(arbitration.state, "repair")
+
+    const history = readHistory(item.runtime.requireStore(), item.runtime.project(item.root).id, null, 1_000)
+    assert.ok(
+      history.some((entry) => entry.action === "arbitration.refused"),
+      "the refusal must be in the chain, not only in the reply",
+    )
+
+    // The repair that follows is told what the reviewer objected to instead of being sent in to
+    // rediscover it. Before, lastRefusal read only rejected arbitrations, so a refused approval
+    // left it empty.
+    const status = workflowStatus(item.runtime, item.root, workflow.id) as {
+      lastRefusal: readonly { findings: readonly unknown[]; from: string }[]
+    }
+    assert.ok(status.lastRefusal.some((refusal) => refusal.from === "security_reviewer"))
   } finally {
     item.close()
   }

@@ -264,7 +264,7 @@ export function candidateEvidence(runtime, projectRoot, workflowId) {
     const workflow = requireWorkflow(database, project.id, workflowId);
     const requirements = loadPlan(database, workflow.id)?.requirements.map((entry) => entry.id) ?? [];
     if (workflow.candidateId === null)
-        return { candidate: null, evidence: [], requirements };
+        return { candidate: null, evidence: [], requirements, reviews: [] };
     return {
         candidate: workflow.candidateId,
         evidence: loadEvidence(database, workflow.candidateId).map((item) => ({
@@ -275,6 +275,12 @@ export function candidateEvidence(runtime, projectRoot, workflowId) {
             status: item.status,
         })),
         requirements,
+        reviews: loadReviews(database, workflow.candidateId).map((review) => ({
+            decision: review.verdict.decision,
+            findings: review.verdict.findings ?? [],
+            repairTarget: review.verdict.repairTarget ?? null,
+            role: review.role,
+        })),
     };
 }
 export function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw, roleSessionId, now = Date.now()) {
@@ -374,6 +380,7 @@ export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSes
     const candidateId = requireCandidate(workflow);
     bindRoleSession(database, workflow.id, candidateId, "arbiter", roleSessionId, now);
     const verdict = parseVerdict(raw, verdictContext(database, workflow, "arbiter"));
+    let boundBy = null;
     if (workflow.mode === "full") {
         const reviews = loadReviews(database, candidateId);
         if (reviews.length < 2)
@@ -381,15 +388,27 @@ export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSes
         if (candidateReviewerSessions(database, workflow.id, candidateId) === null) {
             throw new WorkflowError("arbitration requires two distinct native reviewer sessions");
         }
-        if (verdict.decision === "approved" && reviews.some((review) => review.verdict.decision === "rejected")) {
-            throw new WorkflowError("arbitration cannot approve while a reviewer rejected the candidate");
+        const rejecting = reviews.filter((review) => review.verdict.decision === "rejected");
+        if (verdict.decision === "approved" && rejecting.length > 0) {
+            boundBy = {
+                target: rejecting.some((review) => review.verdict.repairTarget === "architecture")
+                    ? "architecture"
+                    : "execution",
+                who: rejecting.map((review) => review.role).join(" and "),
+            };
         }
     }
     return database.transaction(() => {
         const receiptDigest = recordArbitration(database, workflow.id, candidateId, verdict, now);
         let next;
         let refusal = null;
-        if (verdict.decision === "approved") {
+        if (boundBy !== null) {
+            refusal =
+                "arbitration cannot approve while a reviewer rejected the candidate: " +
+                    `${boundBy.who} rejected it, and that rejection stands until a repair answers it`;
+            next = transition(database, workflow, { target: boundBy.target, type: "reject" }, now);
+        }
+        else if (verdict.decision === "approved") {
             try {
                 next = transition(database, workflow, { mandatoryGatesPassed: mandatoryGatesPassed(runtime, project.path, workflow.id), type: "approve" }, now);
             }

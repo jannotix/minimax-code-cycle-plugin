@@ -357,9 +357,12 @@ export function lastRefusal(
   database: Database,
   workflowId: string,
 ): { findings: readonly unknown[]; from: string }[] {
+  // The latest arbitration, whatever it decided. Reading only rejected ones left this empty after
+  // an approval the plane refused for contradicting a live rejection — so the repair that followed
+  // was sent in to rediscover what the reviewer had already written down.
   const arbitration = database.get<Row>(
-    `select candidate_id, verdict from arbitrations
-      where workflow_id = ? and decision = 'rejected'
+    `select candidate_id, decision, verdict from arbitrations
+      where workflow_id = ?
       order by finalized_at desc limit 1`,
     workflowId,
   )
@@ -372,8 +375,12 @@ export function lastRefusal(
     refusals.push({ findings: review.verdict.findings ?? [], from: review.role })
   }
 
-  const verdict = JSON.parse(String(arbitration["verdict"])) as Verdict
-  refusals.push({ findings: verdict.findings ?? [], from: "arbiter" })
+  // The arbiter's own findings count only when it rejected: an approval, refused or not, was not
+  // asking for anything to be fixed.
+  if (String(arbitration["decision"]) === "rejected") {
+    const verdict = JSON.parse(String(arbitration["verdict"])) as Verdict
+    refusals.push({ findings: verdict.findings ?? [], from: "arbiter" })
+  }
   return refusals.filter((refusal) => refusal.findings.length > 0)
 }
 

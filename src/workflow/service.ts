@@ -402,7 +402,7 @@ export function candidateEvidence(
   const database = runtime.requireStore()
   const workflow = requireWorkflow(database, project.id, workflowId)
   const requirements = loadPlan(database, workflow.id)?.requirements.map((entry) => entry.id) ?? []
-  if (workflow.candidateId === null) return { candidate: null, evidence: [], requirements }
+  if (workflow.candidateId === null) return { candidate: null, evidence: [], requirements, reviews: [] }
   return {
     candidate: workflow.candidateId,
     evidence: loadEvidence(database, workflow.candidateId).map((item) => ({
@@ -413,6 +413,15 @@ export function candidateEvidence(
       status: item.status,
     })),
     requirements,
+    // The reviews recorded against this candidate, so an arbiter can be handed what the reviewers
+    // concluded. A run resumed at arbitration reads them from here exactly as a fresh run does;
+    // without that, the arbiter judges the candidate without knowing it was already rejected.
+    reviews: loadReviews(database, workflow.candidateId).map((review) => ({
+      decision: review.verdict.decision,
+      findings: review.verdict.findings ?? [],
+      repairTarget: review.verdict.repairTarget ?? null,
+      role: review.role,
+    })),
   }
 }
 
@@ -559,21 +568,41 @@ export function arbitrateWorkflow(
   const candidateId = requireCandidate(workflow)
   bindRoleSession(database, workflow.id, candidateId, "arbiter", roleSessionId, now)
   const verdict = parseVerdict(raw, verdictContext(database, workflow, "arbiter"))
+  // A rejection by either independent reviewer binds: the arbiter judges against the original
+  // request, not over the reviewers, so an approval that contradicts a live rejection cannot become
+  // a delivery. It used to be refused with a throw, before anything was recorded — no arbitration
+  // row, no history event, an empty lastRefusal — and the coordinator then re-dispatched the arbiter
+  // with the same prompt, which produced the same verdict. The run could not converge and left no
+  // trace of why. It is handled now the way an approval over failing gates already is: recorded
+  // verbatim, refused by name in the chain, and routed to repair toward the target the rejecting
+  // reviewer asked for, so one dispatch converges even when the arbiter is wrong.
+  let boundBy: { readonly target: "architecture" | "execution"; readonly who: string } | null = null
   if (workflow.mode === "full") {
     const reviews = loadReviews(database, candidateId)
     if (reviews.length < 2) throw new WorkflowError("arbitration requires both independent reviews")
     if (candidateReviewerSessions(database, workflow.id, candidateId) === null) {
       throw new WorkflowError("arbitration requires two distinct native reviewer sessions")
     }
-    if (verdict.decision === "approved" && reviews.some((review) => review.verdict.decision === "rejected")) {
-      throw new WorkflowError("arbitration cannot approve while a reviewer rejected the candidate")
+    const rejecting = reviews.filter((review) => review.verdict.decision === "rejected")
+    if (verdict.decision === "approved" && rejecting.length > 0) {
+      boundBy = {
+        target: rejecting.some((review) => review.verdict.repairTarget === "architecture")
+          ? "architecture"
+          : "execution",
+        who: rejecting.map((review) => review.role).join(" and "),
+      }
     }
   }
   return database.transaction(() => {
     const receiptDigest = recordArbitration(database, workflow.id, candidateId, verdict, now)
     let next: StoredWorkflow
     let refusal: string | null = null
-    if (verdict.decision === "approved") {
+    if (boundBy !== null) {
+      refusal =
+        "arbitration cannot approve while a reviewer rejected the candidate: " +
+        `${boundBy.who} rejected it, and that rejection stands until a repair answers it`
+      next = transition(database, workflow, { target: boundBy.target, type: "reject" }, now)
+    } else if (verdict.decision === "approved") {
       try {
         next = transition(
           database,

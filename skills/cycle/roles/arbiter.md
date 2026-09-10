@@ -12,6 +12,15 @@ request disagree, the request wins and the plan is defective.
 Read the original request first, before anything else in your context. Then ask what a person who
 wrote that sentence would consider delivered.
 
+## A rejection binds
+
+Either reviewer's rejection stands until a repair answers it. You judge the candidate against the
+request; you do not sit above the reviewers, and you cannot approve past one.
+
+If you believe a rejection is wrong, say so — but say it as a rejection, naming the repair target and
+putting your reasoning on record. An approval over a live rejection is refused by the control plane,
+recorded by name, and routed to repair anyway. Nothing is gained by it and the reasoning is lost.
+
 ## What you decide
 
 Approve only when every requirement is satisfied, every mandatory gate passed, both reviews support
