@@ -41,3 +41,21 @@ It is not a production-release decision and does not certify the remaining workf
 The only valid overall release decision remains **BLOCKED** until the remaining T07 matrix and the
 post-publication clean-install evidence contract are complete. Raw prompts, local paths, account
 details, session identifiers, and process output are omitted from the machine-readable receipt.
+
+## Correction recorded 2026-09-10
+
+The Skill archive digest above is **not a reproducible value** and must not be used to establish
+that a later archive is the same artifact.
+
+`fflate` renders the ZIP MS-DOS timestamp with local-time getters, and the packer handed it a fixed
+UTC instant, so the bytes depended on the timezone of the machine that packed. Measured across six
+zones: UTC stamped `1980-01-01 00:00`, UTC+1 stamped `01:00`, and every zone west of UTC stamped
+1979 - below the year the format counts from - where the year field goes negative and reads back as
+2107. One commit produced at least three different archives, and the two-build test could not see it
+because both builds ran on one machine.
+
+The observation above is left as recorded: it is what was seen that day. What it cannot support is
+the equivalence claim that a fixed digest normally carries.
+
+The packer now builds the stamp from local components fixed at `1980-01-01 00:00`, which renders
+identically in every zone; verified from UTC-11 to UTC+14, including a half-hour offset.

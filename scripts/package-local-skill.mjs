@@ -26,10 +26,16 @@ const archiveEntries = Object.fromEntries(
 await mkdir(output, { recursive: true })
 const artifactName = `cycle-skill-${source.version}.zip`
 const artifactPath = join(output, artifactName)
-await writeFile(artifactPath, zipSync(archiveEntries, {
-  level: 9,
-  mtime: new Date("1980-01-01T00:00:00.000Z"),
-}))
+// The ZIP format stores a local MS-DOS timestamp, and `fflate` renders it with local-time getters:
+// year, month, day, hours, minutes and seconds are all read off the machine that packs. A fixed
+// instant is therefore not a fixed stamp — midnight UTC is 01:00 at UTC+1 and, worse, 1979 west of
+// UTC, below the year the format counts from, where the year field goes negative and wraps.
+//
+// Constructed from local components instead, so the rendering is 1980-01-01 00:00 in every zone.
+// That is the smallest stamp the format holds, and the same bytes everywhere.
+const DOS_EPOCH = new Date(1980, 0, 1, 0, 0, 0, 0)
+
+await writeFile(artifactPath, zipSync(archiveEntries, { level: 9, mtime: DOS_EPOCH }))
 const bytes = await readFile(artifactPath)
 const digest = sha256(bytes)
 const unpacked = unzipSync(bytes)

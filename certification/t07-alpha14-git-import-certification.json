@@ -19,16 +19,54 @@
     "mavisRuntime": "temporary"
   },
   "checks": [
-    { "id": "public-main-source", "status": "passed" },
-    { "id": "git-import-preview-manifest", "status": "passed", "version": "2.0.0-alpha.14", "skills": 1, "mcpServers": 1 },
-    { "id": "git-import-native-action", "status": "passed" },
-    { "id": "imported-plugin-catalog", "status": "passed" },
-    { "id": "application-restart-persistence", "status": "passed" },
-    { "id": "imported-skill-selection", "status": "passed" },
-    { "id": "imported-mcp-cycle-doctor", "status": "passed", "version": "2.0.0-alpha.14", "schemaVersion": 8, "ok": true },
-    { "id": "installed-checkout-byte-digest", "status": "not_proven", "reason": "host UI does not expose the imported file tree hash" },
-    { "id": "local-skill-zip-install", "status": "unsupported", "reason": "host exposes no local archive upload surface" },
-    { "id": "full-t07-workflow-matrix", "status": "not_run" }
+    {
+      "id": "public-main-source",
+      "status": "passed"
+    },
+    {
+      "id": "git-import-preview-manifest",
+      "status": "passed",
+      "version": "2.0.0-alpha.14",
+      "skills": 1,
+      "mcpServers": 1
+    },
+    {
+      "id": "git-import-native-action",
+      "status": "passed"
+    },
+    {
+      "id": "imported-plugin-catalog",
+      "status": "passed"
+    },
+    {
+      "id": "application-restart-persistence",
+      "status": "passed"
+    },
+    {
+      "id": "imported-skill-selection",
+      "status": "passed"
+    },
+    {
+      "id": "imported-mcp-cycle-doctor",
+      "status": "passed",
+      "version": "2.0.0-alpha.14",
+      "schemaVersion": 8,
+      "ok": true
+    },
+    {
+      "id": "installed-checkout-byte-digest",
+      "status": "not_proven",
+      "reason": "host UI does not expose the imported file tree hash"
+    },
+    {
+      "id": "local-skill-zip-install",
+      "status": "unsupported",
+      "reason": "host exposes no local archive upload surface"
+    },
+    {
+      "id": "full-t07-workflow-matrix",
+      "status": "not_run"
+    }
   ],
   "remainingGates": [
     "executor-allowed-write",
@@ -51,5 +89,15 @@
     "credentials": false,
     "privateConfiguration": false,
     "sessionIdentifiers": false
-  }
+  },
+  "corrections": [
+    {
+      "recordedAt": "2026-09-10",
+      "affects": "candidate.skillArtifactSha256",
+      "finding": "T07-A14-C01",
+      "summary": "The Skill archive digest recorded here is not reproducible. fflate renders the ZIP MS-DOS timestamp with local-time getters, and the packer handed it a fixed UTC instant, so the bytes depended on the packing machine's timezone. Measured: UTC stamped 1980-01-01 00:00, UTC+1 stamped 01:00, and every zone west of UTC stamped 1979 - below the year the format counts from - where the year field goes negative and reads back as 2107. One commit produced at least three different archives.",
+      "consequence": "This digest identifies one machine's build, not the commit. It must not be used to establish that a later archive is the same artifact.",
+      "correctedBy": "the packer now builds the stamp from local components fixed at 1980-01-01 00:00, verified identical across six timezones from UTC-11 to UTC+14"
+    }
+  ]
 }

@@ -9,11 +9,30 @@
     "skillArtifactSha256": "2b35cd5467e72a555124671cf9fa659bcb33fdf845dee623a5037abf3f1802ba"
   },
   "checks": [
-    { "id": "imported-skill-setup-spec", "status": "passed" },
-    { "id": "parent-terminal-absent", "status": "failed", "reason": "selected Skill executed a Terminal directory-discovery command" },
-    { "id": "setup-run-validity", "status": "failed", "reason": "run stopped after forbidden Terminal execution" },
-    { "id": "managed-agent-profiles-after-stop", "status": "passed", "value": 0 },
-    { "id": "temporary-project-mutations-after-stop", "status": "passed", "value": 0 }
+    {
+      "id": "imported-skill-setup-spec",
+      "status": "passed"
+    },
+    {
+      "id": "parent-terminal-absent",
+      "status": "failed",
+      "reason": "selected Skill executed a Terminal directory-discovery command"
+    },
+    {
+      "id": "setup-run-validity",
+      "status": "failed",
+      "reason": "run stopped after forbidden Terminal execution"
+    },
+    {
+      "id": "managed-agent-profiles-after-stop",
+      "status": "passed",
+      "value": 0
+    },
+    {
+      "id": "temporary-project-mutations-after-stop",
+      "status": "passed",
+      "value": 0
+    }
   ],
   "finding": {
     "id": "T07-A14-B01",
@@ -29,5 +48,15 @@
     "credentials": false,
     "privateConfiguration": false,
     "sessionIdentifiers": false
-  }
+  },
+  "corrections": [
+    {
+      "recordedAt": "2026-09-10",
+      "affects": "candidate.skillArtifactSha256",
+      "finding": "T07-A14-C01",
+      "summary": "The Skill archive digest recorded here is not reproducible. fflate renders the ZIP MS-DOS timestamp with local-time getters, and the packer handed it a fixed UTC instant, so the bytes depended on the packing machine's timezone. Measured: UTC stamped 1980-01-01 00:00, UTC+1 stamped 01:00, and every zone west of UTC stamped 1979 - below the year the format counts from - where the year field goes negative and reads back as 2107. One commit produced at least three different archives.",
+      "consequence": "This digest identifies one machine's build, not the commit. It must not be used to establish that a later archive is the same artifact.",
+      "correctedBy": "the packer now builds the stamp from local components fixed at 1980-01-01 00:00, verified identical across six timezones from UTC-11 to UTC+14"
+    }
+  ]
 }

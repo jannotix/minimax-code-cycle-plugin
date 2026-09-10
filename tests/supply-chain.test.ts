@@ -98,7 +98,12 @@ test("the supply-chain verifier uses npm pack and an external tar reader", async
   assert.match(verifier, /child\.on\("close"/u)
   assert.match(verifier, /await rm\(clean, \{ force: true, recursive: true \}\)/u)
   assert.match(skillPackager, /zipSync\(archiveEntries/u)
-  assert.match(skillPackager, /1980-01-01T00:00:00\.000Z/u)
+  // The stamp is built from local components, never from a fixed instant. An instant is rendered
+  // through local getters and stops being fixed the moment the machine moves zone, which is what
+  // the ISO literal that used to be pinned here was hiding. What the archive carries is asserted on
+  // the bytes below rather than on the shape of the source, so this only keeps the instant out.
+  assert.match(skillPackager, /new Date\(1980, 0, 1, 0, 0, 0, 0\)/u)
+  assert.doesNotMatch(skillPackager, /mtime:\s*new Date\("/u)
   assert.match(skillPackager, /HEAD:skills\/cycle/u)
   assert.match(skillPackager, /unzipSync\(bytes\)/u)
 })
@@ -121,6 +126,41 @@ test("the local Skill ZIP is byte-stable across two builds of the same commit", 
   } finally {
     await rm(first, { force: true, recursive: true })
     await rm(second, { force: true, recursive: true })
+  }
+})
+
+// The two-build test above compares one machine against itself, which is how a reproducibility
+// claim stays true of the comparison and false of the property. This reads the stamp the archive
+// actually carries, so it fails anywhere the writer renders it in local time — which `fflate` does:
+// it builds the DOS field from getFullYear, getMonth, getDate, getHours, getMinutes and getSeconds,
+// every one of them local. Handed an instant that is midnight UTC, a machine at UTC+1 wrote 01:00
+// and a machine west of UTC wrote 1979, below the year the format counts from, where the year field
+// goes negative and wraps.
+test("every archive entry is stamped 1980-01-01 00:00, in any timezone", async () => {
+  const source = JSON.parse(await readFile(join(ROOT as string, "package.json"), "utf8"))
+  const output = await mkdtemp(join(tmpdir(), "cycle-skill-stamp-"))
+  try {
+    await execFileAsync(
+      process.execPath,
+      [join(ROOT as string, "scripts", "package-local-skill.mjs"), "--output", output],
+      { cwd: ROOT as string },
+    )
+    const bytes = await readFile(join(output, `cycle-skill-${source.version}.zip`))
+
+    // Every local file header, not only the first: one entry written from a different instant is
+    // the same defect with a smaller blast radius.
+    let headers = 0
+    for (let at = 0; at + 30 <= bytes.length; at += 1) {
+      if (bytes.readUInt32LE(at) !== 0x04034b50) continue
+      headers += 1
+      const time = bytes.readUInt16LE(at + 10)
+      const date = bytes.readUInt16LE(at + 12)
+      assert.equal(date, 0x0021, `entry at ${at} is not stamped 1980-01-01`)
+      assert.equal(time, 0x0000, `entry at ${at} is not stamped 00:00:00`)
+    }
+    assert.ok(headers > 0, "no local file header was found in the archive")
+  } finally {
+    await rm(output, { force: true, recursive: true })
   }
 })
 
