@@ -1,2 +1,12 @@
+# The working tree is the same bytes on every platform, because the artifact is packed from it.
+#
+# `npm pack` takes the files as they sit on disk, and without this git checks them out with CRLF on
+# Windows and LF elsewhere — so the published digest depended on which machine packed it. That is
+# the property the Skill archive was fixed for; the archive reads its bytes from the object database
+# and was never exposed, while the package was, and the Windows lane never reached the check that
+# would have said so.
+* text=auto eol=lf
+
+# Binary, and never to be converted or diffed.
 vendor/**/*.wasm -diff -text
 vendor/runtime/tree-sitter.cjs -diff -text

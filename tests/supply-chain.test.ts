@@ -47,6 +47,26 @@ test("the package allowlist contains every runtime root and refuses development 
   assert.equal(reached.size, (FORBIDDEN as unknown[]).length)
 })
 
+// `npm pack` packs the working tree, so the published digest is only a property of the commit if the
+// working tree is the same bytes everywhere. Without `eol=lf` in .gitattributes git checks text out
+// as CRLF on Windows and LF elsewhere, and the artifact differed by the machine that packed it —
+// the same failure the Skill archive had for a different reason, on the artifact people install.
+//
+// Checked on what the allowlist actually ships rather than on the attributes file, because a rule
+// that stops matching is exactly the silent way this comes back.
+test("no packaged text file carries a carriage return", async () => {
+  const paths = (await collect()) as string[]
+  const offenders: string[] = []
+  for (const path of paths) {
+    if (/\.(wasm|png|jpg|jpeg|gif|ico|zip|tgz)$/iu.test(path)) continue
+    const bytes = await readFile(join(ROOT as string, path))
+    // A NUL byte means this is not text, whatever its extension says.
+    if (bytes.includes(0)) continue
+    if (bytes.includes(Buffer.from("\r\n"))) offenders.push(path)
+  }
+  assert.deepEqual(offenders, [], `packed with CRLF: ${offenders.join(", ")}`)
+})
+
 test("the shipped package metadata has no install scripts or dependency tree", async () => {
   const source = JSON.parse(await readFile(join(ROOT as string, "package.json"), "utf8"))
   const runtime = JSON.parse(runtimePackage(source) as string)
