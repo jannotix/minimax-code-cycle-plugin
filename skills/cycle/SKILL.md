@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.14` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.15` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -84,14 +84,18 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-T07R7 freezes a fresh alpha.14 candidate after correcting local Skill archive reproducibility. The
-archive is constructed from sorted committed blobs with fixed ZIP metadata, and two same-commit builds
-must have identical bytes. The candidate retains canonical MiniMax capability profiles, a persisted
-MCP owner argument, an explicit active-profile-root handoff, and the Custom Agent `agent.md` prompt
-authority. It does not certify that MiniMax Desktop installs this artifact, enforces those profiles,
-dispatches agents, or completes browser/provider/concurrency flows on a real profile. Fresh alpha.14
-T07 live certification remains a release gate. Until all applicable gates pass on one exact artifact,
-the product is not production-ready and its release is blocked.
+Alpha.15 has no live behavioural certification, and the alpha.14 receipts do not carry forward: they
+name an artifact this line no longer produces, so they describe a different candidate rather than an
+older one. The Skill archive is reproducible off the machine that builds it, and the package is too —
+both are built from bytes that do not depend on the platform or its timezone.
+
+What is not certified is everything a person would call the product: that MiniMax Desktop installs
+this artifact, that it enforces the capability profiles, that five roles are dispatched and answer,
+and that a cycle completes through browser, provider failure, concurrency, delivery and uninstall.
+None of it has been run against a real profile.
+
+T07 live certification on one exact artifact remains the release gate. Until every applicable gate
+passes on that artifact, the product is not production-ready and its release is blocked.
 
 ## Safety
 

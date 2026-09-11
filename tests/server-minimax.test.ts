@@ -5,6 +5,10 @@ import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from "node:child_process"
 
+// The one constant the server itself reads. contract.test.mjs is what proves this file, the
+// manifests and the lockfile all name the same version; here it is simply the source.
+import { VERSION } from "../src/version.ts"
+
 interface RpcResponse {
   readonly error?: { readonly code: number; readonly message: string }
   readonly id: number | string | null
@@ -177,7 +181,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     const identity = initialized.result as { serverInfo: { version: string }; protocolVersion: string }
     assert.equal(identity.protocolVersion, "2025-06-18")
-    assert.equal(identity.serverInfo.version, "2.0.0-alpha.14")
+    assert.equal(identity.serverInfo.version, VERSION)
 
     const listed = await first.call("tools/list")
     const names = (listed.result as { tools: readonly { name: string }[] }).tools.map((tool) => tool.name)
@@ -253,7 +257,7 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     }))
     const installedReceipt = {
       agents: receiptAgents,
-      pluginVersion: "2.0.0-alpha.14",
+      pluginVersion: VERSION,
       profile: "cycle-t04",
       schema: "cycle.mavis-setup-receipt.v2",
       status: "installed_unverified",

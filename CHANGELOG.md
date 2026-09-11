@@ -2,6 +2,52 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.15] - Unreleased
+
+### Fixed
+
+- The durable data directory could sit inside the project it governs. The containment check compared
+  a resolved path against a canonicalised one, so a junction, a symlink or a Windows short name
+  escaped it — measured, not inferred: the store was created inside the project and the doctor
+  answered `ok`.
+- `engines` promised Node 22 while the store needs 22.13.0 for `node:sqlite`, and the doctor compared
+  the major alone, so 22.0 through 22.12 were reported healthy and then failed to open the store.
+  Continuous integration now pins the exact floor and loads the shipped runtime on it.
+- The published package was not reproducible. `npm pack` packs the working tree, and without a
+  normalisation rule git checked text out as CRLF on Windows and LF elsewhere, so the digest depended
+  on the machine that packed it. The Skill archive had the same property for a different reason: its
+  ZIP timestamp was rendered through local-time getters, which put 1979 in the field west of UTC,
+  below the year the format counts from.
+- An arbiter that approved over a reviewer's rejection was refused with a throw before anything was
+  recorded, so the run re-dispatched the same arbiter with the same prompt and could not converge.
+  The refusal is recorded now and routed to repair, and the arbiter is shown both reviews.
+- Every commit this delivered claimed it rested on zero recorded gates, because the commit message
+  read the manifest frozen before verification while the journal read an enriched copy.
+- Reconcile could not tell a delivery that never began from one that ran and aborted, and refused to
+  finish work that was safe to finish — which is how a non-interactive run ordinarily ends.
+- The index fell back to walking the filesystem when git refused to list the project, so ignored
+  files could enter the graph, and a refusal was read as an empty repository and deleted it.
+- The signing-key permission check required at most one principal, which no ordinary Windows machine
+  can satisfy. It names the accounts it will not accept now, and permits the system principals that
+  hold the file regardless.
+- Two legacy tools that existed to be distrusted are gone, along with six packaged Skill files that
+  described a contract this host does not have — including one that said the executor drives the
+  browser, which is the opposite of what the control plane enforces.
+
+### Changed
+
+- `cycle_setup assess` reads the installed capability profile from disk when given the active
+  `profile_root`, instead of judging the caller's account of it. The coordinator is the party those
+  profiles restrict, so the one fact of a setup the plane can establish on its own it now does; the
+  answer names which half is evidence and which is a report.
+
+### Known limitations
+
+- Alpha.15 has no live artifact-install, MCP, role, workflow, recovery, delivery, uninstall or
+  repeat-critical-battery certification. The alpha.14 receipts do not carry forward: they name an
+  artifact this line no longer produces. Release remains blocked pending a supported, authorized
+  public Git import and the complete T07 matrix.
+
 ## [2.0.0-alpha.14] - Unreleased
 
 ### Fixed

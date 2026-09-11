@@ -7,7 +7,11 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const VERSION = "2.0.0-alpha.14";
+// Read, not repeated: this suite exists to prove every surface agrees on one version, and a
+// literal here would be a second place to forget.
+const VERSION = JSON.parse(
+  await readFile(join(resolve(dirname(fileURLToPath(import.meta.url)), ".."), "package.json"), "utf8"),
+).version;
 
 async function text(path) {
   return await readFile(join(ROOT, path), "utf8");

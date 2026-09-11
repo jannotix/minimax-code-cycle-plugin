@@ -4,6 +4,10 @@ import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 
+// The one constant the server itself reads. contract.test.mjs is what proves this file, the
+// manifests and the lockfile all name the same version; here it is simply the source.
+import { VERSION } from "../src/version.ts"
+
 import {
   assessAgent,
   assessUninstall,
@@ -215,25 +219,25 @@ test("setup receipts cannot claim ready, omit a role, or substitute an agent", (
   }))
   const installed = {
     agents,
-    pluginVersion: "2.0.0-alpha.14",
+    pluginVersion: VERSION,
     profile: "cycle-t04",
     schema: "cycle.mavis-setup-receipt.v2",
     status: "installed_unverified",
   }
-  assert.equal(validateSetupReceipt(installed, "2.0.0-alpha.14").status, "installed_unverified")
+  assert.equal(validateSetupReceipt(installed, VERSION).status, "installed_unverified")
   assert.throws(
-    () => validateSetupReceipt({ ...installed, status: "ready" }, "2.0.0-alpha.14"),
+    () => validateSetupReceipt({ ...installed, status: "ready" }, VERSION),
     /ready requires/u,
   )
   assert.throws(
-    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, "2.0.0-alpha.14"),
+    () => validateSetupReceipt({ ...installed, agents: agents.slice(0, 4) }, VERSION),
     /exactly five/u,
   )
   assert.throws(
     () => validateSetupReceipt({
       ...installed,
       agents: agents.map((entry, index) => index === 1 ? { ...entry, name: "user-executor" } : entry),
-    }, "2.0.0-alpha.14"),
+    }, VERSION),
     /role\/name mismatch/u,
   )
 })
