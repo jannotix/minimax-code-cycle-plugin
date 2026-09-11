@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process"
+import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from "node:child_process"
 
 interface RpcResponse {
   readonly error?: { readonly code: number; readonly message: string }
@@ -92,6 +92,13 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
   const projectB = join(scratch, "project-b")
   mkdirSync(projectA)
   mkdirSync(projectB)
+  // Repositories, because the indexer only indexes one: git's list is the ignore policy, and a root
+  // git will not answer for is refused rather than walked. Without this the index below finds
+  // nothing — and on a loaded machine admission control defers the call, so the assertion that would
+  // have caught it never runs.
+  for (const project of [projectA, projectB]) {
+    execFileSync("git", ["init", "--quiet"], { cwd: project, stdio: "ignore" })
+  }
   const environment = { ...process.env, CYCLE_DATA_DIR: join(scratch, "data") }
 
   const first = new McpClient(environment)
