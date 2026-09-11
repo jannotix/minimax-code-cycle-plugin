@@ -62,6 +62,46 @@ function principal() {
     const domain = process.env["USERDOMAIN"]?.trim();
     return domain ? `${domain}\\${user}` : user;
 }
+const UNAVOIDABLE_PRINCIPALS = new Set([
+    "nt authority\\system",
+    "builtin\\administrators",
+    "administrators",
+    "system",
+    "s-1-5-18",
+    "s-1-5-32-544",
+]);
+const EVERYBODY_PRINCIPALS = new Set([
+    "everyone",
+    "builtin\\users",
+    "users",
+    "nt authority\\authenticated users",
+    "authenticated users",
+    "nt authority\\interactive",
+    "s-1-1-0",
+    "s-1-5-32-545",
+    "s-1-5-11",
+]);
+export function inspectAcl(acl, path) {
+    if (acl.includes("(I)"))
+        return { detail: "inherited access is still granted", restricted: false };
+    const named = [];
+    for (const line of acl.split(/\r?\n/u)) {
+        const rest = line.startsWith(path) ? line.slice(path.length) : line;
+        const found = /^\s*(.+?):\(/u.exec(rest);
+        if (found?.[1] !== undefined)
+            named.push(found[1].trim());
+    }
+    const everybody = named.filter((name) => EVERYBODY_PRINCIPALS.has(name.toLowerCase()));
+    const accounts = named.filter((name) => !UNAVOIDABLE_PRINCIPALS.has(name.toLowerCase()) &&
+        !EVERYBODY_PRINCIPALS.has(name.toLowerCase()));
+    if (everybody.length > 0) {
+        return { detail: `granted to ${everybody.join(", ")}`, restricted: false };
+    }
+    if (accounts.length > 1) {
+        return { detail: `granted to more than one account: ${accounts.join(", ")}`, restricted: false };
+    }
+    return { detail: accounts.length === 1 ? `only ${accounts[0]}` : "no account grant found", restricted: true };
+}
 export function keyPermissions(dataDirectory) {
     const path = join(dataDirectory, KEY_DIRECTORY, KEY_FILE);
     if (process.platform !== "win32") {
@@ -90,13 +130,7 @@ export function keyPermissions(dataDirectory) {
     catch {
         return { detail: "no key yet", exists: false, restricted: true };
     }
-    const inherited = acl.includes("(I)");
-    const principals = [...acl.matchAll(/([^\s:]+):\((?!I\))/gu)].length;
-    return {
-        detail: inherited ? "inherited access is still granted" : `${principals} principal(s)`,
-        exists: true,
-        restricted: !inherited && principals <= 1,
-    };
+    return { ...inspectAcl(acl, path), exists: true };
 }
 export function signCheckpoint(database, dataDirectory, now = Date.now()) {
     const head = database.get("select hash, sequence from history order by sequence desc limit 1");

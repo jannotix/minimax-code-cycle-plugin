@@ -95,6 +95,80 @@ export interface KeyPermissions {
 }
 
 /**
+ * Principals that hold the key whatever its ACL says, so refusing them reports a condition nobody
+ * can remove. An administrator can take ownership of any file on the machine, and SYSTEM is the
+ * operating system. The POSIX side already concedes exactly this point: `0600` keeps other users
+ * out and does not keep root out. Holding Windows to a stricter standard for the same property is
+ * what made this refuse ordinary machines, including every Windows continuous-integration runner.
+ *
+ * Spelled without a locale: `icacls` renders these names in the display language of the machine, so
+ * the well-known SID aliases are matched too.
+ */
+const UNAVOIDABLE_PRINCIPALS = new Set([
+  "nt authority\\system",
+  "builtin\\administrators",
+  "administrators",
+  "system",
+  "s-1-5-18",
+  "s-1-5-32-544",
+])
+
+/**
+ * Groups that mean "more than one person", which is the condition this check exists to find. They
+ * are named rather than inferred, because a group that grants everybody read is indistinguishable
+ * from an ordinary second account by counting alone.
+ */
+const EVERYBODY_PRINCIPALS = new Set([
+  "everyone",
+  "builtin\\users",
+  "users",
+  "nt authority\\authenticated users",
+  "authenticated users",
+  "nt authority\\interactive",
+  "s-1-1-0",
+  "s-1-5-32-545",
+  "s-1-5-11",
+])
+
+/**
+ * What an `icacls` listing says about who can read the key.
+ *
+ * Exported and pure so the rule is tested on every platform rather than only where it runs: the
+ * machine that refused this in continuous integration is not the machine most of these tests run
+ * on, which is how a check too strict for Windows survived being written on Windows.
+ */
+export function inspectAcl(acl: string, path: string): { detail: string; restricted: boolean } {
+  // An inherited entry means the key kept whatever the directory above it grants, which is the
+  // state this check exists to catch, whoever the entry belongs to.
+  if (acl.includes("(I)")) return { detail: "inherited access is still granted", restricted: false }
+
+  const named: string[] = []
+  for (const line of acl.split(/\r?\n/u)) {
+    // The first line carries the path in front of the first entry, and principal names contain
+    // spaces and backslashes — so the name is everything up to `:(`, not the last whitespace-
+    // delimited token. Splitting on whitespace reads `NT AUTHORITY\SYSTEM` as `AUTHORITY\SYSTEM`.
+    const rest = line.startsWith(path) ? line.slice(path.length) : line
+    const found = /^\s*(.+?):\(/u.exec(rest)
+    if (found?.[1] !== undefined) named.push(found[1].trim())
+  }
+
+  const everybody = named.filter((name) => EVERYBODY_PRINCIPALS.has(name.toLowerCase()))
+  const accounts = named.filter(
+    (name) =>
+      !UNAVOIDABLE_PRINCIPALS.has(name.toLowerCase()) &&
+      !EVERYBODY_PRINCIPALS.has(name.toLowerCase()),
+  )
+
+  if (everybody.length > 0) {
+    return { detail: `granted to ${everybody.join(", ")}`, restricted: false }
+  }
+  if (accounts.length > 1) {
+    return { detail: `granted to more than one account: ${accounts.join(", ")}`, restricted: false }
+  }
+  return { detail: accounts.length === 1 ? `only ${accounts[0]}` : "no account grant found", restricted: true }
+}
+
+/**
  * What the key file actually carries now, rather than what creation attempted. A signature is worth
  * the exclusivity of the key that made it, so this is read from the filesystem every time doctor
  * runs and not cached from the moment it was written.
@@ -130,15 +204,7 @@ export function keyPermissions(dataDirectory: string): KeyPermissions {
     return { detail: "no key yet", exists: false, restricted: true }
   }
 
-  // icacls prints `path principal:(rights)` and then one indented principal per line. Inherited
-  // entries carry (I), and an inherited entry is exactly the state this is here to catch.
-  const inherited = acl.includes("(I)")
-  const principals = [...acl.matchAll(/([^\s:]+):\((?!I\))/gu)].length
-  return {
-    detail: inherited ? "inherited access is still granted" : `${principals} principal(s)`,
-    exists: true,
-    restricted: !inherited && principals <= 1,
-  }
+  return { ...inspectAcl(acl, path), exists: true }
 }
 
 /** Signs the current head of the chain. Idempotent: signing the same sequence twice replaces it. */
