@@ -57,3 +57,6 @@ docs-site/
 tests/*
 !tests/*.test.mjs
 !tests/*.test.ts
+
+# Working material, deliberately not part of the artifact or its history.
+PRODUCTION_TASK_PLAN.md
