@@ -58,6 +58,24 @@ profile write itself.
 Setup is idempotent and uninstall deletes only marker-owned agents while preserving the durable
 Cycle database.
 
+**What the control plane establishes, and what it is told.** The coordinator is an ordinary MiniMax
+session, and this host exposes no way to constrain which tools it may use — so the party these
+capability profiles exist to restrict is also the party that installs them. One fact about that is a
+local file, and the plane reads it: given the active `profile_root`, `cycle_setup assess` opens the
+installed `agent.md` itself, read-only and inside that root, and judges those bytes. Reporting the
+expected profile without having written it now answers `conflict`, where it used to answer `noop`.
+
+Everything else about a setup is reported. The agent's native name, description and system prompt
+live in MiniMax's own store, which this plane cannot query; whether the live child roster matches its
+profile, and whether a role was dispatched at all rather than imitated by the coordinator, are
+invisible to it. `assess` says which half is which: `profile.source` reads `read-by-control-plane`
+when the plane read the file, and `reported-by-caller` when it did not.
+
+The remaining gap needs a host-enforced parent boundary, which
+[upstream issue #138](https://github.com/MiniMax-AI/minimax-code/issues/138) asks for and which does
+not exist today. Until it does, treat a `ready` receipt as the coordinator's account of the parts
+above that the plane could not read.
+
 For Custom Agents, canonical `agent.md` is the sole authority for both the system prompt and the
 capability selectors. Setup writes and digests that exact file, then requires native `agent get` and
 `cycle_setup assess` to round-trip to `noop`. It never calls native `agent update` with

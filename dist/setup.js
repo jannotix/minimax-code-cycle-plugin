@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { isAbsolute } from "node:path";
+import { readContainedFile } from "./filesystem.js";
 import { containsSecret } from "./secrets.js";
 export const SETUP_SCHEMA = "cycle.mavis-setup.v2";
 export const SETUP_NAMESPACE = "cycle-v2";
@@ -60,6 +62,13 @@ export function roleSetup(role) {
 }
 export function profileRelativePath(role) {
     return `agents/${roleSetup(role).agentName}/agent.md`;
+}
+const MAX_PROFILE_BYTES = 256 * 1024;
+export async function readInstalledProfile(profileRoot, role) {
+    if (!isAbsolute(profileRoot))
+        throw new Error("profile_root must be an absolute path");
+    const bytes = await readContainedFile(profileRoot, profileRelativePath(role), MAX_PROFILE_BYTES);
+    return bytes === null ? null : bytes.toString("utf8");
 }
 export function ownershipMarker(role) {
     return `<!-- cycle-managed:${SETUP_OWNER};schema=${SETUP_SCHEMA};role=${role} -->`;

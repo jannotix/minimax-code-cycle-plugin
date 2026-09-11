@@ -38,7 +38,11 @@ Do not load every reference for a simple inspection.
    native `agent update` with `system_prompt`.
    Setup additionally requires the user-confirmed active `profile_root`; join it only with the
    `profileRelativePath` returned by `cycle_setup spec`, never with a path found through Terminal
-   or a shell.
+   or a shell. Pass that same `profile_root` to `cycle_setup assess`: the plane reads the
+   installed `agent.md` itself and judges those bytes, so reporting a profile you did not write
+   answers `conflict`. What it cannot read — the native name, description and prompt in the
+   MiniMax store, the live child roster, and whether a role was dispatched at all — stays your
+   report, and the receipt is only ever that.
    MiniMax persists MCP identity through name/type/enabled/command/arguments, not environment or
    description fields. Use the returned owner argument; do not claim Mavis persisted `CYCLE_DATA_DIR`.
 4. Start or reconcile one durable workflow, then call `cycle_coordinator next`. Execute exactly one

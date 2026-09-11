@@ -49,8 +49,11 @@ or prompt-only tool restriction.
    list/get/create/delete. A native Custom Agent `system_prompt` update is not a setup
    capability: its canonical `agent.md` is the prompt authority. Missing required operations stop
    setup.
-6. For each expected agent, call `agent get`. Read its canonical `agent.md` when present and pass
-   native fields plus `observed_agent_markdown` to `cycle_setup assess`.
+6. For each expected agent, call `agent get` and pass the native fields to `cycle_setup assess`
+   **together with `profile_root`**. Given the root, the plane reads the installed `agent.md`
+   itself and judges those bytes; do not send `observed_agent_markdown`, which it ignores. The
+   answer names which half it established: `profile.source` reads `read-by-control-plane` when
+   the file was read, and `profile.read` says `on_disk` or `absent`.
 7. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
    persisted type, enabled state, command, and both arguments match the returned specification:
    resolved `dist/server.js` followed by `ownerArgument`. Native Mavis does not persist description
@@ -121,8 +124,10 @@ unknown future tools. Deterministic tests and proofs run in the parent through t
 engine; role sessions only inspect or propose scoped file edits. Post-task Git reconciliation still
 rejects executor writes outside the current/completed task scopes.
 
-After every native create or profile-file write, call `agent get`, re-read `agent.md`, and call
-`cycle_setup assess`. The result must be `noop`. If `assess` returns `update` after the byte-exact
+After every native create or profile-file write, call `agent get` and call `cycle_setup assess`
+with `profile_root`. The result must be `noop`. Reporting the expected bytes without having
+written them no longer produces one: the plane reads the file, and an absent or different
+profile answers `conflict` with `profile.read: absent`. If `assess` returns `update` after the byte-exact
 profile write and native read-back, stop setup as `blocked`: the canonical profile did not produce a
 trusted native round-trip. Do not use native `agent update` with `system_prompt` as recovery. At the
 end `agent list` contains each expected name exactly once.

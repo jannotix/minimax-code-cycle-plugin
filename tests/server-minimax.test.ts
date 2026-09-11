@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from "node:child_process"
 
@@ -85,6 +85,59 @@ function toolBody(response: RpcResponse): unknown {
   if (typeof text !== "string") throw new Error("tool response did not contain text")
   return JSON.parse(text)
 }
+
+// The coordinator is the party these capability profiles exist to restrict, and it was also the only
+// witness to having installed them: `assess` compared the text the caller handed it, so a session
+// that wrote nothing could return the expected bytes and be told `noop`. The plane reads the file
+// now, which is the one fact of a setup it can establish without being told.
+test("assess judges the profile on disk, not the caller's account of it", async () => {
+  const scratch = mkdtempSync(join(tmpdir(), "cycle-minimax-assess-"))
+  const client = new McpClient({ ...process.env, CYCLE_DATA_DIR: join(scratch, "data") })
+  try {
+    await client.call("initialize", {
+      capabilities: {},
+      clientInfo: { name: "test", version: "1" },
+      protocolVersion: "2025-06-18",
+    })
+    const spec = toolBody(await client.call("tools/call", {
+      arguments: { operation: "spec" },
+      name: "cycle_setup",
+    })) as { agents: { profile: string; profileRelativePath: string; role: string; name: string; description: string; systemPrompt: string }[] }
+    const agent = spec.agents.find((entry) => entry.role === "executor")!
+
+    const assess = async (): Promise<{ action: string; profile: { read: string; source: string; reportedDiffers?: boolean } }> =>
+      toolBody(await client.call("tools/call", {
+        arguments: {
+          observed_agent_markdown: agent.profile,
+          observed_description: agent.description,
+          observed_name: agent.name,
+          observed_system_prompt: agent.systemPrompt,
+          operation: "assess",
+          profile_root: scratch,
+          role: "executor",
+        },
+        name: "cycle_setup",
+      })) as never
+
+    // Nothing written, and the caller reports the exact expected profile.
+    const lied = await assess()
+    assert.notEqual(lied.action, "noop", "an unwritten profile must not be accepted on a report")
+    assert.equal(lied.profile.read, "absent")
+    assert.equal(lied.profile.source, "read-by-control-plane")
+    assert.equal(lied.profile.reportedDiffers, true)
+
+    // The same call once the bytes are actually there.
+    const path = join(scratch, agent.profileRelativePath)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, agent.profile, "utf8")
+    const written = await assess()
+    assert.equal(written.action, "noop", "the installed profile is the managed one")
+    assert.equal(written.profile.read, "on_disk")
+  } finally {
+    await client.stop()
+    rmSync(scratch, { force: true, recursive: true })
+  }
+})
 
 test("the MCP control plane is strict, project-scoped, and durable across restart", async () => {
   const scratch = mkdtempSync(join(tmpdir(), "cycle-minimax-mcp-"))

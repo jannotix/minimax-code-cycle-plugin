@@ -14,7 +14,7 @@ import { chainOf, explain, forget, recall } from "./memory.js";
 import { serve } from "./mcp.js";
 import { pressure } from "./resources.js";
 import { Runtime } from "./runtime.js";
-import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, profileRelativePath, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
+import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, profileRelativePath, readInstalledProfile, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
 import { frozenFiles } from "./store/workflows.js";
@@ -40,6 +40,8 @@ const tools = [
             "validate a sanitized readiness receipt. " +
             "For Custom Agents, canonical agent.md is the system-prompt authority; native system_prompt updates are unsupported. " +
             "The setup caller must supply a user-confirmed active profile root and use each returned profileRelativePath without shell discovery. " +
+            "Given profile_root, assess reads the installed capability profile from disk itself and judges those bytes rather than the caller's account of them; " +
+            "the native name, description and system prompt remain reported, because they live in the MiniMax store this plane cannot query. " +
             "On MiniMax 3.0.68.134, MCP env and description fields are not persisted; ownership uses the returned managed owner argument. " +
             "This tool never mutates the MiniMax profile; the Cycle Skill uses the native mavis tool.",
         inputSchema: objectSchema({
@@ -47,11 +49,12 @@ const tools = [
             role: enumSchema(["architect", "executor", "functional_reviewer", "security_reviewer", "arbiter"]),
             observed_name: stringSchema("Name returned by native mavis agent get.", 128),
             observed_description: stringSchema("Description returned by native mavis agent get.", 2_048),
-            observed_agent_markdown: stringSchema("Canonical agent.md read from the active profile.", 65_536),
+            observed_agent_markdown: stringSchema("Canonical agent.md as the caller read it. Ignored when profile_root is supplied.", 65_536),
             observed_system_prompt: stringSchema("System prompt returned by native mavis agent get.", 65_536),
+            profile_root: stringSchema("Absolute, user-confirmed active MiniMax profile directory. Read-only.", 4_096),
             receipt: { type: "object" },
         }, ["operation"]),
-        run: (args) => setupOperation(args),
+        run: async (args) => await setupOperation(args),
     },
     {
         name: "cycle_coordinator",
@@ -219,7 +222,7 @@ const tools = [
 ];
 serve({ name: "cycle-control-plane-minimax", version: VERSION }, tools);
 process.on("exit", () => runtime.close());
-function setupOperation(args) {
+async function setupOperation(args) {
     const operation = requiredString(args, "operation");
     if (operation === "spec") {
         return {
@@ -279,7 +282,10 @@ function setupOperation(args) {
     ]);
     const observed = setupSnapshot(args);
     if (operation === "assess") {
-        const observedAgentMarkdown = optionalBoundedString(args, "observed_agent_markdown", 65_536);
+        const profileRoot = optionalBoundedString(args, "profile_root", 4_096);
+        const onDisk = profileRoot === undefined ? null : await readInstalledProfile(profileRoot, role);
+        const reported = optionalBoundedString(args, "observed_agent_markdown", 65_536);
+        const observedAgentMarkdown = profileRoot === undefined ? reported : onDisk ?? "";
         const action = assessAgent(role, setupPrompt(role), observed, observedAgentMarkdown);
         const expected = roleSetup(role);
         return {
@@ -291,6 +297,13 @@ function setupOperation(args) {
                 profileDigest: contentDigest(managedAgentMarkdown(role, setupPrompt(role))),
                 profileRelativePath: profileRelativePath(role),
                 tools: expected.tools,
+            },
+            profile: {
+                read: profileRoot === undefined ? "not_requested" : onDisk === null ? "absent" : "on_disk",
+                source: profileRoot === undefined ? "reported-by-caller" : "read-by-control-plane",
+                ...(profileRoot !== undefined && reported !== undefined && reported !== (onDisk ?? "")
+                    ? { reportedDiffers: true }
+                    : {}),
             },
             role,
         };

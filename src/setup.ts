@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto"
+import { isAbsolute } from "node:path"
+
+import { readContainedFile } from "./filesystem.ts"
 
 import { containsSecret } from "./secrets.ts"
 
@@ -118,6 +121,34 @@ export function roleSetup(role: string): RoleSetup {
 
 export function profileRelativePath(role: CycleRole): string {
   return `agents/${roleSetup(role).agentName}/agent.md`
+}
+
+/** A capability profile is small; anything larger is not one, and is not read into memory. */
+const MAX_PROFILE_BYTES = 256 * 1024
+
+/**
+ * The capability profile as it sits on disk, read by the control plane itself.
+ *
+ * Every other fact about a setup reaches the plane from the coordinator, which is the party the
+ * profile exists to constrain — so `assess` used to compare the coordinator's account of the file
+ * against the specification, and a session that had written nothing could return the expected bytes
+ * and be told `noop`. This is the one of those facts the plane can establish on its own, because the
+ * file is on the same machine, so it does.
+ *
+ * It cannot establish the rest. The agent's name, description and system prompt live in MiniMax's
+ * own store, which the plane has no way to query, and whether a role was dispatched at all is
+ * invisible to it. Those stay reported, and the report says so.
+ *
+ * Read-only and bounded the way every read in this plugin is: an absolute root the user confirmed,
+ * containment checked before and after, no link followed, size capped.
+ */
+export async function readInstalledProfile(
+  profileRoot: string,
+  role: CycleRole,
+): Promise<string | null> {
+  if (!isAbsolute(profileRoot)) throw new Error("profile_root must be an absolute path")
+  const bytes = await readContainedFile(profileRoot, profileRelativePath(role), MAX_PROFILE_BYTES)
+  return bytes === null ? null : bytes.toString("utf8")
 }
 
 export function ownershipMarker(role: CycleRole): string {
