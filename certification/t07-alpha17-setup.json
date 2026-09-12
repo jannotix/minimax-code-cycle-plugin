@@ -1,0 +1,137 @@
+{
+  "schema": "cycle.t07.live-certification.v3",
+  "recordedAt": "2026-09-13T00:20:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "112587a7f874cd5d30c5e40b4d3bdbbddfb1e808",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.17.tgz",
+    "artifactVersion": "2.0.0-alpha.17",
+    "artifactBytes": 1903484,
+    "artifactSha256": "c4976303eef8e301411d40af014a642b17ee765f9e38751f8090bf6156389753",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.17.zip",
+    "skillArtifactBytes": 42012,
+    "skillArtifactSha256": "0535d0c78a5d4ae1125f7bfe2cb3d7c359ddeb6a5c008109e6fa587ffad2e870",
+    "continuousIntegration": "green on all four jobs on this exact commit"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "profile": "disposable-runtime-fresh",
+    "profileSelection": "MINIMAX_DATA_DIR",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M3"
+  },
+  "evidenceBasis": "every passed item was verified from outside the session, against files on disk and the session's own recorded tool calls, not from the coordinator's account of its work",
+  "profileIsolation": {
+    "status": "passed",
+    "workingProfileCycleAgentsAfter": 0,
+    "workingProfilePluginsAfter": 0,
+    "disposableProfileCycleAgentsAfter": 5,
+    "credentialsEntered": false
+  },
+  "setupOutcome": {
+    "receiptStatus": "installed_unverified",
+    "receiptDigestsMatchCanonical": true,
+    "receiptPassesValidatorOffSession": true,
+    "readyReachable": false
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "public-git-import", "status": "passed" },
+    { "id": "mcp-registration", "status": "passed", "note": "args [<resolved>/dist/server.js, --cycle-managed=minimax-code-cycle-plugin], script first; A15-B03 did not recur" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "mcp-doctor", "status": "passed", "note": "dataDirectorySource minimax_data_dir" },
+    { "id": "five-role-setup", "status": "passed", "note": "five agents created; five profiles byte-exact with allow-lists intact" },
+    { "id": "setup-assess-round-trip", "status": "passed", "note": "action noop with profile.read on_disk and profile.source read-by-control-plane for every role" },
+    { "id": "per-role-spec", "status": "passed", "note": "role-scoped spec responses in the session records; no reassembly attempted" },
+    { "id": "setup-run-validity", "status": "failed", "finding": "T07-A17-B02" },
+    { "id": "receipt-validation-path", "status": "failed", "finding": "T07-A17-B03" },
+    { "id": "setup-receipt-ready", "status": "failed", "finding": "T07-A17-B01" },
+    { "id": "gates-1-to-11", "status": "not_run", "blockedBy": "T07-A17-B01" }
+  ],
+  "provenLive": [
+    {
+      "id": "T07-A15-B02",
+      "state": "proven",
+      "evidence": "assess returned noop with profile.read on_disk and profile.source read-by-control-plane for all five roles; the absent-agent short-circuit did not fire"
+    },
+    {
+      "id": "T07-A16-B03",
+      "state": "proven",
+      "evidence": "session records show role-scoped spec responses carrying one profile each; no 18 KB artifact, no reassembly"
+    },
+    {
+      "id": "T07-A16-B02",
+      "state": "proven",
+      "evidence": "the request supplied both profile_root and project_root as the corrected procedure requires; step 2 completed without a stop"
+    }
+  ],
+  "notProven": [
+    {
+      "id": "T07-A15-B01",
+      "state": "fixed-and-unproven",
+      "reason": "the refusal to rewrite past a lost or widened allow-list was never triggered, because nothing went wrong"
+    }
+  ],
+  "findings": [
+    {
+      "id": "T07-A17-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "a setup run can reach ready",
+      "result": "failed",
+      "observed": "step 4 requires native task session event/tool records for every managed agent; the host exposes no such surface — task returns a child's work, not its tool roster, and session message returns conversation content, not event/tool records",
+      "consequence": "ready is unreachable on MiniMax Desktop 3.0.68.134, not merely unproven, and all eleven behavioural gates sit behind it",
+      "fixableInPlugin": false,
+      "relatedUpstream": "https://github.com/MiniMax-AI/minimax-code/issues/138",
+      "distinctFrom138": "#138 asks the host to enforce a parent tool boundary; this asks the host to let anyone observe a child session's tool roster"
+    },
+    {
+      "id": "T07-A17-B02",
+      "severity": "medium",
+      "confidence": "high",
+      "requirement": "native-only, shell-free managed-role setup",
+      "result": "failed",
+      "observed": "one read-only bash call, the session's first action, issued in parallel with a glob for the same purpose: a recursive Get-ChildItem search of the profile root for *cycle*setup* and *PROCEDURE*",
+      "consequence": "this run is not a shell-free setup and is not put forward as one; nothing was mutated by it",
+      "note": "the prohibition lives inside the document the session used a shell to locate, so the procedure could not bind the action that found the procedure",
+      "remedy": "SKILL.md, which the host loads, should name the procedure's path and forbid discovering it through a shell",
+      "coordinatorAccountWasWrong": "the close-out described a clean native-only run; the session records show otherwise"
+    },
+    {
+      "id": "T07-A17-B03",
+      "severity": "medium",
+      "confidence": "high",
+      "requirement": "validate_receipt is callable through the host's MCP tool path",
+      "result": "failed",
+      "observed": "every encoding was rejected — booleans reported back as not boolean, array entries arriving wrapped as {\"item\": [...]}; the receipt itself validates cleanly off-session",
+      "consequence": "the operation is sound but unreachable from a live session",
+      "remedy": "accept a JSON string for `receipt` in addition to an object, sidestepping the host's object encoding"
+    }
+  ],
+  "remainingGates": [
+    "executor-allowed-write",
+    "quick-cycle",
+    "full-cycle",
+    "repair-blocked-retry-pause-resume",
+    "state-persistence",
+    "provider-failure",
+    "concurrent-projects",
+    "candidate-delivery",
+    "uninstall",
+    "critical-battery-20",
+    "post-publication-clean-install"
+  ],
+  "remainingGatesBlockedBy": "T07-A17-B01",
+  "releaseVerdict": "BLOCKED",
+  "releaseVerdictNote": "the previous two runs were blocked by defects in this plugin; this one was not. What blocks the release now is that the host cannot show what tools a child session actually had.",
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}
