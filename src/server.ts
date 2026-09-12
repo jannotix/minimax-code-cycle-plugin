@@ -52,6 +52,7 @@ import {
 } from "./setup.ts"
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.ts"
 import { graphSize } from "./store/graph.ts"
+import { pruneCandidateBytes, storeUsage } from "./store/retention.ts"
 import { frozenFiles } from "./store/workflows.ts"
 import { readHistory, verifyHistory } from "./store/history.ts"
 import {
@@ -219,13 +220,16 @@ const tools: readonly ToolDefinition[] = [
   {
     name: "cycle_limits",
     description:
-      "Inspect measured resource pressure and lease limits, or admit, renew, and release a " +
-      "workflow without blocking the MCP process.",
+      "Inspect measured resource pressure and lease limits, report what the store holds and what "  +
+      "of it can be given back, prune the retained bytes of finished workflows, or admit, renew, " +
+      "and release a workflow without blocking the MCP process. Pruning keeps every row, digest, " +
+      "evidence entry and history link: only the bytes go, and only for a workflow that finished.",
     inputSchema: objectSchema(
       {
-        operation: enumSchema(["status", "admit", "renew", "release"]),
+        operation: enumSchema(["status", "usage", "prune", "admit", "renew", "release"]),
         project_root: stringSchema("Absolute project directory."),
         workflow_id: stringSchema("Workflow identifier for lease mutation."),
+        confirm: { type: "boolean" },
       },
       ["operation", "project_root"],
     ),
@@ -604,6 +608,17 @@ async function limitsOperation(args: Record<string, unknown>): Promise<unknown> 
   const database = runtime.requireStore()
   const reading = await runtime.resources()
   if (operation === "status") return runtime.admission.report(database, project.id, reading)
+  if (operation === "usage") return storeUsage(database, project.id)
+  if (operation === "prune") {
+    // Reported before it is done, unless the caller said to do it. Giving bytes back is not
+    // reversible, and a caller that asked what it would free is not the same as one that asked
+    // for it to happen.
+    const usage = storeUsage(database, project.id)
+    if (args["confirm"] !== true) {
+      return { confirmRequired: true, wouldFree: usage.prunable, ...usage }
+    }
+    return { freed: pruneCandidateBytes(database, project.id), usage: storeUsage(database, project.id) }
+  }
 
   const workflowId = requiredString(args, "workflow_id")
   requireProjectWorkflow(runtime, root, workflowId)

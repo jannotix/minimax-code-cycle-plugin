@@ -28,7 +28,7 @@ tools:
 | `cycle_coordinator` | Reads durable workflow/setup/capability facts and returns one legal dispatch, control-plane, resume, or stop action without mutating state. |
 | `cycle_workflow` | Drives durable planning, scoped task reconciliation, exact candidate freeze, verification, reviews, arbitration, delivery, and recovery. |
 | `cycle_history` | Lists project-scoped history, verifies the global append-only chain and checkpoints, and signs the current head with Ed25519. |
-| `cycle_limits` | Reports measured resource pressure and manages fair, expiring workflow leases. |
+| `cycle_limits` | Reports measured resource pressure, manages fair expiring workflow leases, and gives back the retained bytes of finished workflows without losing a row, a digest or a history link. |
 | `cycle_graph_index` | Incrementally indexes supported source with bundled Tree-sitter WASM grammars; unchanged files are not read and unsafe links are skipped. |
 | `cycle_graph_query` | Provides exact symbol lookup, confidence-tagged neighbours, impact traversal, bounded scope bundles, and graph status. |
 | `cycle_memory` | Recalls compact project knowledge, explains evidence provenance, walks supersession chains, and explicitly revokes without deletion. |

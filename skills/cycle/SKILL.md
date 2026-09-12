@@ -19,6 +19,10 @@ request and preserve its exact text.
   `coordinator/FLOW.md`. Before dispatch/resume also read `coordinator/ROLE_DISPATCH.md`.
 - Restart, provider/session failure, malformed role output, missing capability, or blocked state:
   read `coordinator/RECOVERY.md`.
+- Store size: `cycle_limits usage` says what is retained and what of it can be given back;
+  `cycle_limits prune` reports what it would free and does nothing until confirmed. Pruning
+  takes only the bytes of finished workflows' candidates — every row, digest, evidence entry
+  and history link stays, so what a candidate contained remains provable after its bytes go.
 - Read-only inspection: call the relevant `cycle_doctor`, `cycle_workflow`, `cycle_history`,
   `cycle_graph_query`, `cycle_memory`, `cycle_goal`, or `cycle_limits` operation directly.
 

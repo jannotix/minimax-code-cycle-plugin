@@ -17,6 +17,7 @@ import { Runtime } from "./runtime.js";
 import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, profileRelativePath, readInstalledProfile, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
+import { pruneCandidateBytes, storeUsage } from "./store/retention.js";
 import { frozenFiles } from "./store/workflows.js";
 import { readHistory, verifyHistory } from "./store/history.js";
 import { amendWorkflow, arbitrateWorkflow, bindWorkflowRoleSession, candidateEvidence, controlWorkflow, deliverWorkflowCandidate, freezeWorkflowCandidate, reconcileWorkflow, reportTask, requireProjectWorkflow, startWorkflow, submitBrowserEvidence, submitPlan, submitReviewVerdict, submitSecurityProof, verifyWorkflowCandidate, workflowStatus, } from "./workflow/service.js";
@@ -145,12 +146,15 @@ const tools = [
     },
     {
         name: "cycle_limits",
-        description: "Inspect measured resource pressure and lease limits, or admit, renew, and release a " +
-            "workflow without blocking the MCP process.",
+        description: "Inspect measured resource pressure and lease limits, report what the store holds and what " +
+            "of it can be given back, prune the retained bytes of finished workflows, or admit, renew, " +
+            "and release a workflow without blocking the MCP process. Pruning keeps every row, digest, " +
+            "evidence entry and history link: only the bytes go, and only for a workflow that finished.",
         inputSchema: objectSchema({
-            operation: enumSchema(["status", "admit", "renew", "release"]),
+            operation: enumSchema(["status", "usage", "prune", "admit", "renew", "release"]),
             project_root: stringSchema("Absolute project directory."),
             workflow_id: stringSchema("Workflow identifier for lease mutation."),
+            confirm: { type: "boolean" },
         }, ["operation", "project_root"]),
         run: async (args) => await limitsOperation(args),
     },
@@ -443,6 +447,15 @@ async function limitsOperation(args) {
     const reading = await runtime.resources();
     if (operation === "status")
         return runtime.admission.report(database, project.id, reading);
+    if (operation === "usage")
+        return storeUsage(database, project.id);
+    if (operation === "prune") {
+        const usage = storeUsage(database, project.id);
+        if (args["confirm"] !== true) {
+            return { confirmRequired: true, wouldFree: usage.prunable, ...usage };
+        }
+        return { freed: pruneCandidateBytes(database, project.id), usage: storeUsage(database, project.id) };
+    }
     const workflowId = requiredString(args, "workflow_id");
     requireProjectWorkflow(runtime, root, workflowId);
     switch (operation) {
