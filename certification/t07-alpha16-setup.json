@@ -1,0 +1,126 @@
+{
+  "schema": "cycle.t07.live-certification.v3",
+  "recordedAt": "2026-09-12T23:10:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "99270a1fb35f960638948616f0228b199f8ca432",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.16.tgz",
+    "artifactVersion": "2.0.0-alpha.16",
+    "artifactBytes": 1901138,
+    "artifactSha256": "33c7b92a64561d2056f8c55c3afea5eb07ed95ed3c4c2f1c36ba8b6b61ea3e6f",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.16.zip",
+    "skillArtifactBytes": 41242,
+    "skillArtifactSha256": "734dcf1e3b110d968d0aa489fce5bbbbcea726c1eedcf68a26002cd357dcfd84",
+    "continuousIntegration": "green on all four jobs on this exact commit"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "profile": "disposable-runtime-fresh",
+    "profileSelection": "MINIMAX_DATA_DIR",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M5",
+    "note": "the alpha.15 disposable profile was deliberately not reused; its corrupted state would have exercised the repair path instead of the install path"
+  },
+  "profileIsolation": {
+    "status": "passed",
+    "workingProfileCycleAgentsBefore": 0,
+    "workingProfileCycleAgentsAfter": 0,
+    "workingProfilePluginsAfter": 0,
+    "disposableProfileCycleAgentsAfter": 0,
+    "governedProjectState": "clean at 9d54ca0",
+    "credentialsEntered": false
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "public-git-import", "status": "passed", "note": "plugin.json, SKILL.md and mcp.json byte-identical to the frozen commit; installed dist carries both alpha.16 fixes" },
+    { "id": "mcp-registration", "status": "passed", "note": "matching persisted arguments; T07-A15-B03 did not recur" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "mcp-doctor", "status": "passed", "note": "ok true, findings empty, dataDirectorySource minimax_data_dir" },
+    { "id": "setup-blocked-reporting", "status": "passed", "note": "named the step, quoted the refusal, offered options, made no mutation" },
+    { "id": "setup-run-validity", "status": "failed", "finding": "T07-A16-B01" },
+    { "id": "five-role-setup", "status": "not_run", "blockedBy": "T07-A16-B01" },
+    { "id": "setup-assess-round-trip", "status": "not_run", "blockedBy": "T07-A16-B01" },
+    { "id": "setup-receipt-ready", "status": "failed", "reason": "the receipt never reached ready" }
+  ],
+  "findings": [
+    {
+      "id": "T07-A16-B01",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "native-only, shell-free managed-role setup",
+      "result": "failed",
+      "observed": "at step 3, recovering the five profile bodies from the spec response, the coordinator ran repeated Terminal commands — Python one-liners inspecting and normalising filesystem paths — after a heredoc quoting attempt failed",
+      "consequence": "a run that reached ready by this route would not be a certified setup; a ready receipt cannot distinguish a run that stayed native from one that did not",
+      "sameClassAs": "T07-A14-B01",
+      "fixableInPlugin": false,
+      "upstream": "https://github.com/MiniMax-AI/minimax-code/issues/138",
+      "triggeredBy": "T07-A16-B03"
+    },
+    {
+      "id": "T07-A16-B02",
+      "severity": "medium",
+      "confidence": "high",
+      "requirement": "a caller following PROCEDURE.md with the inputs it asks for can complete every step",
+      "result": "failed",
+      "observed": "step 1 asks for profile_root only; step 2 requires a cycle_doctor handshake, and cycle_doctor requires project_root, a different directory the procedure never mentions. Passing profile_root for both is correctly refused by the containment check.",
+      "consequence": "the procedure as written cannot complete step 2; the run stopped until the governed project was supplied",
+      "remedy": "step 1 must ask for both roots and state that they cannot be the same directory"
+    },
+    {
+      "id": "T07-A16-B03",
+      "severity": "medium",
+      "confidence": "high",
+      "requirement": "the plugin does not push the coordinator toward tools its own procedure forbids",
+      "result": "failed",
+      "observed": "cycle_setup spec returns the complete agent.md bytes for all five roles in one response — 17876 bytes of profiles before digests, paths and the MCP specification. MiniMax externalised the response to a file, and recovering five exact byte strings from it drove reads with offsets, a heredoc, and finally Python.",
+      "measured": {
+        "architect": 3165,
+        "executor": 2640,
+        "functional_reviewer": 4356,
+        "security_reviewer": 4633,
+        "arbiter": 3082,
+        "total": 17876
+      },
+      "consequence": "the host permits the shell, which is why B01 was possible; this is why it was attempted",
+      "remedy": "spec should return one role at a time, so no reassembly step exists"
+    }
+  ],
+  "notProven": [
+    {
+      "id": "T07-A15-B02",
+      "state": "fixed-and-unproven",
+      "reason": "setup never reached an assess call; verified by tests and off-line against the corrupted alpha.15 profiles, not on a live profile"
+    },
+    {
+      "id": "T07-A15-B01",
+      "state": "fixed-and-unproven",
+      "reason": "setup never reached an assess call; verified by tests and off-line against the corrupted alpha.15 profiles, not on a live profile"
+    }
+  ],
+  "remainingGates": [
+    "executor-allowed-write",
+    "quick-cycle",
+    "full-cycle",
+    "repair-blocked-retry-pause-resume",
+    "state-persistence",
+    "provider-failure",
+    "concurrent-projects",
+    "candidate-delivery",
+    "uninstall",
+    "critical-battery-20",
+    "post-publication-clean-install"
+  ],
+  "remainingGatesBlockedBy": "T07-A16-B01",
+  "releaseVerdict": "BLOCKED",
+  "refreezeRequired": true,
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}
