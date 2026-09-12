@@ -95,10 +95,12 @@ const tools: readonly ToolDefinition[] = [
   {
     name: "cycle_setup",
     description:
-      "Return the native Mavis agent setup specification, deterministically assess one observed " +
+      "Return the native Mavis agent setup specification one role at a time, deterministically assess one observed " +
       "agent for create/update/noop/conflict, authorize deletion only for a Cycle-owned agent, or " +
       "validate a sanitized readiness receipt. " +
       "For Custom Agents, canonical agent.md is the system-prompt authority; native system_prompt updates are unsupported. " +
+      "spec without role returns the roster — names, paths, digests and allow-lists, no profile bytes; spec with role returns that role's exact profile and system prompt. " +
+      "Request one role at a time and write it before asking for the next; never reassemble all five from one response. " +
       "The setup caller must supply a user-confirmed active profile root and use each returned profileRelativePath without shell discovery. " +
       "Given profile_root, assess reads the installed capability profile from disk itself and judges those bytes rather than the caller's account of them; " +
       "the native name, description and system prompt remain reported, because they live in the MiniMax store this plane cannot query. " +
@@ -326,8 +328,24 @@ process.on("exit", () => runtime.close())
 async function setupOperation(args: Record<string, unknown>): Promise<unknown> {
   const operation = requiredString(args, "operation")
   if (operation === "spec") {
+    // One role at a time, because the bytes are the problem. Returning all five profiles together
+    // is around 18 KB, which MiniMax externalises to a file; recovering five exact byte strings
+    // back out of that file is what drove a certification run to a shell, in a setup that forbids
+    // one. The plane cannot stop the session using a shell — no host-enforced tool boundary exists
+    // — but it can stop handing it a reason to. Without `role` the answer is the roster: every
+    // name, path, digest and allow-list needed to plan the work, and none of the bytes.
+    const requested = optionalBoundedString(args, "role", 64)
+    const roster = requested === undefined
+      ? ROLE_SETUP
+      : [roleSetup(oneOf(args, "role", [
+          "architect",
+          "executor",
+          "functional_reviewer",
+          "security_reviewer",
+          "arbiter",
+        ]) as CycleRole)]
     return {
-      agents: ROLE_SETUP.map((entry) => {
+      agents: roster.map((entry) => {
         const body = setupPrompt(entry.role)
         const systemPrompt = managedSystemPrompt(entry.role, body)
         return {
@@ -338,15 +356,18 @@ async function setupOperation(args: Record<string, unknown>): Promise<unknown> {
           name: entry.agentName,
           promptPath: entry.promptPath,
           promptDigest: contentDigest(systemPrompt),
-          profile: managedAgentMarkdown(entry.role, body),
           profileDigest: contentDigest(managedAgentMarkdown(entry.role, body)),
           profileRelativePath: profileRelativePath(entry.role),
           role: entry.role,
-          systemPrompt,
           systemPromptSource: "canonical-agent.md",
           tools: entry.tools,
+          // The bytes travel only when one role was asked for.
+          ...(requested === undefined
+            ? {}
+            : { profile: managedAgentMarkdown(entry.role, body), systemPrompt }),
         }
       }),
+      profileBytesIncluded: requested !== undefined,
       mcp: {
         argsFromPluginRoot: ["dist/server.js"],
         command: "node",

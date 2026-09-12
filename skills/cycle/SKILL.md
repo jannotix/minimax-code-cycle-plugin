@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.16` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.17` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -40,9 +40,11 @@ Do not load every reference for a simple inspection.
    shell, delegation, `mavis`, MCP, memory, and unknown tools.
    For Custom Agents, canonical `agent.md` is also the sole system-prompt authority: never call
    native `agent update` with `system_prompt`.
-   Setup additionally requires the user-confirmed active `profile_root`; join it only with the
+   Setup additionally requires two user-confirmed absolute roots that are not the same directory:
+   the active `profile_root` and the governed `project_root`. Join `profile_root` only with the
    `profileRelativePath` returned by `cycle_setup spec`, never with a path found through Terminal
-   or a shell. Pass that same `profile_root` to `cycle_setup assess`: the plane reads the
+   or a shell. Ask `spec` for one role at a time when you need its bytes; the roster it returns
+   without a role carries no profile bytes on purpose. Pass that same `profile_root` to `cycle_setup assess`: the plane reads the
    installed `agent.md` itself and judges those bytes, so reporting a profile you did not write
    answers `conflict`. What it cannot read — the native name, description and prompt in the
    MiniMax store, the live child roster, and whether a role was dispatched at all — stays your
@@ -88,18 +90,22 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-Alpha.16 has no live behavioural certification. Alpha.15 does, and it is a failure: setup never
-reached `ready`, and the run ended with every capability profile stripped of its tool allow-list.
-The two defects behind it are fixed here, which is why this is a new candidate and not a re-run of
-that one. The alpha.14 receipts do not carry forward either: they name an artifact this line no
-longer produces, so they describe a different candidate rather than an older one. The Skill archive
-is reproducible off the machine that builds it, and the package is too — both are built from bytes
-that do not depend on the platform or its timezone.
+Alpha.17 has no live behavioural certification. Alpha.15 and alpha.16 do, and both are failures:
+alpha.15 ended with every capability profile stripped of its tool allow-list; alpha.16 reached
+further — import, restart, MCP arguments and the doctor handshake all passed, and the coordinator
+stopped and asked when blocked instead of working around — then executed shell commands during a
+setup specified shell-free. What was ours in both is fixed here, which is why this is a new
+candidate rather than a re-run. The alpha.14 receipts do not carry forward: they name an artifact
+this line no longer produces. The Skill archive is reproducible off the machine that builds it, and
+the package is too — both are built from bytes that do not depend on the platform or its timezone.
 
-What is not certified is everything a person would call the product: that MiniMax Desktop installs
-this artifact, that it enforces the capability profiles, that five roles are dispatched and answer,
-and that a cycle completes through browser, provider failure, concurrency, delivery and uninstall.
-None of it has been run against a real profile.
+Established live: import from the public Git route with bytes matching the commit, restart
+persistence, the MCP row registered with matching persisted arguments, and a `cycle_doctor`
+handshake honouring the profile-scoped data directory.
+
+Not established: that the profiles are enforced, that five roles are dispatched and answer, and that
+a cycle completes through browser, provider failure, concurrency, delivery and uninstall. The
+setup fixes shipped in alpha.16 and alpha.17 have never been exercised on a live profile either.
 
 T07 live certification on one exact artifact remains the release gate. Until every applicable gate
 passes on that artifact, the product is not production-ready and its release is blocked.

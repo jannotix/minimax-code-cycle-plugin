@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code — user manual
 
-For `2.0.0-alpha.16`.
+For `2.0.0-alpha.17`.
 
 > This is a development line and its release is blocked. This candidate has no live behavioural
 > certification; the one before it was run live and failed. What follows describes what the plugin
@@ -205,20 +205,27 @@ Ask Cycle to recover; the Skill reads its own recovery reference. What it does:
 
 ## Release boundary
 
-Alpha.16 has no live behavioural certification. Alpha.15 was run, and failed — the receipt is
-`certification/T07_ALPHA15_SETUP.md`. The alpha.14 receipts do not carry forward: they name an
-artifact this line no longer produces.
+Alpha.17 has no live behavioural certification. Two candidates before it were run live and both
+failed — `certification/T07_ALPHA15_SETUP.md` and `certification/T07_ALPHA16_SETUP.md`. The
+alpha.14 receipts do not carry forward: they name an artifact this line no longer produces.
 
-That alpha.15 run did establish some of this against a real profile: the plugin imports from the
-public Git route with bytes matching its commit, survives a restart, registers its server, and
-writes five byte-exact capability profiles. It then failed, and the failure was the important part —
-the coordinator was told its correct profiles were absent, rewrote all five, and dropped the tool
-allow-list from every one of them without anything objecting. Both defects are fixed in alpha.16,
-and neither fix has been proven live.
+Those runs did establish things against a real profile, and they are worth naming: the plugin
+imports from the public Git route with bytes matching its commit, survives a restart, registers its
+MCP row with the right arguments, answers a `cycle_doctor` handshake honouring the profile-scoped
+data directory, and writes byte-exact capability profiles.
 
-What remains **not** certified is everything past that point: that the profiles are enforced, that
-five roles are dispatched and answer, and that a cycle completes through browser evidence, provider
-failure, concurrency, delivery and uninstall.
+Both then failed, in different places. Alpha.15 was told its own correct profiles were absent,
+rewrote all five, and dropped the tool allow-list from every one of them without anything objecting.
+Alpha.16 reached step 3 and executed shell commands during a setup that is specified shell-free —
+having first stopped and asked for help when it hit a genuine blocker, which is the behaviour the
+procedure wants. What was ours in both is fixed in alpha.17, and none of those fixes has been
+exercised live.
+
+What remains **not** certified is everything past setup: that the profiles are enforced, that five
+roles are dispatched and answer, and that a cycle completes through browser evidence, provider
+failure, concurrency, delivery and uninstall. And the last blocker is not ours to close — a plugin
+cannot constrain which tools the parent session uses, which is
+[upstream #138](https://github.com/MiniMax-AI/minimax-code/issues/138).
 
 What **is** established: the control plane's own suite, green on Windows, macOS and Linux and on the
 oldest Node the manifest declares; and that both published archives are reproducible off the machine

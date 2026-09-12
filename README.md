@@ -1,10 +1,16 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.16` — production release is blocked. The one candidate of this
-> line that has been run live, `2.0.0-alpha.15`, **failed**: setup never reached `ready`, and the
-> run ended with all five capability profiles stripped of the tool allow-list that makes a
-> read-only role read-only. See `certification/T07_ALPHA15_SETUP.md`. Both defects behind that
-> result are fixed in alpha.16, and alpha.16 itself has not been run live.
+> Development line: `2.0.0-alpha.17` — production release is blocked. Two candidates of this line
+> have been run live and both failed: `alpha.15` ended with all five capability profiles stripped of
+> the tool allow-list that makes a read-only role read-only, and `alpha.16` got further — import,
+> restart, MCP arguments and the doctor handshake all passed — then executed shell commands during a
+> setup that is specified shell-free. Receipts: `certification/T07_ALPHA15_SETUP.md` and
+> `certification/T07_ALPHA16_SETUP.md`.
+>
+> Alpha.17 fixes what was ours in both and has not been run live. The remaining blocker is not ours:
+> nothing lets a plugin constrain which tools the parent session uses, which needs a host-enforced
+> boundary that does not exist —
+> [upstream #138](https://github.com/MiniMax-AI/minimax-code/issues/138).
 >
 > MiniMax also has no supported local Skill archive installation surface, and the alpha.14 receipts
 > describe an artifact this line no longer produces.

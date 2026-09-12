@@ -235,7 +235,15 @@ test("the natural-language setup is explicit, native-only, reversible, and hones
   assert.match(procedure, /manual editor/iu)
   assert.doesNotMatch(procedure, /Upload a skill/iu)
   assert.match(procedure, /mcp create/iu)
-  assert.match(procedure, /setup request must include an explicit,\s+absolute `profile_root`/iu)
+  // Both roots, named, and stated to be different directories. A procedure that asks for
+  // profile_root alone cannot complete its own step 2, because cycle_doctor needs project_root
+  // and passing one for both is refused by the containment check.
+  assert.match(procedure, /setup request must include \*\*two\*\* explicit,\s+absolute directories/iu)
+  assert.match(procedure, /`project_root` — the git project Cycle will govern/iu)
+  assert.match(procedure, /they must not be the\s+same one/iu)
+  // The bytes travel one role at a time; the roster carries none.
+  assert.match(procedure, /Ask for the bytes one role at a time/iu)
+  assert.match(procedure, /Never collect all five profiles before writing any of them/iu)
   assert.match(procedure, /profileRelativePath/iu)
   assert.match(procedure, /Do not use Terminal, a shell, or directory discovery/iu)
   assert.match(procedure, /ownerArgument/iu)

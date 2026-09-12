@@ -32,8 +32,20 @@ or prompt-only tool restriction.
 
 ## 1. Preflight — no writes
 
-1. The setup request must include an explicit, absolute `profile_root`: the user-confirmed active
-   MiniMax data directory for this profile. It is neither the plugin root, a task workspace, nor
+1. The setup request must include **two** explicit, absolute directories, and they must not be the
+   same one:
+
+   - `profile_root` — the user-confirmed active MiniMax data directory for this profile. Agents and
+     the MCP row are written here.
+   - `project_root` — the git project Cycle will govern. `cycle_doctor` takes this, and step 2
+     cannot be completed without it.
+
+   They are different things and the durable data directory must sit **outside** the project it
+   governs, so passing `profile_root` for both is refused by design. If the request named only one,
+   stop and ask for the other before any mutation; do not infer it, and do not use a shell to look
+   for it.
+
+   About `profile_root`: It is neither the plugin root, a task workspace, nor
    `CYCLE_DATA_DIR`. A disposable certification run supplies its disposable data root. Do not guess
    or discover this directory through Terminal, a shell, directory traversal, or a profile-store
    workaround. MiniMax cannot persist a `CYCLE_DATA_DIR` value through native MCP configuration;
@@ -41,9 +53,18 @@ or prompt-only tool restriction.
    out of receipts.
 2. Show the sanitized current profile name and confirm it is the profile represented by
    `profile_root`. A missing, relative, or unconfirmed root stops setup before the first mutation.
-3. Call `cycle_setup` with `operation: "spec"`. It returns the five exact agents, their complete
-   canonical `agent.md` bytes and digests, each `profileRelativePath`, and the `cycle-tools` MCP
-   specification.
+3. Call `cycle_setup` with `operation: "spec"` and **no role**. It returns the roster: the five
+   names, their `profileRelativePath`, digests and tool allow-lists, and the `cycle-tools` MCP
+   specification — everything needed to plan, and none of the profile bytes.
+
+   Ask for the bytes one role at a time, with `operation: "spec"` and that `role`, at the moment you
+   are about to write that role's file. Write it, verify its digest, then ask for the next.
+
+   **Never collect all five profiles before writing any of them.** Five profiles in one response is
+   roughly 18 KB, which this host externalises to a file; recovering exact byte strings back out of
+   that file is what drove a certification run into a shell during a setup that forbids one. If a
+   response is ever large enough that you are tempted to parse it with a script, that is the signal
+   you are doing this the wrong way — go back to one role at a time.
 4. Call native `mavis` with `agent help`, `agent list`, `mcp help`, and `mcp list`.
 5. The live contracts must expose deterministic agent create/get/list/delete and MCP
    list/get/create/delete. A native Custom Agent `system_prompt` update is not a setup

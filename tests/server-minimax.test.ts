@@ -103,10 +103,16 @@ test("assess judges the profile on disk, not the caller's account of it", async 
       clientInfo: { name: "test", version: "1" },
       protocolVersion: "2025-06-18",
     })
+    // One role at a time: the bytes travel only when a role is named.
     const spec = toolBody(await client.call("tools/call", {
-      arguments: { operation: "spec" },
+      arguments: { operation: "spec", role: "executor" },
       name: "cycle_setup",
-    })) as { agents: { profile: string; profileRelativePath: string; role: string; name: string; description: string; systemPrompt: string }[] }
+    })) as {
+      agents: { profile: string; profileRelativePath: string; role: string; name: string; description: string; systemPrompt: string }[]
+      profileBytesIncluded: boolean
+    }
+    assert.equal(spec.agents.length, 1, "a role-scoped spec returns only that role")
+    assert.equal(spec.profileBytesIncluded, true)
     const agent = spec.agents.find((entry) => entry.role === "executor")!
 
     const assess = async (): Promise<{ action: string; profile: { read: string; source: string; reportedDiffers?: boolean } }> =>
@@ -206,13 +212,14 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
         description: string
         name: string
         role: string
-        profile: string
+        profile?: string
         profileDigest: string
         profileRelativePath: string
-        systemPrompt: string
+        systemPrompt?: string
         systemPromptSource: string
         tools: string[]
       }[]
+      profileBytesIncluded: boolean
       host: {
         agentApi: string
         capabilityProfile: string
@@ -244,6 +251,15 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })
     assert.ok(setup.agents.every((entry) => entry.systemPromptSource === "canonical-agent.md"))
     assert.ok(setup.agents.every((entry) => entry.profileRelativePath === `agents/${entry.name}/agent.md`))
+    // The roster carries no profile bytes. Five profiles in one response is the ~18 KB artifact
+    // that a certification run tried to parse with a shell script; it must not exist.
+    assert.equal(setup.profileBytesIncluded, false)
+    assert.ok(setup.agents.every((entry) => entry.profile === undefined && entry.systemPrompt === undefined))
+    assert.ok(
+      JSON.stringify(setup).length < 6_000,
+      `the roster must stay small; got ${JSON.stringify(setup).length} bytes`,
+    )
+    assert.ok(setup.agents.every((entry) => typeof entry.profileDigest === "string" && entry.profileDigest.length === 64))
     assert.match(setup.host.modelStrategy, /session-inherited/u)
     const receiptAgents = setup.agents.map((entry) => ({
       configDigest: entry.profileDigest,
@@ -270,7 +286,12 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       name: "cycle_setup",
     })) as { valid: boolean }
     assert.equal(receipt.valid, true)
-    const architect = setup.agents.find((entry) => entry.role === "architect")!
+    // The roster has no bytes; ask for the one role this assertion needs.
+    const architectSpec = toolBody(await first.call("tools/call", {
+      arguments: { operation: "spec", role: "architect" },
+      name: "cycle_setup",
+    })) as { agents: { description: string; name: string; profile: string; systemPrompt: string }[] }
+    const architect = architectSpec.agents[0]!
     const absent = toolBody(await first.call("tools/call", {
       arguments: { operation: "assess", role: "architect" },
       name: "cycle_setup",

@@ -2,6 +2,33 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.17] - Unreleased
+
+Opened because alpha.16 was run live and failed, and what was ours in that failure is fixed here.
+A fix changes the packaged bytes, so alpha.16's digests describe a candidate that no longer exists;
+its receipt stays as the record of that run. See `certification/T07_ALPHA16_SETUP.md`.
+
+Both fixes below were found by running the product, not by reading it.
+
+### Fixed
+
+- Setup could not be completed by following its own procedure. Step 1 asked the caller for one
+  absolute path, `profile_root`; step 2 required a `cycle_doctor` handshake, and `cycle_doctor`
+  needs a `project_root` the procedure never mentioned. Passing the profile root for both is
+  refused by the containment check, correctly, because the durable data directory must sit outside
+  the project it governs — so the documented inputs could not satisfy the documented steps. Step 1
+  now asks for both roots and says they cannot be the same directory. (T07-A16-B02)
+- `cycle_setup spec` returned the complete canonical `agent.md` bytes for all five roles in one
+  response — 17 876 bytes of profiles before digests, paths and the MCP specification. MiniMax
+  externalises a response that size to a file, and recovering five exact byte strings back out of
+  it is what drove a certification run into a shell during a setup that is specified shell-free.
+  `spec` now takes an optional `role`: without one it returns the roster — names, paths, digests
+  and allow-lists, no bytes, 5 157 bytes measured — and with one it returns that role's profile and
+  system prompt, 11 211 bytes at the largest. The reassembly step no longer exists: each response
+  is exactly one file to write. The plugin cannot stop a session reaching for a shell, which would
+  need a host-enforced tool boundary it does not have; it can stop handing it a reason to.
+  (T07-A16-B03)
+
 ## [2.0.0-alpha.16] - Unreleased
 
 Opened because alpha.15 was run live and failed, and the two defects behind that failure are fixed
@@ -34,6 +61,14 @@ stays as the record of that run. See `certification/T07_ALPHA15_SETUP.md`.
 Alpha.16 has not been run live. The alpha.15 receipt establishes import, restart persistence, MCP
 registration and byte-exact profile creation against a real profile; everything past that point
 remains uncertified, and the release stays blocked.
+
+### Added
+
+- `certification/T07_ALPHA16_SETUP.md` and its JSON receipt. Alpha.16 got further than alpha.15 on
+  every count alpha.15 failed on — the doctor handshake, the MCP arguments, and a coordinator that
+  stopped and asked when blocked instead of working around — and then failed at step 3 on shell
+  execution during setup. Neither alpha.16 fix was exercised: setup never reached an `assess` call,
+  so both remain fixed-and-unproven live.
 
 ## [2.0.0-alpha.15] - Unreleased
 
