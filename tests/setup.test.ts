@@ -74,6 +74,22 @@ test("setup assessment is create, update, noop, or conflict without taking over 
   const profile = managedAgentMarkdown(role, body)
 
   assert.equal(assessAgent(role, body, undefined).action, "create")
+  // The plane looked at the profile root and found nothing: absent is established, not assumed.
+  assert.equal(assessAgent(role, body, undefined, "").action, "create")
+  // An installed, owned, specification-matching profile is never reported absent just because the
+  // caller gave no account of the native agent — that answer is what drove a coordinator to delete
+  // five correct profiles and rewrite them without their tool allow-lists.
+  const unreported = assessAgent(role, body, undefined, profile)
+  assert.equal(unreported.action, "conflict")
+  assert.match(unreported.reason, /matches the specification/u)
+  assert.doesNotMatch(unreported.reason, /absent/u)
+  const unreportedStale = assessAgent(role, body, undefined, `${profile}\ndrifted`)
+  assert.equal(unreportedStale.action, "conflict")
+  assert.match(unreportedStale.reason, /stale/u)
+  assert.equal(
+    assessAgent(role, body, undefined, "---\nname: foreign\n---\nnot managed").action,
+    "conflict",
+  )
   assert.equal(assessAgent(role, body, {
     description: "user-owned",
     name: spec.agentName,

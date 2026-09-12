@@ -109,8 +109,20 @@ export function byteDigest(content) {
 }
 export function assessAgent(role, expectedBody, observed, observedAgentMarkdown) {
     const expected = roleSetup(role);
-    if (observed === undefined)
-        return { action: "create", reason: "managed agent is absent" };
+    if (observed === undefined) {
+        const installed = observedAgentMarkdown === undefined ? "" : normalize(observedAgentMarkdown);
+        if (installed === "")
+            return { action: "create", reason: "managed agent is absent" };
+        if (!installed.includes(ownershipMarker(role))) {
+            return { action: "conflict", reason: "a profile is installed at this role's path and is not owned by this Cycle setup" };
+        }
+        return {
+            action: "conflict",
+            reason: installed === normalize(managedAgentMarkdown(role, expectedBody))
+                ? "the capability profile is installed and matches the specification, but no native agent was reported; report the agent rather than recreating it"
+                : "a capability profile owned by this setup is installed but stale, and no native agent was reported; report the agent before rewriting it",
+        };
+    }
     if (observed.name !== expected.agentName) {
         return { action: "conflict", reason: "native agent lookup returned a different name" };
     }

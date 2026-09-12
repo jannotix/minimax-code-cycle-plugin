@@ -54,6 +54,12 @@ or prompt-only tool restriction.
    itself and judges those bytes; do not send `observed_agent_markdown`, which it ignores. The
    answer names which half it established: `profile.source` reads `read-by-control-plane` when
    the file was read, and `profile.read` says `on_disk` or `absent`.
+
+   If `agent get` is unavailable or fails, stop setup as `blocked`. Do not call `assess` without the
+   native fields as a way of proceeding: with no account of the agent, the plane answers `conflict`
+   over any installed profile and will not authorize a rewrite, because it cannot tell a missing
+   agent from an unreported one. **A `conflict` naming an installed profile is never grounds for
+   deleting agents or rewriting profiles.** Report the agent, or stop.
 7. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
    persisted type, enabled state, command, and both arguments match the returned specification:
    resolved `dist/server.js` followed by `ownerArgument`. Native Mavis does not persist description
