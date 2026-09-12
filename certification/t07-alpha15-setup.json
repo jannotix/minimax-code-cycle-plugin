@@ -1,0 +1,110 @@
+{
+  "schema": "cycle.t07.live-certification.v3",
+  "recordedAt": "2026-09-12T10:45:00+02:00",
+  "verdict": "BLOCKED",
+  "candidate": {
+    "sourceCommit": "07cb3e4d01b30c3e010b2dbe6f4663d961290165",
+    "sourceTreeState": "clean",
+    "artifactName": "minimax-code-cycle-plugin-2.0.0-alpha.15.tgz",
+    "artifactVersion": "2.0.0-alpha.15",
+    "artifactBytes": 1898735,
+    "artifactSha256": "97c384ab368a792abb0b7faff973180670d34ea4da5504a2e9de98f92e818c13",
+    "skillArtifactName": "cycle-skill-2.0.0-alpha.15.zip",
+    "skillArtifactBytes": 40820,
+    "skillArtifactSha256": "1df38c4f1b2e1f41f4cbcba97b233c629cd884ba9ccb7b6bdabab8d324f5e8c6",
+    "continuousIntegration": "green on all four jobs on this exact commit"
+  },
+  "environment": {
+    "platform": "windows-x64",
+    "minimaxCodeDesktop": "3.0.68.134",
+    "profile": "disposable-runtime",
+    "profileSelection": "MINIMAX_DATA_DIR",
+    "authentication": "existing-desktop-account",
+    "liveModel": "MiniMax-M5"
+  },
+  "profileIsolation": {
+    "status": "passed",
+    "workingProfileCycleAgentsBefore": 0,
+    "workingProfileCycleAgentsAfter": 0,
+    "workingProfilePluginsAfter": 0,
+    "credentialsEntered": false
+  },
+  "checks": [
+    { "id": "exact-candidate", "status": "passed" },
+    { "id": "disposable-profile", "status": "passed" },
+    { "id": "public-git-import", "status": "passed", "note": "installed SKILL.md, mcp.json and plugin.json match the frozen commit byte for byte" },
+    { "id": "mcp-registration", "status": "failed", "finding": "T07-A15-B03" },
+    { "id": "mcp-restart-discovery", "status": "passed" },
+    { "id": "five-role-setup", "status": "passed", "note": "five agents created; five profiles independently verified byte-exact on first write" },
+    { "id": "capability-profile-integrity", "status": "failed", "finding": "T07-A15-B01" },
+    { "id": "setup-assess-round-trip", "status": "failed", "finding": "T07-A15-B02" },
+    { "id": "setup-receipt-ready", "status": "failed", "reason": "the receipt never reached ready" }
+  ],
+  "findings": [
+    {
+      "id": "T07-A15-B01",
+      "severity": "critical",
+      "confidence": "high",
+      "requirement": "every managed role carries the tool allow-list that makes its restriction real",
+      "result": "failed",
+      "observed": "after assess reported the agents absent, the coordinator deleted all five and rewrote them; the rewritten profiles omit the tools allow-list, mcpServers and skills keys in all five cases",
+      "measured": {
+        "rolesAffected": 5,
+        "expectedAllowLists": {
+          "architect": ["read", "grep", "glob"],
+          "executor": ["read", "write", "edit", "grep", "glob"],
+          "functional_reviewer": ["read", "grep", "glob"],
+          "security_reviewer": ["read", "grep", "glob"],
+          "arbiter": ["read", "grep", "glob"]
+        },
+        "allowListsFoundOnDisk": 0
+      },
+      "consequence": "a read-only role is no longer constrained to read; the product's central claim that an independent reviewer cannot modify the work it judges did not hold at the end of this run",
+      "cause": "T07-A15-B02"
+    },
+    {
+      "id": "T07-A15-B02",
+      "severity": "high",
+      "confidence": "high",
+      "requirement": "assess judges the capability profile the control plane read from disk",
+      "result": "failed",
+      "observed": "assessAgent returns action create with reason 'managed agent is absent' on its first line when the caller's account is undefined, before the profile the plane read is considered",
+      "consequence": "a correctly installed, byte-exact profile is reported absent, and the coordinator's reasonable response to being told its correct work does not exist is to redo it",
+      "note": "T-J moved the read into the control plane but left the short-circuit above it, so this path never consults the one fact the plane can establish on its own"
+    },
+    {
+      "id": "T07-A15-B03",
+      "severity": "medium",
+      "confidence": "high",
+      "requirement": "the registered MCP row matches the shipped mcp.json",
+      "result": "failed",
+      "observed": "args registered as ['--cycle-managed=minimax-code-cycle-plugin', 'dist/server.js']; the owner argument precedes the script path and is offered to Node as a runtime option rather than to the server",
+      "consequence": "the server ran in this session, so this did not block the phase, but the registration does not match the specification and cannot be relied on"
+    }
+  ],
+  "remainingGates": [
+    "executor-allowed-write",
+    "quick-cycle",
+    "full-cycle",
+    "repair-blocked-retry-pause-resume",
+    "state-persistence",
+    "provider-failure",
+    "concurrent-projects",
+    "candidate-delivery",
+    "uninstall",
+    "critical-battery-20",
+    "post-publication-clean-install"
+  ],
+  "remainingGatesBlockedBy": "T07-A15-B01",
+  "releaseVerdict": "BLOCKED",
+  "refreezeRequired": true,
+  "refreezeNote": "every digest in this receipt goes stale when either B01 or B02 is fixed; the run restarts from a new freeze and nothing here carries forward",
+  "sanitization": {
+    "rawPrompts": false,
+    "rawProcessOutput": false,
+    "absoluteUserPaths": false,
+    "credentials": false,
+    "privateConfiguration": false,
+    "sessionIdentifiers": false
+  }
+}
