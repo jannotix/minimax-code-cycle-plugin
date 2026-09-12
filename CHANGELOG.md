@@ -2,6 +2,39 @@
 
 All notable changes to Cycle for MiniMax Code are documented here.
 
+## [2.0.0-alpha.16] - Unreleased
+
+Opened because alpha.15 was run live and failed, and the two defects behind that failure are fixed
+here. A fix changes the packaged bytes, so alpha.15's receipt cannot describe this candidate; it
+stays as the record of that run. See `certification/T07_ALPHA15_SETUP.md`.
+
+### Fixed
+
+- `cycle_setup assess` reported a managed agent absent whenever the caller supplied no native
+  snapshot, before looking at the capability profile the control plane had just read from disk. The
+  read was added so the plane would stop depending on the coordinator's account of its own work, but
+  the short-circuit sat above it, so the one fact the plane can establish itself was the one fact
+  this path never consulted. Measured live: five byte-exact profiles reported absent, and the
+  coordinator, told its correct work did not exist, deleted all five agents and rewrote them.
+- An installed profile that had lost its `tools:` block was read as ordinary staleness and answered
+  `update` — "rewrite agent.md" — to the party that had just written it wrong. A profile that
+  declares no tool allow-list, or declares a tool outside its role's specification, is now a
+  capability change rather than drift: it answers `conflict`, and no branch authorizes the rewrite
+  that can produce it. Repairing it silently would hide the event. `assess` also returns the
+  allow-list the profile actually declares, so the answer carries the evidence and not only the
+  verdict.
+
+### Added
+
+- `certification/T07_ALPHA15_SETUP.md` and its JSON receipt: the first live run to get past import,
+  restart and profile creation, and the first to fail on the guarantee rather than on plumbing.
+
+### Note
+
+Alpha.16 has not been run live. The alpha.15 receipt establishes import, restart persistence, MCP
+registration and byte-exact profile creation against a real profile; everything past that point
+remains uncertified, and the release stays blocked.
+
 ## [2.0.0-alpha.15] - Unreleased
 
 ### Fixed

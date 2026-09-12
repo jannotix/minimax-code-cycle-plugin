@@ -1,10 +1,11 @@
 # Cycle for MiniMax Code — user manual
 
-For `2.0.0-alpha.15`.
+For `2.0.0-alpha.16`.
 
-> This is a development line. No candidate of it has live behavioural certification, and its release
-> is blocked. What follows describes what the plugin does; it does not claim any of it has been
-> proven on a real MiniMax profile. See [Release boundary](#release-boundary).
+> This is a development line and its release is blocked. This candidate has no live behavioural
+> certification; the one before it was run live and failed. What follows describes what the plugin
+> does — it does not claim any of it has been proven on a real MiniMax profile, beyond the little
+> the previous run established. See [Release boundary](#release-boundary).
 
 ---
 
@@ -204,13 +205,20 @@ Ask Cycle to recover; the Skill reads its own recovery reference. What it does:
 
 ## Release boundary
 
-Alpha.15 has no live behavioural certification. The alpha.14 receipts do not carry forward: they name
-an artifact this line no longer produces.
+Alpha.16 has no live behavioural certification. Alpha.15 was run, and failed — the receipt is
+`certification/T07_ALPHA15_SETUP.md`. The alpha.14 receipts do not carry forward: they name an
+artifact this line no longer produces.
 
-What is **not** certified is everything a person would call the product — that MiniMax Desktop
-installs this artifact, that it enforces the capability profiles, that five roles are dispatched and
-answer, and that a cycle completes through browser evidence, provider failure, concurrency, delivery
-and uninstall. None of it has been run against a real profile.
+That alpha.15 run did establish some of this against a real profile: the plugin imports from the
+public Git route with bytes matching its commit, survives a restart, registers its server, and
+writes five byte-exact capability profiles. It then failed, and the failure was the important part —
+the coordinator was told its correct profiles were absent, rewrote all five, and dropped the tool
+allow-list from every one of them without anything objecting. Both defects are fixed in alpha.16,
+and neither fix has been proven live.
+
+What remains **not** certified is everything past that point: that the profiles are enforced, that
+five roles are dispatched and answer, and that a cycle completes through browser evidence, provider
+failure, concurrency, delivery and uninstall.
 
 What **is** established: the control plane's own suite, green on Windows, macOS and Linux and on the
 oldest Node the manifest declares; and that both published archives are reproducible off the machine

@@ -1,9 +1,13 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.15` — production release is blocked: no candidate of this line
-> has live behavioural certification. The alpha.14 receipts describe a different artifact and
-> do not carry forward; MiniMax has no supported local Skill archive installation surface; and
-> the public Git-import route remains unauthorized and uncertified.
+> Development line: `2.0.0-alpha.16` — production release is blocked. The one candidate of this
+> line that has been run live, `2.0.0-alpha.15`, **failed**: setup never reached `ready`, and the
+> run ended with all five capability profiles stripped of the tool allow-list that makes a
+> read-only role read-only. See `certification/T07_ALPHA15_SETUP.md`. Both defects behind that
+> result are fixed in alpha.16, and alpha.16 itself has not been run live.
+>
+> MiniMax also has no supported local Skill archive installation surface, and the alpha.14 receipts
+> describe an artifact this line no longer produces.
 
 Cycle for MiniMax Code is being rebuilt as an evidence-gated delivery system that fits the public
 MiniMax Code Agent Plugins 1.0 contract. The portable package may expose Skills and MCP servers; it

@@ -2,7 +2,7 @@
 
 Status: **BLOCKED — alpha.14 public Git import and MCP activation passed; full T07 certification remains gated**
 
-Development version: `2.0.0-alpha.15`
+Development version: `2.0.0-alpha.16`
 
 Initial source baseline: `f23115d51d4fe5bbe816ed20a953c63b1fe0bbdf`
 

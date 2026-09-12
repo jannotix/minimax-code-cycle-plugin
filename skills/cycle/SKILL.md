@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.15` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.16` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -88,10 +88,13 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-Alpha.15 has no live behavioural certification, and the alpha.14 receipts do not carry forward: they
-name an artifact this line no longer produces, so they describe a different candidate rather than an
-older one. The Skill archive is reproducible off the machine that builds it, and the package is too —
-both are built from bytes that do not depend on the platform or its timezone.
+Alpha.16 has no live behavioural certification. Alpha.15 does, and it is a failure: setup never
+reached `ready`, and the run ended with every capability profile stripped of its tool allow-list.
+The two defects behind it are fixed here, which is why this is a new candidate and not a re-run of
+that one. The alpha.14 receipts do not carry forward either: they name an artifact this line no
+longer produces, so they describe a different candidate rather than an older one. The Skill archive
+is reproducible off the machine that builds it, and the package is too — both are built from bytes
+that do not depend on the platform or its timezone.
 
 What is not certified is everything a person would call the product: that MiniMax Desktop installs
 this artifact, that it enforces the capability profiles, that five roles are dispatched and answer,
