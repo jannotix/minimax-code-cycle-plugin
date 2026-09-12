@@ -107,6 +107,35 @@ export function contentDigest(content) {
 export function byteDigest(content) {
     return createHash("sha256").update(content).digest("hex");
 }
+export function declaredTools(profile) {
+    const lines = normalize(profile).split("\n");
+    if (lines[0] !== "---")
+        return null;
+    const end = lines.indexOf("---", 1);
+    const frontMatter = lines.slice(1, end === -1 ? lines.length : end);
+    const start = frontMatter.indexOf("tools:");
+    if (start === -1)
+        return null;
+    const tools = [];
+    for (const line of frontMatter.slice(start + 1)) {
+        const entry = /^ {2}- (\S+)$/u.exec(line);
+        if (entry === null)
+            break;
+        tools.push(entry[1]);
+    }
+    return tools;
+}
+export function capabilityLoss(role, profile) {
+    const declared = declaredTools(profile);
+    if (declared === null)
+        return "the installed capability profile declares no tool allow-list";
+    const allowed = roleSetup(role).tools;
+    const widened = declared.filter((tool) => !allowed.includes(tool));
+    if (widened.length > 0) {
+        return `the installed capability profile grants tools outside this role: ${widened.join(", ")}`;
+    }
+    return null;
+}
 export function assessAgent(role, expectedBody, observed, observedAgentMarkdown) {
     const expected = roleSetup(role);
     if (observed === undefined) {
@@ -116,11 +145,14 @@ export function assessAgent(role, expectedBody, observed, observedAgentMarkdown)
         if (!installed.includes(ownershipMarker(role))) {
             return { action: "conflict", reason: "a profile is installed at this role's path and is not owned by this Cycle setup" };
         }
+        const unreportedLoss = capabilityLoss(role, installed);
         return {
             action: "conflict",
-            reason: installed === normalize(managedAgentMarkdown(role, expectedBody))
-                ? "the capability profile is installed and matches the specification, but no native agent was reported; report the agent rather than recreating it"
-                : "a capability profile owned by this setup is installed but stale, and no native agent was reported; report the agent before rewriting it",
+            reason: unreportedLoss !== null
+                ? `${unreportedLoss}, and no native agent was reported`
+                : installed === normalize(managedAgentMarkdown(role, expectedBody))
+                    ? "the capability profile is installed and matches the specification, but no native agent was reported; report the agent rather than recreating it"
+                    : "a capability profile owned by this setup is installed but stale, and no native agent was reported; report the agent before rewriting it",
         };
     }
     if (observed.name !== expected.agentName) {
@@ -139,6 +171,13 @@ export function assessAgent(role, expectedBody, observed, observedAgentMarkdown)
     if (observedAgentMarkdown !== undefined &&
         !normalize(observedAgentMarkdown).includes(ownershipMarker(role))) {
         return { action: "conflict", reason: "agent profile is not owned by this Cycle setup" };
+    }
+    const loss = observedAgentMarkdown === undefined ? null : capabilityLoss(role, observedAgentMarkdown);
+    if (loss !== null) {
+        return {
+            action: "conflict",
+            reason: `${loss}; this is a capability change, not staleness, and setup will not rewrite past it`,
+        };
     }
     return {
         action: "update",

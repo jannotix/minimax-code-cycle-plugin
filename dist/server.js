@@ -14,7 +14,7 @@ import { chainOf, explain, forget, recall } from "./memory.js";
 import { serve } from "./mcp.js";
 import { pressure } from "./resources.js";
 import { Runtime } from "./runtime.js";
-import { assessAgent, assessUninstall, contentDigest, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, profileRelativePath, readInstalledProfile, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
+import { assessAgent, assessUninstall, contentDigest, declaredTools, managedAgentMarkdown, managedSystemPrompt, ownershipMarker, profileRelativePath, readInstalledProfile, ROLE_SETUP, roleSetup, SETUP_NAMESPACE, SETUP_OWNER, SETUP_SCHEMA, validateSetupReceipt, } from "./setup.js";
 import { signCheckpoint, verifyCheckpoints } from "./store/checkpoints.js";
 import { graphSize } from "./store/graph.js";
 import { pruneCandidateBytes, storeUsage } from "./store/retention.js";
@@ -305,6 +305,9 @@ async function setupOperation(args) {
             profile: {
                 read: profileRoot === undefined ? "not_requested" : onDisk === null ? "absent" : "on_disk",
                 source: profileRoot === undefined ? "reported-by-caller" : "read-by-control-plane",
+                ...(observedAgentMarkdown !== undefined && observedAgentMarkdown !== ""
+                    ? { declaredTools: declaredTools(observedAgentMarkdown) }
+                    : {}),
                 ...(profileRoot !== undefined && reported !== undefined && reported !== (onDisk ?? "")
                     ? { reportedDiffers: true }
                     : {}),

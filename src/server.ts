@@ -36,6 +36,7 @@ import {
   assessAgent,
   assessUninstall,
   contentDigest,
+  declaredTools,
   managedAgentMarkdown,
   managedSystemPrompt,
   ownershipMarker,
@@ -408,6 +409,12 @@ async function setupOperation(args: Record<string, unknown>): Promise<unknown> {
         // half of this answer is evidence and which half is a report.
         read: profileRoot === undefined ? "not_requested" : onDisk === null ? "absent" : "on_disk",
         source: profileRoot === undefined ? "reported-by-caller" : "read-by-control-plane",
+        // The allow-list the profile actually declares, so the answer carries the evidence and not
+        // only the verdict. `null` means it declares none, which is not the same as declaring an
+        // empty one.
+        ...(observedAgentMarkdown !== undefined && observedAgentMarkdown !== ""
+          ? { declaredTools: declaredTools(observedAgentMarkdown) }
+          : {}),
         ...(profileRoot !== undefined && reported !== undefined && reported !== (onDisk ?? "")
           ? { reportedDiffers: true }
           : {}),

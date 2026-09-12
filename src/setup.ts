@@ -193,6 +193,49 @@ export function byteDigest(content: Uint8Array): string {
   return createHash("sha256").update(content).digest("hex")
 }
 
+/**
+ * The tool allow-list the installed profile actually declares, or `null` if it declares none.
+ *
+ * Read from the front matter only — a `tools:` line in the prompt body is prose, not a declaration.
+ */
+export function declaredTools(profile: string): readonly string[] | null {
+  const lines = normalize(profile).split("\n")
+  if (lines[0] !== "---") return null
+  const end = lines.indexOf("---", 1)
+  const frontMatter = lines.slice(1, end === -1 ? lines.length : end)
+  const start = frontMatter.indexOf("tools:")
+  if (start === -1) return null
+  const tools: string[] = []
+  for (const line of frontMatter.slice(start + 1)) {
+    const entry = /^ {2}- (\S+)$/u.exec(line)
+    if (entry === null) break
+    tools.push(entry[1]!)
+  }
+  return tools
+}
+
+/**
+ * Whether an installed profile has stopped constraining its role, and how.
+ *
+ * This is deliberately not treated as drift. The `tools:` block is the entire mechanism by which a
+ * read-only role is read-only: a profile that has lost it is not a stale profile, it is a role with
+ * nothing restricting it, and a profile that lists a tool outside the specification is a role that
+ * has been widened. Both are answered `conflict` rather than `update`, because `update` invites the
+ * rewrite — and a rewrite is what produced this state in the one live run that reached this far.
+ * Repairing it silently would also hide the event, and a capability that quietly came back is worth
+ * a person's attention even when the repair would have been correct.
+ */
+export function capabilityLoss(role: CycleRole, profile: string): string | null {
+  const declared = declaredTools(profile)
+  if (declared === null) return "the installed capability profile declares no tool allow-list"
+  const allowed = roleSetup(role).tools
+  const widened = declared.filter((tool) => !allowed.includes(tool))
+  if (widened.length > 0) {
+    return `the installed capability profile grants tools outside this role: ${widened.join(", ")}`
+  }
+  return null
+}
+
 export function assessAgent(
   role: CycleRole,
   expectedBody: string,
@@ -212,12 +255,15 @@ export function assessAgent(
     if (!installed.includes(ownershipMarker(role))) {
       return { action: "conflict", reason: "a profile is installed at this role's path and is not owned by this Cycle setup" }
     }
+    const unreportedLoss = capabilityLoss(role, installed)
     return {
       action: "conflict",
       reason:
-        installed === normalize(managedAgentMarkdown(role, expectedBody))
-          ? "the capability profile is installed and matches the specification, but no native agent was reported; report the agent rather than recreating it"
-          : "a capability profile owned by this setup is installed but stale, and no native agent was reported; report the agent before rewriting it",
+        unreportedLoss !== null
+          ? `${unreportedLoss}, and no native agent was reported`
+          : installed === normalize(managedAgentMarkdown(role, expectedBody))
+            ? "the capability profile is installed and matches the specification, but no native agent was reported; report the agent rather than recreating it"
+            : "a capability profile owned by this setup is installed but stale, and no native agent was reported; report the agent before rewriting it",
     }
   }
   if (observed.name !== expected.agentName) {
@@ -241,6 +287,15 @@ export function assessAgent(
     !normalize(observedAgentMarkdown).includes(ownershipMarker(role))
   ) {
     return { action: "conflict", reason: "agent profile is not owned by this Cycle setup" }
+  }
+  // Drift is a rewrite; a lost or widened allow-list is not drift, and is never answered with the
+  // rewrite that can produce it.
+  const loss = observedAgentMarkdown === undefined ? null : capabilityLoss(role, observedAgentMarkdown)
+  if (loss !== null) {
+    return {
+      action: "conflict",
+      reason: `${loss}; this is a capability change, not staleness, and setup will not rewrite past it`,
+    }
   }
   return {
     action: "update",

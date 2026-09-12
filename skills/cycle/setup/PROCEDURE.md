@@ -60,6 +60,11 @@ or prompt-only tool restriction.
    over any installed profile and will not authorize a rewrite, because it cannot tell a missing
    agent from an unreported one. **A `conflict` naming an installed profile is never grounds for
    deleting agents or rewriting profiles.** Report the agent, or stop.
+
+   A `conflict` that names a missing or widened tool allow-list is not staleness and is never
+   repaired by rewriting. The `tools:` block is what makes a read-only role read-only, so a profile
+   that has lost it describes a role with nothing restricting it. Stop setup as `blocked` and leave
+   the file alone; a person confirms before that capability is written back.
 7. Call `mcp get` for `cycle-tools` when it exists. A same-name server is Cycle-owned only when its
    persisted type, enabled state, command, and both arguments match the returned specification:
    resolved `dist/server.js` followed by `ownerArgument`. Native Mavis does not persist description

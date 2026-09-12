@@ -11,6 +11,7 @@ import { VERSION } from "../src/version.ts"
 import {
   assessAgent,
   assessUninstall,
+  declaredTools,
   managedAgentMarkdown,
   managedSystemPrompt,
   ownershipMarker,
@@ -112,6 +113,45 @@ test("setup assessment is create, update, noop, or conflict without taking over 
     name: spec.agentName,
     systemPrompt,
   }, "---\nname: foreign\n---\nnot managed").action, "conflict")
+
+  // The exact corruption measured in the alpha.15 run: the coordinator rewrote every profile
+  // without its `tools:` block, `mcpServers` and `skills`. A role with no allow-list is not a stale
+  // role, and must never be answered with the rewrite that produced it.
+  const stripped = profile.replace(/tools:\n(?: {2}- .+\n)+mcpServers: \[\]\nskills: \[\]\n/u, "")
+  assert.notEqual(stripped, profile)
+  assert.equal(declaredTools(stripped), null)
+  const lost = assessAgent(role, body, {
+    description: spec.description,
+    name: spec.agentName,
+    systemPrompt,
+  }, stripped)
+  assert.equal(lost.action, "conflict")
+  assert.match(lost.reason, /no tool allow-list/u)
+  assert.match(lost.reason, /not staleness/u)
+
+  // A widened allow-list is the same class of event: a capability came back, not drifted.
+  const escalated = assessAgent(role, body, {
+    description: spec.description,
+    name: spec.agentName,
+    systemPrompt,
+  }, profile.replace("tools:\n", "tools:\n  - write\n"))
+  assert.equal(escalated.action, "conflict")
+  assert.match(escalated.reason, /grants tools outside this role: write/u)
+
+  // A profile the plane looked for and did not find is a conflict on ownership, as PROCEDURE.md
+  // states — it is not reached by the allow-list check and must not be mistaken for one.
+  const missing = assessAgent(role, body, {
+    description: spec.description,
+    name: spec.agentName,
+    systemPrompt,
+  }, "")
+  assert.equal(missing.action, "conflict")
+  assert.match(missing.reason, /not owned by this Cycle setup/u)
+
+  assert.deepEqual(declaredTools(profile), [...spec.tools])
+  // A `tools:` line in the prompt body is prose, not a declaration.
+  assert.equal(declaredTools("---\nname: x\n---\n\ntools:\n  - write\n"), null)
+
   assert.equal(assessUninstall(role, {
     description: spec.description,
     name: spec.agentName,
