@@ -61,3 +61,6 @@ tests/*
 # Working material, deliberately not part of the artifact or its history.
 PRODUCTION_TASK_PLAN.md
 T-K_PROCEDURE.md
+
+# The unusable v1 release assets, kept out of the way.
+.legacy-v1-archives/
