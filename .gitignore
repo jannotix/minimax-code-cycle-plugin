@@ -49,6 +49,10 @@ minimax-code-cycle-plugin-*.tar.gz
 
 # Documentation (see README for the public-facing manual)
 docs/
+# …except the manual, which is the only public documentation there is.
+!docs/
+docs/*
+!docs/MANUAL.md
 
 # Docs site (built and deployed to GitHub Pages, not committed)
 docs-site/

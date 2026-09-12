@@ -38,6 +38,12 @@ The MCP server requires Node.js 22.13.0 or later on `PATH`: the store is built o
 which is unflagged only from that version. It makes no network calls and has no runtime package
 dependencies.
 
+The [user manual](https://github.com/jannotix/minimax-code-cycle-plugin/blob/main/docs/MANUAL.md)
+covers setup, routing, configuration, where the data lives, the record, and what to do when
+something goes wrong. The link is absolute on purpose: documentation is kept out of the packaged
+artifact, so a relative one resolves to nothing for anyone reading the archive rather than the
+repository.
+
 ## Not available in this alpha
 
 The following capabilities remain release blockers and are not advertised as working:
