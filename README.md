@@ -1,11 +1,13 @@
 # Cycle for MiniMax Code
 
-> Development line: `2.0.0-alpha.18` — production release is blocked. Three candidates have been
+> Development line: `2.0.0-alpha.19` — production release is blocked. Three candidates have been
 > run live, and the receipts are in `certification/`. `alpha.15` ended with all five capability
 > profiles stripped of the tool allow-list that makes a read-only role read-only. `alpha.16` got as
 > far as writing them correctly, then ran shell commands during a setup specified shell-free.
 > `alpha.17` did everything the host permits and stopped at `installed_unverified` — the first run
-> blocked by something other than a defect of ours.
+> blocked by something other than a defect of ours. `alpha.18` reached the same point and deadlocked
+> on `validate_receipt`: the text form added for it was declared as a union type this host cannot
+> render, which made the call less reachable than the defect it was meant to rescue.
 >
 > What blocks it now: `ready` requires proof that a read-only role *lacks* `write` rather than
 > declining it, and this host exposes no record of the tools a child session ran with. That proof

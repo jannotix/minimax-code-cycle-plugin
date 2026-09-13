@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.18` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.19` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -104,25 +104,28 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-Alpha.18 has no live behavioural certification. Alpha.15 and alpha.16 do, and both are failures:
-alpha.15 ended with every capability profile stripped of its tool allow-list; alpha.16 reached
-further — import, restart, MCP arguments and the doctor handshake all passed, and the coordinator
-stopped and asked when blocked instead of working around — then executed shell commands during a
-setup specified shell-free. What was ours in both is fixed here, which is why this is a new
-candidate rather than a re-run. The alpha.14 receipts do not carry forward: they name an artifact
-this line no longer produces. The Skill archive is reproducible off the machine that builds it, and
-the package is too — both are built from bytes that do not depend on the platform or its timezone.
+Alpha.19 has no live behavioural certification. Four candidates before it were run live and each
+stopped short, every time for a reason the next one fixed:
 
-Established live: import from the public Git route with bytes matching the commit, restart
-persistence, the MCP row registered with matching persisted arguments, and a `cycle_doctor`
-handshake honouring the profile-scoped data directory.
+- **alpha.15** ended with every capability profile stripped of its tool allow-list.
+- **alpha.16** wrote them correctly, then ran shell commands during a setup specified shell-free.
+- **alpha.17** did everything this host permits and stopped at `installed_unverified`.
+- **alpha.18** reached the same point and then deadlocked on `validate_receipt`, because the text
+  form added for it was declared as a union type this host cannot render at all.
 
-Alpha.17 went further than either: five profiles byte-exact with their allow-lists intact, confirmed
-by the plane reading them itself, and a receipt of `installed_unverified` — the ceiling on this host,
-because `ready` needs a probe MiniMax gives no way to run.
+The alpha.14 receipts do not carry forward: they name an artifact this line no longer produces. The
+Skill archive is reproducible off the machine that builds it, and the package is too — neither
+depends on the platform or its timezone.
+
+Established live, repeatedly: import from the public Git route with bytes matching the commit,
+restart persistence, the MCP row registered with matching persisted arguments, a `cycle_doctor`
+handshake honouring the profile-scoped data directory, and five capability profiles written
+byte-exact with their allow-lists intact, confirmed by the plane reading them itself.
 
 Not established: that the profiles are actually enforced, that five roles are dispatched and answer,
 and that a cycle completes through browser, provider failure, concurrency, delivery and uninstall.
+`installed_unverified` is the ceiling here, because `ready` needs a probe MiniMax gives nobody a way
+to run.
 
 T07 live certification on one exact artifact remains the release gate. Until every applicable gate
 passes on that artifact, the product is not production-ready and its release is blocked.

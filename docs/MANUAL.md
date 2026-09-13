@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code — user manual
 
-For `2.0.0-alpha.18`.
+For `2.0.0-alpha.19`.
 
 > This is a development line and its release is blocked. This candidate has no live behavioural
 > certification; the one before it was run live and failed. What follows describes what the plugin
