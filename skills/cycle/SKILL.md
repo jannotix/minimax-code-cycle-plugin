@@ -7,7 +7,7 @@ compatibility: Requires MiniMax Code with native mavis/task tools and Node.js 22
 
 # Cycle for MiniMax Code
 
-This is the `2.0.0-alpha.17` coordinator. MiniMax loads this Skill and the dependency-free
+This is the `2.0.0-alpha.18` coordinator. MiniMax loads this Skill and the dependency-free
 `cycle-tools` MCP server. There is no command namespace; interpret the user's natural-language
 request and preserve its exact text.
 
@@ -37,8 +37,17 @@ Do not load every reference for a simple inspection.
 
 1. Every control-plane call uses the explicit absolute user project root. Plugin-root `cwd` is
    never a project identity.
-2. Validate the current profile's setup receipt on every run. It must be `ready`; an absent, stale,
-   `installed_unverified`, `blocked`, or `uninstalled` receipt stops role dispatch.
+2. Validate the current profile's setup receipt on every run. An absent, stale, `blocked` or
+   `uninstalled` receipt stops role dispatch. `installed_unverified` does not: the five capability
+   profiles are installed and the control plane confirmed their bytes itself, which is what dispatch
+   depends on. What `ready` adds is a live per-role probe showing a read-only role *lacks* `write`
+   rather than declining it — and on this host that probe cannot be run at all, so requiring it
+   before dispatch would stop every cycle rather than raise the standard of any.
+
+   When the receipt is not `ready`, every coordinator answer carries
+   `capabilityEnforcement: "unverified-on-host"` and reports `warning` instead of `success`. Pass
+   the receipt to `deliver` so the commit records the same fact. Never describe such a run as having
+   verified role separation: nobody checked, and the honest sentence says so.
 3. Confirm native `mavis` and `task` tools from the live tool roster. Never use a shell CLI,
    undocumented HTTP endpoint, direct agent-store edit, or inline role substitute.
    The receipt must bind byte-exact canonical agent capability profiles whose allowlists exclude
@@ -95,7 +104,7 @@ does not authorize an inline fallback. Missing required browser capability stops
 
 ## Release boundary
 
-Alpha.17 has no live behavioural certification. Alpha.15 and alpha.16 do, and both are failures:
+Alpha.18 has no live behavioural certification. Alpha.15 and alpha.16 do, and both are failures:
 alpha.15 ended with every capability profile stripped of its tool allow-list; alpha.16 reached
 further — import, restart, MCP arguments and the doctor handshake all passed, and the coordinator
 stopped and asked when blocked instead of working around — then executed shell commands during a
@@ -108,9 +117,12 @@ Established live: import from the public Git route with bytes matching the commi
 persistence, the MCP row registered with matching persisted arguments, and a `cycle_doctor`
 handshake honouring the profile-scoped data directory.
 
-Not established: that the profiles are enforced, that five roles are dispatched and answer, and that
-a cycle completes through browser, provider failure, concurrency, delivery and uninstall. The
-setup fixes shipped in alpha.16 and alpha.17 have never been exercised on a live profile either.
+Alpha.17 went further than either: five profiles byte-exact with their allow-lists intact, confirmed
+by the plane reading them itself, and a receipt of `installed_unverified` — the ceiling on this host,
+because `ready` needs a probe MiniMax gives no way to run.
+
+Not established: that the profiles are actually enforced, that five roles are dispatched and answer,
+and that a cycle completes through browser, provider failure, concurrency, delivery and uninstall.
 
 T07 live certification on one exact artifact remains the release gate. Until every applicable gate
 passes on that artifact, the product is not production-ready and its release is blocked.

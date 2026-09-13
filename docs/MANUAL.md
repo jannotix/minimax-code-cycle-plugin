@@ -1,6 +1,6 @@
 # Cycle for MiniMax Code — user manual
 
-For `2.0.0-alpha.17`.
+For `2.0.0-alpha.18`.
 
 > This is a development line and its release is blocked. This candidate has no live behavioural
 > certification; the one before it was run live and failed. What follows describes what the plugin
@@ -214,18 +214,25 @@ imports from the public Git route with bytes matching its commit, survives a res
 MCP row with the right arguments, answers a `cycle_doctor` handshake honouring the profile-scoped
 data directory, and writes byte-exact capability profiles.
 
-Both then failed, in different places. Alpha.15 was told its own correct profiles were absent,
+Each then failed, in a different place. Alpha.15 was told its own correct profiles were absent,
 rewrote all five, and dropped the tool allow-list from every one of them without anything objecting.
-Alpha.16 reached step 3 and executed shell commands during a setup that is specified shell-free —
-having first stopped and asked for help when it hit a genuine blocker, which is the behaviour the
-procedure wants. What was ours in both is fixed in alpha.17, and none of those fixes has been
-exercised live.
+Alpha.16 reached step 3 and ran shell commands during a setup that is specified shell-free — having
+first stopped and asked for help when it hit a genuine blocker, which is the behaviour the procedure
+wants. Alpha.17 did everything this host permits: five profiles byte-exact with their allow-lists
+intact, confirmed by the plane reading them itself, and a receipt of `installed_unverified`.
 
-What remains **not** certified is everything past setup: that the profiles are enforced, that five
-roles are dispatched and answer, and that a cycle completes through browser evidence, provider
-failure, concurrency, delivery and uninstall. And the last blocker is not ours to close — a plugin
-cannot constrain which tools the parent session uses, which is
-[upstream #138](https://github.com/MiniMax-AI/minimax-code/issues/138).
+That last state is the ceiling here, and it is why `ready` no longer gates the work. `ready` means a
+live probe showed a read-only role *lacks* `write` rather than declining it, and MiniMax exposes no
+record of the tools a child session ran with — so the probe cannot be run, by anyone. Requiring it
+before dispatch did not raise the standard of what ran; it stopped everything from running. Since
+alpha.18, dispatch needs only profiles the control plane confirmed itself, and every coordinator
+answer and every delivered commit records that the boundary was never checked.
+
+What remains **not** certified is everything past setup: that the profiles are actually enforced,
+that five roles are dispatched and answer, and that a cycle completes through browser evidence,
+provider failure, concurrency, delivery and uninstall. The observability gap is upstream, adjacent
+to [#138](https://github.com/MiniMax-AI/minimax-code/issues/138) — that issue asks the host to
+enforce a tool boundary, this asks it to let anyone observe one.
 
 What **is** established: the control plane's own suite, green on Windows, macOS and Linux and on the
 oldest Node the manifest declares; and that both published archives are reproducible off the machine
