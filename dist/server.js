@@ -55,7 +55,7 @@ const tools = [
             observed_agent_markdown: stringSchema("Canonical agent.md as the caller read it. Ignored when profile_root is supplied.", 65_536),
             observed_system_prompt: stringSchema("System prompt returned by native mavis agent get.", 65_536),
             profile_root: stringSchema("Absolute, user-confirmed active MiniMax profile directory. Read-only.", 4_096),
-            receipt: { type: "object" },
+            receipt: { description: "Sanitized setup receipt, as an object or as the JSON text of one. Send JSON text if the host mangles nested objects, booleans or arrays on the tool-call path.", type: ["object", "string"] },
         }, ["operation"]),
         run: async (args) => await setupOperation(args),
     },
@@ -68,7 +68,7 @@ const tools = [
             operation: enumSchema(["next"]),
             project_root: stringSchema("Absolute project directory."),
             workflow_id: stringSchema("Durable workflow identifier.", 64),
-            setup_receipt: { type: "object" },
+            setup_receipt: { description: "Validated ready setup receipt, as an object or as the JSON text of one.", type: ["object", "string"] },
             native_mavis: { type: "boolean" },
             native_task: { type: "boolean" },
             browser: enumSchema(["available", "unavailable", "unknown"]),
@@ -289,7 +289,7 @@ async function setupOperation(args) {
         };
     }
     if (operation === "validate_receipt") {
-        return { receipt: validateSetupReceipt(requiredRecord(args, "receipt"), VERSION), valid: true };
+        return { receipt: validateSetupReceipt(receiptArgument(args, "receipt"), VERSION), valid: true };
     }
     const role = oneOf(args, "role", [
         "architect",
@@ -354,7 +354,7 @@ function coordinatorOperation(args) {
         throw new Error(`unknown coordinator operation: ${operation}`);
     const root = projectRoot(args);
     const workflowId = requiredBoundedString(args, "workflow_id", 64);
-    const receipt = validateSetupReceipt(requiredRecord(args, "setup_receipt"), VERSION);
+    const receipt = validateSetupReceipt(receiptArgument(args, "setup_receipt"), VERSION);
     const view = workflowStatus(runtime, root, workflowId);
     if (view === null)
         throw new Error("workflow not found");
@@ -666,6 +666,22 @@ function optionalBoundedString(args, key, maximumBytes) {
         throw new Error(`${key} exceeds the ${maximumBytes}-byte limit`);
     }
     return value;
+}
+function receiptArgument(args, key) {
+    const value = args[key];
+    if (typeof value !== "string")
+        return requiredRecord(args, key);
+    let parsed;
+    try {
+        parsed = JSON.parse(value);
+    }
+    catch {
+        throw new Error(`${key} was sent as text that is not valid JSON`);
+    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error(`${key} text must describe an object`);
+    }
+    return parsed;
 }
 function requiredRecord(args, key) {
     const value = args[key];

@@ -13,8 +13,13 @@ request and preserve its exact text.
 
 ## Route the request
 
-- Setup or uninstall: read `setup/PROCEDURE.md` completely and follow it. These are explicit
-  profile mutations and never run during plugin installation.
+- Setup or uninstall: read `setup/PROCEDURE.md` completely and follow it. It sits beside this file,
+  at `setup/PROCEDURE.md` inside this Skill — open that path directly. **Do not search the
+  filesystem for it, and never use a shell, Terminal or scripting tool to locate it.** The rule
+  against shell discovery is written inside that document, so a session that goes looking for the
+  document with a shell has already broken it; a live certification run did exactly that, as its
+  first action, before it had read a word. These are explicit profile mutations and never run during
+  plugin installation.
 - New governed work, status, resume, amendment, pause, retry, or cancellation: read
   `coordinator/FLOW.md`. Before dispatch/resume also read `coordinator/ROLE_DISPATCH.md`.
 - Restart, provider/session failure, malformed role output, missing capability, or blocked state:

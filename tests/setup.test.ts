@@ -245,6 +245,12 @@ test("the natural-language setup is explicit, native-only, reversible, and hones
   assert.match(procedure, /Ask for the bytes one role at a time/iu)
   assert.match(procedure, /Never collect all five profiles before writing any of them/iu)
   assert.match(procedure, /profileRelativePath/iu)
+  // A17-B02: the prohibition lives inside PROCEDURE.md, so SKILL.md — the file the host loads —
+  // must name the path and forbid discovering it through a shell. A live run spent its first
+  // action shell-searching for the procedure, before it had read the rule against doing that.
+  const skill = readFileSync(join(ROOT, "skills", "cycle", "SKILL.md"), "utf8")
+  assert.match(skill, /at `setup\/PROCEDURE\.md` inside this Skill/iu)
+  assert.match(skill, /never use a shell, Terminal or scripting tool to locate it/iu)
   assert.match(procedure, /Do not use Terminal, a shell, or directory discovery/iu)
   assert.match(procedure, /ownerArgument/iu)
   assert.match(procedure, /drops `description` and `env` fields/iu)

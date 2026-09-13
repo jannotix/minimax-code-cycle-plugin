@@ -286,6 +286,31 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
       name: "cycle_setup",
     })) as { valid: boolean }
     assert.equal(receipt.valid, true)
+
+    // A17-B03: the same receipt as JSON text. A live run could not call validate_receipt at all —
+    // the host's tool-call encoding turned booleans into something the validator refused and
+    // wrapped array entries as {"item": [...]} — while the receipt itself validated cleanly
+    // off-session. Text crosses that path unchanged, so text has to be accepted.
+    const asText = toolBody(await first.call("tools/call", {
+      arguments: { operation: "validate_receipt", receipt: JSON.stringify(installedReceipt) },
+      name: "cycle_setup",
+    })) as { valid: boolean; receipt: { status: string } }
+    assert.equal(asText.valid, true)
+    assert.equal(asText.receipt.status, "installed_unverified")
+
+    // Text that is not JSON is refused, not half-understood.
+    const notJson = await first.call("tools/call", {
+      arguments: { operation: "validate_receipt", receipt: "{not json" },
+      name: "cycle_setup",
+    })
+    assert.match(JSON.stringify(notJson), /not valid JSON/u)
+
+    // Valid JSON that is not an object is refused too.
+    const notObject = await first.call("tools/call", {
+      arguments: { operation: "validate_receipt", receipt: "[1,2,3]" },
+      name: "cycle_setup",
+    })
+    assert.match(JSON.stringify(notObject), /must describe an object/u)
     // The roster has no bytes; ask for the one role this assertion needs.
     const architectSpec = toolBody(await first.call("tools/call", {
       arguments: { operation: "spec", role: "architect" },

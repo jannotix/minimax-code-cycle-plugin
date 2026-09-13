@@ -115,7 +115,7 @@ const tools: readonly ToolDefinition[] = [
         observed_agent_markdown: stringSchema("Canonical agent.md as the caller read it. Ignored when profile_root is supplied.", 65_536),
         observed_system_prompt: stringSchema("System prompt returned by native mavis agent get.", 65_536),
         profile_root: stringSchema("Absolute, user-confirmed active MiniMax profile directory. Read-only.", 4_096),
-        receipt: { type: "object" },
+        receipt: { description: "Sanitized setup receipt, as an object or as the JSON text of one. Send JSON text if the host mangles nested objects, booleans or arrays on the tool-call path.", type: ["object", "string"] },
       },
       ["operation"],
     ),
@@ -132,7 +132,7 @@ const tools: readonly ToolDefinition[] = [
         operation: enumSchema(["next"]),
         project_root: stringSchema("Absolute project directory."),
         workflow_id: stringSchema("Durable workflow identifier.", 64),
-        setup_receipt: { type: "object" },
+        setup_receipt: { description: "Validated ready setup receipt, as an object or as the JSON text of one.", type: ["object", "string"] },
         native_mavis: { type: "boolean" },
         native_task: { type: "boolean" },
         browser: enumSchema(["available", "unavailable", "unknown"]),
@@ -393,7 +393,7 @@ async function setupOperation(args: Record<string, unknown>): Promise<unknown> {
     }
   }
   if (operation === "validate_receipt") {
-    return { receipt: validateSetupReceipt(requiredRecord(args, "receipt"), VERSION), valid: true }
+    return { receipt: validateSetupReceipt(receiptArgument(args, "receipt"), VERSION), valid: true }
   }
 
   const role = oneOf(args, "role", [
@@ -469,7 +469,7 @@ function coordinatorOperation(args: Record<string, unknown>): unknown {
   if (operation !== "next") throw new Error(`unknown coordinator operation: ${operation}`)
   const root = projectRoot(args)
   const workflowId = requiredBoundedString(args, "workflow_id", 64)
-  const receipt = validateSetupReceipt(requiredRecord(args, "setup_receipt"), VERSION)
+  const receipt = validateSetupReceipt(receiptArgument(args, "setup_receipt"), VERSION)
   const view = workflowStatus(runtime, root, workflowId)
   if (view === null) throw new Error("workflow not found")
   const candidatePaths = view.workflow.candidateId === null
@@ -883,6 +883,33 @@ function optionalBoundedString(
     throw new Error(`${key} exceeds the ${maximumBytes}-byte limit`)
   }
   return value
+}
+
+/**
+ * The receipt to validate, as an object or as the JSON text of one.
+ *
+ * A structured object has to survive the host's tool-call encoding to get here, and on MiniMax
+ * 3.0.68.134 it does not: a live run found booleans arriving as something the validator refused as
+ * not boolean, and array entries arriving wrapped in `{"item": [...]}`. The receipt was valid — it
+ * passed the same validator off-session — so the operation was sound and only its parameter path
+ * was not. Text crosses that path unchanged, so accepting text makes the operation reachable.
+ *
+ * The validator itself is untouched: whatever shape arrives is judged exactly as before, and a
+ * string that is not JSON is refused here rather than being half-parsed into something plausible.
+ */
+function receiptArgument(args: Record<string, unknown>, key: string): Record<string, unknown> {
+  const value = args[key]
+  if (typeof value !== "string") return requiredRecord(args, key)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(value)
+  } catch {
+    throw new Error(`${key} was sent as text that is not valid JSON`)
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${key} text must describe an object`)
+  }
+  return parsed as Record<string, unknown>
 }
 
 function requiredRecord(args: Record<string, unknown>, key: string): Record<string, unknown> {

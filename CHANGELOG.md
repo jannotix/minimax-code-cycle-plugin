@@ -10,6 +10,33 @@ its receipt stays as the record of that run. See `certification/T07_ALPHA16_SETU
 
 Both fixes below were found by running the product, not by reading it.
 
+### Added
+
+- `certification/T07_ALPHA17_SETUP.md` and its JSON receipt. Setup ran to completion and stopped at
+  `installed_unverified`, the correct ceiling on this host. Verified from outside the session:
+  `assess` answered `noop` with `profile.read: on_disk` for all five roles, `spec` was used per
+  role, five profiles are byte-exact with their allow-lists intact, and the MCP row carries the
+  script path first. It cannot reach `ready`, because step 4 needs native task session event/tool
+  records the host does not expose — so `ready` is unreachable on Desktop 3.0.68.134 rather than
+  merely unproven, and the eleven behavioural gates sit behind it.
+
+### Fixed
+
+- `SKILL.md` told the coordinator to read `setup/PROCEDURE.md` without naming its path or
+  forbidding shell discovery of it. The rule against using a shell lives inside that document, so a
+  session looking for the document with a shell has already broken it — which is what a live run
+  did, as its first action, before it had read a word. `SKILL.md` now gives the path and says not
+  to search for it. This does not stop a session using a shell, which no plugin can; it removes the
+  one shell call whose cause was ours. (T07-A17-B02)
+- `cycle_setup validate_receipt` could not be called at all from a live session. The host's
+  tool-call encoding turned booleans into values the validator refused and wrapped array entries as
+  `{"item": [...]}`, while the same receipt validated cleanly off-session — the operation was sound
+  and only its parameter path was not. `receipt` now accepts the JSON text of a receipt as well as
+  an object, and text crosses that path unchanged; `cycle_coordinator`'s `setup_receipt` accepts
+  both for the same reason, since fixing one door would have left the next one shut. The validator
+  itself is untouched, and text that is not JSON, or JSON that is not an object, is refused rather
+  than half-understood. (T07-A17-B03)
+
 ### Fixed
 
 - Setup could not be completed by following its own procedure. Step 1 asked the caller for one
