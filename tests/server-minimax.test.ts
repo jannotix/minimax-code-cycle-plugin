@@ -287,27 +287,44 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
     })) as { valid: boolean }
     assert.equal(receipt.valid, true)
 
-    // A17-B03: the same receipt as JSON text. A live run could not call validate_receipt at all —
-    // the host's tool-call encoding turned booleans into something the validator refused and
-    // wrapped array entries as {"item": [...]} — while the receipt itself validated cleanly
-    // off-session. Text crosses that path unchanged, so text has to be accepted.
+    // A17-B03: the same receipt as JSON text, through its own scalar parameter. A live run could
+    // not call validate_receipt at all — the host renders tool parameters as XML, so booleans came
+    // back as something the validator refused and array entries arrived wrapped in {"item": [...]},
+    // while the receipt validated cleanly off-session.
+    //
+    // The text door is `receipt_json`, not a union type on `receipt`. Declaring
+    // type: ["object", "string"] left that renderer unable to render the parameter at all: the
+    // session records show `receipt` arriving as {} call after call. Widening the type made the
+    // operation less reachable than the mangled object form it was meant to rescue.
     const asText = toolBody(await first.call("tools/call", {
-      arguments: { operation: "validate_receipt", receipt: JSON.stringify(installedReceipt) },
+      arguments: { operation: "validate_receipt", receipt_json: JSON.stringify(installedReceipt) },
       name: "cycle_setup",
     })) as { valid: boolean; receipt: { status: string } }
     assert.equal(asText.valid, true)
     assert.equal(asText.receipt.status, "installed_unverified")
 
+    // Text wins over an object sent alongside it, so a caller that sends both is never judged on
+    // the half the host mangled.
+    const bothForms = toolBody(await first.call("tools/call", {
+      arguments: {
+        operation: "validate_receipt",
+        receipt: {},
+        receipt_json: JSON.stringify(installedReceipt),
+      },
+      name: "cycle_setup",
+    })) as { valid: boolean }
+    assert.equal(bothForms.valid, true)
+
     // Text that is not JSON is refused, not half-understood.
     const notJson = await first.call("tools/call", {
-      arguments: { operation: "validate_receipt", receipt: "{not json" },
+      arguments: { operation: "validate_receipt", receipt_json: "{not json" },
       name: "cycle_setup",
     })
     assert.match(JSON.stringify(notJson), /not valid JSON/u)
 
     // Valid JSON that is not an object is refused too.
     const notObject = await first.call("tools/call", {
-      arguments: { operation: "validate_receipt", receipt: "[1,2,3]" },
+      arguments: { operation: "validate_receipt", receipt_json: "[1,2,3]" },
       name: "cycle_setup",
     })
     assert.match(JSON.stringify(notObject), /must describe an object/u)

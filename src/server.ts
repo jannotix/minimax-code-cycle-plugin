@@ -115,7 +115,8 @@ const tools: readonly ToolDefinition[] = [
         observed_agent_markdown: stringSchema("Canonical agent.md as the caller read it. Ignored when profile_root is supplied.", 65_536),
         observed_system_prompt: stringSchema("System prompt returned by native mavis agent get.", 65_536),
         profile_root: stringSchema("Absolute, user-confirmed active MiniMax profile directory. Read-only.", 4_096),
-        receipt: { description: "Sanitized setup receipt, as an object or as the JSON text of one. Send JSON text if the host mangles nested objects, booleans or arrays on the tool-call path.", type: ["object", "string"] },
+        receipt: { type: "object" },
+        receipt_json: stringSchema("Sanitized setup receipt as JSON text. Prefer this: a host that renders tool parameters as XML mangles a nested object and cannot render a union-typed one at all.", 262_144),
       },
       ["operation"],
     ),
@@ -132,7 +133,8 @@ const tools: readonly ToolDefinition[] = [
         operation: enumSchema(["next"]),
         project_root: stringSchema("Absolute project directory."),
         workflow_id: stringSchema("Durable workflow identifier.", 64),
-        setup_receipt: { description: "Validated ready setup receipt, as an object or as the JSON text of one.", type: ["object", "string"] },
+        setup_receipt: { type: "object" },
+        setup_receipt_json: stringSchema("Validated setup receipt as JSON text. Prefer this over the object form.", 262_144),
         native_mavis: { type: "boolean" },
         native_task: { type: "boolean" },
         browser: enumSchema(["available", "unavailable", "unknown"]),
@@ -179,7 +181,8 @@ const tools: readonly ToolDefinition[] = [
         workflow_id: stringSchema("Workflow identifier for non-start operations."),
         request: stringSchema("Exact original user request for start."),
         preference: enumSchema(["auto", "full", "quick"]),
-        setup_receipt: { description: "Validated setup receipt, object or JSON text. Supplied to deliver so the commit records whether the capability boundary was ever checked.", type: ["object", "string"] },
+        setup_receipt: { type: "object" },
+        setup_receipt_json: stringSchema("Validated setup receipt as JSON text, so the commit records whether the capability boundary was ever checked.", 262_144),
         affected_paths: arraySchema("Known project-relative paths for routing."),
         amendment: stringSchema("Exact user amendment."),
         control_operation: enumSchema(["pause", "resume", "retry", "cancel"]),
@@ -922,22 +925,43 @@ function optionalBoundedString(
 function setupEnforcement(
   args: Record<string, unknown>,
 ): "verified" | "unverified-on-host" | undefined {
-  if (args["setup_receipt"] === undefined) return undefined
+  if (args["setup_receipt"] === undefined && args["setup_receipt_json"] === undefined) {
+    return undefined
+  }
   const receipt = validateSetupReceipt(receiptArgument(args, "setup_receipt"), VERSION)
   return receipt.status === "ready" ? "verified" : "unverified-on-host"
 }
 
+/**
+ * The receipt to judge: from `<key>_json` when the caller sent text, from `<key>` when it sent an
+ * object.
+ *
+ * A nested object has to survive the host's tool-call encoding to arrive intact, and on MiniMax
+ * 3.0.68.134 it does not — that host renders tool parameters as XML, so booleans came back as
+ * something the validator refused and array entries arrived wrapped in `{"item": [...]}`, while the
+ * same receipt validated cleanly off-session. Text crosses unchanged, which is why a text form
+ * exists.
+ *
+ * It is a separate scalar parameter rather than a union type on `receipt`, and that detail was
+ * bought the hard way. Declaring `type: ["object", "string"]` left the XML renderer unable to
+ * render the parameter at all: a live run shows `receipt` arriving as `{}` call after call, where
+ * the plain object form had at least arrived mangled. Widening the type made the operation less
+ * reachable, not more. Scalar strings survive that path — every other string parameter here does.
+ *
+ * The validator is untouched. Text that is not JSON, or JSON that is not an object, is refused
+ * here rather than half-parsed into something plausible.
+ */
 function receiptArgument(args: Record<string, unknown>, key: string): Record<string, unknown> {
-  const value = args[key]
-  if (typeof value !== "string") return requiredRecord(args, key)
+  const text = optionalBoundedString(args, `${key}_json`, 262_144)
+  if (text === undefined) return requiredRecord(args, key)
   let parsed: unknown
   try {
-    parsed = JSON.parse(value)
+    parsed = JSON.parse(text)
   } catch {
-    throw new Error(`${key} was sent as text that is not valid JSON`)
+    throw new Error(`${key}_json is not valid JSON`)
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(`${key} text must describe an object`)
+    throw new Error(`${key}_json must describe an object`)
   }
   return parsed as Record<string, unknown>
 }

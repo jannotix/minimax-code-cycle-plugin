@@ -242,6 +242,20 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
     "cycle_goal",
   ]);
   const graph = listed.result.tools.find((tool) => tool.name === "cycle_graph_query");
+  // No tool parameter may declare a union type. MiniMax renders tool parameters as XML, and a
+  // union-typed parameter is one it cannot render at all: a live run shows `receipt`, briefly
+  // declared as type ["object", "string"], arriving as {} on call after call — less reachable than
+  // the mangled object form the union was added to rescue. Where both shapes are genuinely needed,
+  // ship two scalar parameters instead.
+  for (const tool of listed.result.tools) {
+    for (const [name, schema] of Object.entries(tool.inputSchema.properties ?? {})) {
+      assert.ok(
+        !Array.isArray(schema.type),
+        `${tool.name}.${name} declares a union type, which this host cannot render`,
+      );
+    }
+  }
+
   assert.deepEqual(graph.inputSchema.properties.operation.enum, [
     "status",
     "symbol",
