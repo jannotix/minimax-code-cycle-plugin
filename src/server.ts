@@ -139,11 +139,14 @@ const tools: readonly ToolDefinition[] = [
         native_task: { type: "boolean" },
         browser: enumSchema(["available", "unavailable", "unknown"]),
       },
+      // `setup_receipt` is deliberately not required: a caller that sends the receipt as text, which
+      // is the form that survives this host, would otherwise be refused by schema validation before
+      // the server ever sees it. Exactly one of the two forms must arrive, and `receiptArgument`
+      // refuses the call when neither does.
       [
         "operation",
         "project_root",
         "workflow_id",
-        "setup_receipt",
         "native_mavis",
         "native_task",
         "browser",
@@ -969,7 +972,11 @@ function receiptArgument(args: Record<string, unknown>, key: string): Record<str
 function requiredRecord(args: Record<string, unknown>, key: string): Record<string, unknown> {
   const value = args[key]
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${key} must be an object`)
+    throw new Error(
+      value === undefined
+        ? `supply ${key}_json as JSON text, or ${key} as an object`
+        : `${key} must be an object`,
+    )
   }
   return value as Record<string, unknown>
 }

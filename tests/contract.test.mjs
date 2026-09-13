@@ -273,15 +273,19 @@ test("the MCP handshake reports the alpha and only the implemented graph queries
   assert.deepEqual(setup.inputSchema.properties.operation.enum, ["spec", "assess", "uninstall", "validate_receipt"]);
   assert.equal(setup.inputSchema.properties.project_root, undefined);
   const coordinator = listed.result.tools.find((tool) => tool.name === "cycle_coordinator");
+  // `setup_receipt` is not required, and must not become required again: the text form is the one
+  // that survives this host's tool-call encoding, and a caller sending only `setup_receipt_json`
+  // would be refused by schema validation before the server could read it. A live run was stopped
+  // by exactly that. The server refuses the call when neither form arrives.
   assert.deepEqual(coordinator.inputSchema.required, [
     "operation",
     "project_root",
     "workflow_id",
-    "setup_receipt",
     "native_mavis",
     "native_task",
     "browser",
   ]);
+  assert.equal(coordinator.inputSchema.properties.setup_receipt_json.type, "string");
   const workflow = listed.result.tools.find((tool) => tool.name === "cycle_workflow");
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("bind_role_session"));
   assert.ok(workflow.inputSchema.properties.operation.enum.includes("freeze_candidate"));

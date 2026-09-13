@@ -78,7 +78,6 @@ const tools = [
             "operation",
             "project_root",
             "workflow_id",
-            "setup_receipt",
             "native_mavis",
             "native_task",
             "browser",
@@ -698,7 +697,9 @@ function receiptArgument(args, key) {
 function requiredRecord(args, key) {
     const value = args[key];
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        throw new Error(`${key} must be an object`);
+        throw new Error(value === undefined
+            ? `supply ${key}_json as JSON text, or ${key} as an object`
+            : `${key} must be an object`);
     }
     return value;
 }
