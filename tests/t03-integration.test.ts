@@ -69,7 +69,7 @@ test("delivery persists provenance-backed memory and advances the focused goal a
     }
     assert.equal(verified.mandatoryPassed, true)
     assert.equal(verified.state, "arbitration")
-    const arbitration = arbitrateWorkflow(first, root, started.workflow.id, {
+    const arbitration = await arbitrateWorkflow(first, root, started.workflow.id, {
       decision: "approved",
       findings: [],
       repair_target: null,

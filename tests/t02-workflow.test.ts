@@ -127,7 +127,7 @@ async function quickToDelivery(item: Fixture, path = "src/app.js") {
   }
   assert.equal(verified.mandatoryPassed, true)
   assert.equal(verified.state, "arbitration")
-  const arbitration = arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []), "mvs-arbiter") as {
+  const arbitration = await arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []), "mvs-arbiter") as {
     state: string
   }
   assert.equal(arbitration.state, "delivery")
@@ -192,7 +192,7 @@ test("renames, deletions, and untracked files remain exact through freeze and de
       mandatoryPassed: boolean
     }
     assert.equal(verified.mandatoryPassed, true)
-    arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []), "mvs-arbiter")
+    await arbitrateWorkflow(item.runtime, item.root, workflow.id, approved([], []), "mvs-arbiter")
     const delivered = await deliverWorkflowCandidate(item.runtime, item.root, workflow.id) as {
       aborted?: string
       state: string
@@ -239,7 +239,7 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
       projectRoot: item.root,
       request: "Implement payment processing",
     }).workflow
-    submitPlan(item.runtime, item.root, workflow.id, plan(), "mvs-architect")
+    await submitPlan(item.runtime, item.root, workflow.id, plan(), "mvs-architect")
     item.write("src/payment.js", "export const paid = true\n")
     await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "implemented", "mvs-executor")
     await freezeWorkflowCandidate(item.runtime, item.root, workflow.id)
@@ -256,7 +256,7 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
     }
     assert.ok(recorded.evidence.length > 0)
     const verdict = approved(recorded.requirements, recorded.evidence.map((entry) => entry.id))
-    const first = submitReviewVerdict(
+    const first = await submitReviewVerdict(
       item.runtime,
       item.root,
       workflow.id,
@@ -265,7 +265,7 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
       "mvs-functional",
     ) as { reviewsReady: boolean }
     assert.equal(first.reviewsReady, false)
-    const second = submitReviewVerdict(
+    const second = await submitReviewVerdict(
       item.runtime,
       item.root,
       workflow.id,
@@ -275,7 +275,7 @@ test("a full route requires plan coverage, both independent reviews, evidence, a
     ) as { reviewsReady: boolean; state: string }
     assert.equal(second.reviewsReady, true)
     assert.equal(second.state, "arbitration")
-    const arbitration = arbitrateWorkflow(item.runtime, item.root, workflow.id, verdict, "mvs-arbiter") as {
+    const arbitration = await arbitrateWorkflow(item.runtime, item.root, workflow.id, verdict, "mvs-arbiter") as {
       state: string
     }
     assert.equal(arbitration.state, "delivery")
@@ -326,7 +326,7 @@ test("an approval over a live rejection is recorded and routed, not thrown away"
       projectRoot: item.root,
       request: "Implement payment processing",
     }).workflow
-    submitPlan(item.runtime, item.root, workflow.id, plan(), "bind-architect")
+    await submitPlan(item.runtime, item.root, workflow.id, plan(), "bind-architect")
     item.write("src/payment.js", "export const paid = true\n")
     await reportTask(item.runtime, item.root, workflow.id, "task-1", "completed", "implemented", "bind-executor")
     await freezeWorkflowCandidate(item.runtime, item.root, workflow.id)
@@ -337,11 +337,11 @@ test("an approval over a live rejection is recorded and routed, not thrown away"
       requirements: readonly string[]
     }
     const evidenceIds = recorded.evidence.map((entry) => entry.id)
-    submitReviewVerdict(
+    await submitReviewVerdict(
       item.runtime, item.root, workflow.id, "functional_reviewer",
       approved(recorded.requirements, evidenceIds), "bind-functional",
     )
-    submitReviewVerdict(
+    await submitReviewVerdict(
       item.runtime, item.root, workflow.id, "security_reviewer",
       {
         decision: "rejected",
@@ -376,7 +376,7 @@ test("an approval over a live rejection is recorded and routed, not thrown away"
       "the arbiter must see what the reviewer objected to, not only that it objected",
     )
 
-    const arbitration = arbitrateWorkflow(
+    const arbitration = await arbitrateWorkflow(
       item.runtime, item.root, workflow.id,
       approved(recorded.requirements, evidenceIds), "bind-arbiter",
     ) as { decision: string; refusal: string | null; state: string }
@@ -446,7 +446,7 @@ test("scope reconciliation rejects writes outside the current or completed task 
       projectRoot: item.root,
       request: "Implement payment processing",
     }).workflow
-    submitPlan(item.runtime, item.root, workflow.id, plan(), "mvs-architect")
+    await submitPlan(item.runtime, item.root, workflow.id, plan(), "mvs-architect")
     item.write("outside.txt", "not authorized\n")
     const result = await reportTask(
       item.runtime,

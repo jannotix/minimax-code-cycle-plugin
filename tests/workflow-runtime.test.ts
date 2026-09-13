@@ -105,7 +105,7 @@ test("a workflow survives restart, stays project-scoped, and signs cancellation"
   }
 })
 
-test("a malformed architect result keeps its native session bound for correction", () => {
+test("a malformed architect result keeps its native session bound for correction", async () => {
   const scratch = mkdtempSync(join(tmpdir(), "cycle-minimax-role-retry-"))
   const project = join(scratch, "project")
   mkdirSync(project)
@@ -116,8 +116,8 @@ test("a malformed architect result keeps its native session bound for correction
       projectRoot: project,
       request: "plan a durable change",
     }).workflow
-    assert.throws(
-      () => submitPlan(runtime, project, started.id, {}, "mvs-architect"),
+    await assert.rejects(
+      submitPlan(runtime, project, started.id, {}, "mvs-architect"),
       /exactly these keys/u,
     )
     const status = workflowStatus(runtime, project, started.id)

@@ -69,6 +69,22 @@ for the full sequence. Uninstall is equally explicit, requires confirmation, del
 Cycle owns, and **leaves the durable database alone** — a history of delivered work outlives the
 plugin.
 
+### Reviewers cannot be shown to lack `write`. They can be shown not to have used it.
+
+MiniMax exposes no record of the tools a child session actually ran with, so "the reviewer could
+not write" is not a claim anyone on this host can check — not you, not the plugin, not MiniMax's own
+interface.
+
+So Cycle checks the consequence instead. When a read-only role is handed the work, the plane
+fingerprints the working tree; when that role submits its verdict, it fingerprints it again. A
+verdict from a session that changed the tree is refused, and the refusal is recorded. The
+fingerprint covers every path git reports plus each file's digest, so an edit that keeps a file's
+size is caught as surely as a new file.
+
+That is a weaker statement about capability and a stronger one about consequence. It does not prove
+the boundary exists; it proves this run did not cross it, and it turns a silent violation into a
+stopped workflow.
+
 ### What the control plane verifies, and what it is told
 
 The coordinator is an ordinary MiniMax session, and this host gives no way to constrain which tools

@@ -69,6 +69,11 @@ Do not load every reference for a simple inspection.
    returned action and reread state. The coordinator never invents a transition.
 5. Bind every role submission to the native child `session_id`. One session serves one workflow
    role; reviewers are distinct and blind; repaired candidates get fresh reviewer/arbiter sessions.
+   Binding a read-only role also records what the working tree looked like at that moment, and its
+   verdict is refused if the tree changed while it held the work. This host cannot show whether a
+   role's profile *prevented* a write; the plane can establish whether a write *happened*, and it
+   does. Do not describe that check as proof the boundary was enforced — it is proof it was not
+   crossed in this run.
 6. Submit only strict role outputs. The MCP parser, evidence engine, candidate integrity, mandatory
    gates, independent reviews, and arbiter transition decide whether delivery is legal.
 7. Report only the returned state. “Done”, clean Git, a role verdict, or green tests are not

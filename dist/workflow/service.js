@@ -3,6 +3,7 @@ import { parseSnapshot } from "../evidence/accessibility.js";
 import { browserEvidence } from "../evidence/browser.js";
 import { captureCandidate } from "../evidence/candidate.js";
 import { changedFiles } from "../evidence/changes.js";
+import { containmentOf, treeFingerprint } from "../evidence/containment.js";
 import { commitMessage, DeliveryAborted, deliveryOf, manifestWithEvidence, promote, recoverDelivery, } from "../evidence/delivery.js";
 import { verify as verifyEvidence } from "../evidence/engine.js";
 import { proofEvidence, proofGateName } from "../evidence/proof-evidence.js";
@@ -13,7 +14,7 @@ import { issueCaptureCapabilities, redeemCaptureCapability } from "../store/capa
 import { signCheckpoint } from "../store/checkpoints.js";
 import { loadEvidence, recordEvidence } from "../store/evidence.js";
 import { goalOfWorkflow } from "../store/goals.js";
-import { appendHistory, lastEvent } from "../store/history.js";
+import { appendHistory, lastEvent, readHistory } from "../store/history.js";
 import { newId } from "../store/ids.js";
 import { bindRoleSession, candidateReviewerSessions, roleSessions, } from "../store/role-sessions.js";
 import { activeWorkflowForRequest, createWorkflow, frozenFiles, lastRefusal, latestWorkflow, loadPlan, loadRequest, loadReviews, loadTasks, loadWorkflow, recordArbitration, recordCandidate, requestDigestOf, savePlan, saveWorkflow, setTaskState, submitReview, } from "../store/workflows.js";
@@ -28,7 +29,13 @@ export class WorkflowError extends Error {
         this.name = "WorkflowError";
     }
 }
-export function bindWorkflowRoleSession(runtime, projectRoot, workflowId, role, roleSessionId, now = Date.now()) {
+const READ_ONLY_ROLES = new Set([
+    "architect",
+    "functional_reviewer",
+    "security_reviewer",
+    "arbiter",
+]);
+export async function bindWorkflowRoleSession(runtime, projectRoot, workflowId, role, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -47,10 +54,11 @@ export function bindWorkflowRoleSession(runtime, projectRoot, workflowId, role, 
         : null;
     const existing = roleSessions(database, workflow.id).some((entry) => entry.role === role && entry.sessionId === roleSessionId);
     const binding = bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now);
+    const fingerprint = READ_ONLY_ROLES.has(role) ? await treeFingerprint(project.path) : null;
     if (!existing) {
-        record(database, workflow, "role.session_bound", { role }, now, role, roleSessionId);
+        record(database, workflow, "role.session_bound", fingerprint === null ? { role } : { role, treeFingerprint: fingerprint }, now, role, roleSessionId);
     }
-    return { binding, state: workflow.state };
+    return { binding, state: workflow.state, treeFingerprint: fingerprint };
 }
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const MAX_AMENDMENT_BYTES = 64 * 1024;
@@ -126,7 +134,7 @@ export function amendWorkflow(runtime, projectRoot, workflowId, amendment, now =
     });
     return view(database, workflow, false);
 }
-export function submitPlan(runtime, projectRoot, workflowId, raw, roleSessionId, now = Date.now()) {
+export async function submitPlan(runtime, projectRoot, workflowId, raw, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -134,6 +142,7 @@ export function submitPlan(runtime, projectRoot, workflowId, raw, roleSessionId,
         throw new WorkflowError(`a plan is only accepted in architecture, not ${workflow.state}`);
     }
     bindRoleSession(database, workflow.id, null, "architect", roleSessionId, now);
+    await requireContainment(database, workflow, project.path, "architect", roleSessionId, now);
     const plan = parsePlan(raw);
     return database.transaction(() => {
         savePlan(database, workflow.id, plan, now);
@@ -283,7 +292,7 @@ export function candidateEvidence(runtime, projectRoot, workflowId) {
         })),
     };
 }
-export function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw, roleSessionId, now = Date.now()) {
+export async function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -292,9 +301,10 @@ export function submitReviewVerdict(runtime, projectRoot, workflowId, role, raw,
     }
     const candidateId = requireCandidate(workflow);
     bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now);
+    const containment = await requireContainment(database, workflow, project.path, role, roleSessionId, now);
     const verdict = parseVerdict(raw, verdictContext(database, workflow, role));
     const { reviewsReady } = submitReview(database, workflow.id, candidateId, role, verdict, now);
-    record(database, workflow, "review.submitted", { decision: verdict.decision, role }, now, role, roleSessionId);
+    record(database, workflow, "review.submitted", { containment: containment.state, decision: verdict.decision, role }, now, role, roleSessionId);
     const next = reviewsReady
         ? transition(database, workflow, { type: "reviews_ready" }, now)
         : workflow;
@@ -370,7 +380,7 @@ export function mandatoryGatesPassed(runtime, projectRoot, workflowId) {
       where w.id = ? and e.mandatory = 1`, workflowId);
     return (row?.total ?? 0) > 0 && (row?.failed ?? 0) === 0;
 }
-export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSessionId, now = Date.now()) {
+export async function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSessionId, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -379,6 +389,7 @@ export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSes
     }
     const candidateId = requireCandidate(workflow);
     bindRoleSession(database, workflow.id, candidateId, "arbiter", roleSessionId, now);
+    await requireContainment(database, workflow, project.path, "arbiter", roleSessionId, now);
     const verdict = parseVerdict(raw, verdictContext(database, workflow, "arbiter"));
     let boundBy = null;
     if (workflow.mode === "full") {
@@ -629,6 +640,27 @@ function requireCandidate(workflow) {
     if (workflow.candidateId === null)
         throw new WorkflowError("workflow has no candidate");
     return workflow.candidateId;
+}
+async function requireContainment(database, workflow, projectPath, role, roleSessionId, now) {
+    const containment = await containmentOf(projectPath, boundTreeFingerprint(database, workflow, roleSessionId));
+    if (containment.state === "violated") {
+        record(database, workflow, "role.containment_violated", { reason: "tree-changed-under-read-only-role", role }, now, role, roleSessionId);
+        throw new WorkflowError(`the working tree changed while ${role} held it; a read-only role's submission is not accepted over a tree it altered`);
+    }
+    return containment;
+}
+function boundTreeFingerprint(database, workflow, roleSessionId) {
+    const entries = readHistory(database, workflow.projectId, null, 5_000);
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+        const entry = entries[index];
+        if (entry.workflowId === workflow.id &&
+            entry.action === "role.session_bound" &&
+            entry.sessionId === roleSessionId) {
+            const value = entry.metadata["treeFingerprint"];
+            return typeof value === "string" && value.length === 64 ? value : undefined;
+        }
+    }
+    return undefined;
 }
 function record(database, workflow, action, metadata, now, role = "system", sessionId = null) {
     appendHistory(database, {

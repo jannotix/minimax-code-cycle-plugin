@@ -3,6 +3,7 @@ import { parseSnapshot } from "../evidence/accessibility.ts"
 import { browserEvidence, type CapturedBy } from "../evidence/browser.ts"
 import { captureCandidate } from "../evidence/candidate.ts"
 import { changedFiles } from "../evidence/changes.ts"
+import { containmentOf, treeFingerprint, type Containment } from "../evidence/containment.ts"
 import {
   commitMessage,
   DeliveryAborted,
@@ -23,7 +24,7 @@ import { signCheckpoint } from "../store/checkpoints.ts"
 import type { Database } from "../store/database.ts"
 import { loadEvidence, recordEvidence } from "../store/evidence.ts"
 import { goalOfWorkflow } from "../store/goals.ts"
-import { appendHistory, lastEvent } from "../store/history.ts"
+import { appendHistory, lastEvent, readHistory } from "../store/history.ts"
 import { newId } from "../store/ids.ts"
 import {
   bindRoleSession,
@@ -85,14 +86,22 @@ export class WorkflowError extends Error {
   }
 }
 
-export function bindWorkflowRoleSession(
+/** The roles whose profiles grant no write tool, and whose effect on the tree must stay nil. */
+const READ_ONLY_ROLES = new Set<WorkflowRole>([
+  "architect",
+  "functional_reviewer",
+  "security_reviewer",
+  "arbiter",
+])
+
+export async function bindWorkflowRoleSession(
   runtime: Runtime,
   projectRoot: string,
   workflowId: string,
   role: WorkflowRole,
   roleSessionId: string,
   now = Date.now(),
-): unknown {
+): Promise<unknown> {
   const project = runtime.project(projectRoot)
   const database = runtime.requireStore()
   const workflow = requireWorkflow(database, project.id, workflowId)
@@ -113,10 +122,22 @@ export function bindWorkflowRoleSession(
     (entry) => entry.role === role && entry.sessionId === roleSessionId,
   )
   const binding = bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now)
+  // What the tree looked like when this role was handed the work. A read-only role that later
+  // submits against a different tree changed something, and the plane can say so without being
+  // told — which is the one half of the capability question this host lets anyone establish.
+  const fingerprint = READ_ONLY_ROLES.has(role) ? await treeFingerprint(project.path) : null
   if (!existing) {
-    record(database, workflow, "role.session_bound", { role }, now, role, roleSessionId)
+    record(
+      database,
+      workflow,
+      "role.session_bound",
+      fingerprint === null ? { role } : { role, treeFingerprint: fingerprint },
+      now,
+      role,
+      roleSessionId,
+    )
   }
-  return { binding, state: workflow.state }
+  return { binding, state: workflow.state, treeFingerprint: fingerprint }
 }
 
 const MAX_REQUEST_BYTES = 1024 * 1024
@@ -224,14 +245,14 @@ export function amendWorkflow(
   return view(database, workflow, false)
 }
 
-export function submitPlan(
+export async function submitPlan(
   runtime: Runtime,
   projectRoot: string,
   workflowId: string,
   raw: unknown,
   roleSessionId: string,
   now = Date.now(),
-): unknown {
+): Promise<unknown> {
   const project = runtime.project(projectRoot)
   const database = runtime.requireStore()
   const workflow = requireWorkflow(database, project.id, workflowId)
@@ -239,6 +260,7 @@ export function submitPlan(
     throw new WorkflowError(`a plan is only accepted in architecture, not ${workflow.state}`)
   }
   bindRoleSession(database, workflow.id, null, "architect", roleSessionId, now)
+  await requireContainment(database, workflow, project.path, "architect", roleSessionId, now)
   const plan = parsePlan(raw)
   return database.transaction(() => {
     savePlan(database, workflow.id, plan, now)
@@ -426,7 +448,7 @@ export function candidateEvidence(
   }
 }
 
-export function submitReviewVerdict(
+export async function submitReviewVerdict(
   runtime: Runtime,
   projectRoot: string,
   workflowId: string,
@@ -434,7 +456,7 @@ export function submitReviewVerdict(
   raw: unknown,
   roleSessionId: string,
   now = Date.now(),
-): unknown {
+): Promise<unknown> {
   const project = runtime.project(projectRoot)
   const database = runtime.requireStore()
   const workflow = requireWorkflow(database, project.id, workflowId)
@@ -443,9 +465,27 @@ export function submitReviewVerdict(
   }
   const candidateId = requireCandidate(workflow)
   bindRoleSession(database, workflow.id, candidateId, role, roleSessionId, now)
+
+  const containment = await requireContainment(
+    database,
+    workflow,
+    project.path,
+    role,
+    roleSessionId,
+    now,
+  )
+
   const verdict = parseVerdict(raw, verdictContext(database, workflow, role))
   const { reviewsReady } = submitReview(database, workflow.id, candidateId, role, verdict, now)
-  record(database, workflow, "review.submitted", { decision: verdict.decision, role }, now, role, roleSessionId)
+  record(
+    database,
+    workflow,
+    "review.submitted",
+    { containment: containment.state, decision: verdict.decision, role },
+    now,
+    role,
+    roleSessionId,
+  )
   const next = reviewsReady
     ? transition(database, workflow, { type: "reviews_ready" }, now)
     : workflow
@@ -552,14 +592,14 @@ export function mandatoryGatesPassed(
   return (row?.total ?? 0) > 0 && (row?.failed ?? 0) === 0
 }
 
-export function arbitrateWorkflow(
+export async function arbitrateWorkflow(
   runtime: Runtime,
   projectRoot: string,
   workflowId: string,
   raw: unknown,
   roleSessionId: string,
   now = Date.now(),
-): unknown {
+): Promise<unknown> {
   const project = runtime.project(projectRoot)
   const database = runtime.requireStore()
   const workflow = requireWorkflow(database, project.id, workflowId)
@@ -568,6 +608,7 @@ export function arbitrateWorkflow(
   }
   const candidateId = requireCandidate(workflow)
   bindRoleSession(database, workflow.id, candidateId, "arbiter", roleSessionId, now)
+  await requireContainment(database, workflow, project.path, "arbiter", roleSessionId, now)
   const verdict = parseVerdict(raw, verdictContext(database, workflow, "arbiter"))
   // A rejection by either independent reviewer binds: the arbiter judges against the original
   // request, not over the reviewers, so an approval that contradicts a live rejection cannot become
@@ -920,6 +961,74 @@ function requireWorkflow(database: Database, projectId: string, workflowId: stri
 function requireCandidate(workflow: StoredWorkflow): string {
   if (workflow.candidateId === null) throw new WorkflowError("workflow has no candidate")
   return workflow.candidateId
+}
+
+/**
+ * Refuses a read-only role's submission if the tree changed while it held the work.
+ *
+ * Whether the role's profile *prevented* a write is invisible on this host — MiniMax exposes no
+ * record of a child session's tools. Whether a write *happened* is not invisible, and this is where
+ * the plane says so. A submission from a session that altered the tree is refused, because what it
+ * judged is no longer what is on disk.
+ *
+ * `unknown` is allowed through and returned, never silently upgraded: the plane could not establish
+ * the fact, the caller records that word, and a receipt that reads `unknown` is not a receipt that
+ * reads `held`.
+ */
+async function requireContainment(
+  database: Database,
+  workflow: StoredWorkflow,
+  projectPath: string,
+  role: WorkflowRole,
+  roleSessionId: string,
+  now: number,
+): Promise<Containment> {
+  const containment = await containmentOf(
+    projectPath,
+    boundTreeFingerprint(database, workflow, roleSessionId),
+  )
+  if (containment.state === "violated") {
+    record(
+      database,
+      workflow,
+      "role.containment_violated",
+      { reason: "tree-changed-under-read-only-role", role },
+      now,
+      role,
+      roleSessionId,
+    )
+    throw new WorkflowError(
+      `the working tree changed while ${role} held it; a read-only role's submission is not accepted over a tree it altered`,
+    )
+  }
+  return containment
+}
+
+/**
+ * The fingerprint recorded when this exact native session was bound.
+ *
+ * Read back out of the signed hash chain rather than a mutable column: the value is only worth
+ * comparing against if rewriting it would break the chain. `undefined` when no fingerprint was
+ * recorded, which `containmentOf` reports as unknown rather than as a pass.
+ */
+function boundTreeFingerprint(
+  database: Database,
+  workflow: StoredWorkflow,
+  roleSessionId: string,
+): string | undefined {
+  const entries = readHistory(database, workflow.projectId, null, 5_000)
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const entry = entries[index]!
+    if (
+      entry.workflowId === workflow.id &&
+      entry.action === "role.session_bound" &&
+      entry.sessionId === roleSessionId
+    ) {
+      const value = entry.metadata["treeFingerprint"]
+      return typeof value === "string" && value.length === 64 ? value : undefined
+    }
+  }
+  return undefined
 }
 
 function record(
