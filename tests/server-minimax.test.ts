@@ -410,9 +410,16 @@ test("the MCP control plane is strict, project-scoped, and durable across restar
         workflow_id: workflowId,
       },
       name: "cycle_coordinator",
-    })) as { action: { kind: string }; status: string }
-    assert.equal(notReady.status, "error")
-    assert.equal(notReady.action.kind, "stop")
+    })) as { action: { kind: string }; capabilityEnforcement: string; status: string }
+    // An installed_unverified receipt used to stop the run with an error. That rule sounded like
+    // rigour and was a deadlock: the live probe it waited for cannot be obtained on this host at
+    // all, so nothing ran, including the behavioural gates that need no probe. The profiles are
+    // installed and the plane confirmed their bytes, so the work proceeds — and every answer says,
+    // in a field of its own and by refusing to call itself a success, that nobody checked the
+    // roles are constrained.
+    assert.equal(notReady.action.kind, "dispatch_role")
+    assert.equal(notReady.capabilityEnforcement, "unverified-on-host")
+    assert.equal(notReady.status, "warning")
 
     const readyReceipt = {
       ...installedReceipt,

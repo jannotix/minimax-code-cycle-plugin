@@ -640,6 +640,7 @@ export async function deliverWorkflowCandidate(
   runtime: Runtime,
   projectRoot: string,
   workflowId: string,
+  capabilityEnforcement?: "verified" | "unverified-on-host",
   now = Date.now(),
 ): Promise<unknown> {
   const project = runtime.project(projectRoot)
@@ -656,7 +657,7 @@ export async function deliverWorkflowCandidate(
       project.path,
       workflow.id,
       candidateId,
-      deliveryMessage(database, workflow, candidateId),
+      deliveryMessage(database, workflow, candidateId, capabilityEnforcement),
       now,
     )
   } catch (error) {
@@ -695,6 +696,7 @@ export async function reconcileWorkflow(
   runtime: Runtime,
   projectRoot: string,
   workflowId?: string,
+  capabilityEnforcement?: "verified" | "unverified-on-host",
   now = Date.now(),
 ): Promise<unknown> {
   const project = runtime.project(projectRoot)
@@ -710,7 +712,7 @@ export async function reconcileWorkflow(
       database,
       project.path,
       workflow.id,
-      deliveryMessage(database, workflow, candidateId),
+      deliveryMessage(database, workflow, candidateId, capabilityEnforcement),
       now,
     )
     if (recovered !== null) {
@@ -758,7 +760,13 @@ export async function reconcileWorkflow(
       deliveryOf(database, workflow.id) === undefined &&
       lastEvent(database, workflow.id, "delivery.aborted") === undefined
     ) {
-      const delivered = await deliverWorkflowCandidate(runtime, projectRoot, workflow.id, now)
+      const delivered = await deliverWorkflowCandidate(
+        runtime,
+        projectRoot,
+        workflow.id,
+        capabilityEnforcement,
+        now,
+      )
       const current = loadWorkflow(database, workflow.id)
       return { delivered, found: true, state: current?.state ?? workflow.state, workflowId: workflow.id }
     }
@@ -843,13 +851,18 @@ function verdictContext(database: Database, workflow: StoredWorkflow, role: stri
   }
 }
 
-function deliveryMessage(database: Database, workflow: StoredWorkflow, candidateId: string): string {
+function deliveryMessage(
+  database: Database,
+  workflow: StoredWorkflow,
+  candidateId: string,
+  capabilityEnforcement?: "verified" | "unverified-on-host",
+): string {
   const request = loadRequest(database, workflow.id)?.originalText ?? "deliver approved candidate"
   // The same manifest promotion journals, not the stored row: the row is frozen before verification
   // and names no evidence, so reading it here made every commit claim zero gates.
   const manifest = manifestWithEvidence(database, candidateId)
   if (manifest === null) throw new WorkflowError("candidate manifest not found")
-  return commitMessage(request, manifest, workflow.id)
+  return commitMessage(request, manifest, workflow.id, capabilityEnforcement)
 }
 
 function rememberIfBlocked(

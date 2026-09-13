@@ -4,14 +4,33 @@ import type { StoredTask, StoredWorkflow } from "./store/workflows.ts"
 export type BrowserCapability = "available" | "unavailable" | "unknown"
 export type CoordinatorStatus = "success" | "warning" | "error"
 
+/**
+ * Whether anything actually checked that the roles are constrained.
+ *
+ * `verified` means a live per-role capability probe passed: a read-only role was shown to *lack*
+ * `write` rather than to have declined it. `unverified-on-host` means the capability profiles are
+ * installed and the control plane confirmed their bytes itself, but no probe was possible, because
+ * this host exposes no record of the tools a child session actually ran with.
+ *
+ * Dispatch is allowed either way. It used to require `verified`, which sounded like rigour and was
+ * in practice a deadlock: the proof cannot be obtained on MiniMax Desktop 3.0.68.134 at all, so
+ * that rule did not raise the standard of what ran — it stopped anything from running, including
+ * the ten behavioural gates that need no such proof. What it must never do is let the record go
+ * quiet about it, so this value travels on every decision and downgrades every success to a
+ * warning while it reads `unverified-on-host`.
+ */
+export type CapabilityEnforcement = "verified" | "unverified-on-host"
+
 export interface CoordinatorInput {
   readonly browser: BrowserCapability
   readonly browserRequired: boolean
+  readonly capabilityEnforcement: CapabilityEnforcement
   readonly nativeMavis: boolean
   readonly nativeTask: boolean
   readonly reviews: readonly { readonly role: string }[]
   readonly roleSessions: readonly RoleSession[]
-  readonly setupReady: boolean
+  /** The five profiles are installed and the control plane confirmed their bytes. */
+  readonly setupInstalled: boolean
   readonly tasks: readonly StoredTask[]
   readonly workflow: StoredWorkflow
 }
@@ -25,6 +44,8 @@ export type CoordinatorAction =
 
 export interface CoordinatorDecision {
   readonly action: CoordinatorAction
+  /** Carried on every decision so no answer can omit it. */
+  readonly capabilityEnforcement: CapabilityEnforcement
   readonly artifacts: {
     readonly mode: StoredWorkflow["mode"]
     readonly state: StoredWorkflow["state"]
@@ -42,9 +63,10 @@ export function nextCoordinatorAction(input: CoordinatorInput): CoordinatorDecis
       state: input.workflow.state,
       workflowId: input.workflow.id,
     },
+    capabilityEnforcement: input.capabilityEnforcement,
   } as const
-  if (!input.setupReady) {
-    return stopped(base, "error", "native Cycle setup is not ready", "setup or live capability-profile verification is missing")
+  if (!input.setupInstalled) {
+    return stopped(base, "error", "native Cycle setup is not installed", "run setup: the five capability profiles are absent, stale, or unconfirmed")
   }
   if (!input.nativeMavis || !input.nativeTask) {
     return stopped(base, "error", "native MiniMax orchestration is unavailable", "mavis and task tools are both required")
@@ -125,7 +147,7 @@ function reviews(base: CoordinatorDecisionBase, input: CoordinatorInput): Coordi
       ...base,
       action: { blind: true, kind: "dispatch_reviews", roles: missing },
       next_actions: ["dispatch both reviewers in separate background sessions", "withhold each verdict from the other"],
-      status: "success",
+      status: reported(base, "success"),
       summary: "dispatch both independent reviewers blind to one another",
     }
   }
@@ -150,7 +172,7 @@ function role(
       existing === null ? `create a separate ${roleName} task session` : `resume ${existing}`,
       "submit only schema-valid output to the control plane",
     ],
-    status: "success",
+    status: reported(base, "success"),
     summary,
   }
 }
@@ -174,9 +196,21 @@ function control(
     ...base,
     action: { kind: "control_plane", operation },
     next_actions: [`call cycle_workflow ${operation}`, "read the returned state before continuing"],
-    status: "success",
+    status: reported(base, "success"),
     summary,
   }
+}
+
+/**
+ * The status an answer is allowed to carry.
+ *
+ * While the capability enforcement is unproven, nothing reports plain success: the run may proceed,
+ * and the answer says out loud that no one checked the roles are constrained. A caller that ignores
+ * a warning is making its own choice; a caller that never sees one was misled.
+ */
+function reported(base: CoordinatorDecisionBase, status: CoordinatorStatus): CoordinatorStatus {
+  if (status !== "success") return status
+  return base.capabilityEnforcement === "verified" ? "success" : "warning"
 }
 
 function stopped(
@@ -189,9 +223,9 @@ function stopped(
     ...base,
     action: { kind: "stop", reason },
     next_actions: [reason],
-    status,
+    status: reported(base, status),
     summary,
   }
 }
 
-type CoordinatorDecisionBase = Pick<CoordinatorDecision, "artifacts">
+type CoordinatorDecisionBase = Pick<CoordinatorDecision, "artifacts" | "capabilityEnforcement">

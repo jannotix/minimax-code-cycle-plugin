@@ -438,7 +438,7 @@ export function arbitrateWorkflow(runtime, projectRoot, workflowId, raw, roleSes
         };
     });
 }
-export async function deliverWorkflowCandidate(runtime, projectRoot, workflowId, now = Date.now()) {
+export async function deliverWorkflowCandidate(runtime, projectRoot, workflowId, capabilityEnforcement, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = requireWorkflow(database, project.id, workflowId);
@@ -448,7 +448,7 @@ export async function deliverWorkflowCandidate(runtime, projectRoot, workflowId,
     const candidateId = requireCandidate(workflow);
     let outcome;
     try {
-        outcome = await promote(database, project.path, workflow.id, candidateId, deliveryMessage(database, workflow, candidateId), now);
+        outcome = await promote(database, project.path, workflow.id, candidateId, deliveryMessage(database, workflow, candidateId, capabilityEnforcement), now);
     }
     catch (error) {
         if (!(error instanceof DeliveryAborted))
@@ -478,7 +478,7 @@ export async function deliverWorkflowCandidate(runtime, projectRoot, workflowId,
     signCheckpoint(database, runtime.dataDirectory, now);
     return { ...outcome, goal, memories: learned, state: next.state };
 }
-export async function reconcileWorkflow(runtime, projectRoot, workflowId, now = Date.now()) {
+export async function reconcileWorkflow(runtime, projectRoot, workflowId, capabilityEnforcement, now = Date.now()) {
     const project = runtime.project(projectRoot);
     const database = runtime.requireStore();
     const workflow = workflowId === undefined
@@ -488,7 +488,7 @@ export async function reconcileWorkflow(runtime, projectRoot, workflowId, now = 
         return { found: false };
     if (workflow.state === "delivery") {
         const candidateId = requireCandidate(workflow);
-        const recovered = await recoverDelivery(database, project.path, workflow.id, deliveryMessage(database, workflow, candidateId), now);
+        const recovered = await recoverDelivery(database, project.path, workflow.id, deliveryMessage(database, workflow, candidateId, capabilityEnforcement), now);
         if (recovered !== null) {
             const { goal, learned, next } = database.transaction(() => {
                 const next = transition(database, workflow, { type: "deliver" }, now);
@@ -513,7 +513,7 @@ export async function reconcileWorkflow(runtime, projectRoot, workflowId, now = 
         }
         if (deliveryOf(database, workflow.id) === undefined &&
             lastEvent(database, workflow.id, "delivery.aborted") === undefined) {
-            const delivered = await deliverWorkflowCandidate(runtime, projectRoot, workflow.id, now);
+            const delivered = await deliverWorkflowCandidate(runtime, projectRoot, workflow.id, capabilityEnforcement, now);
             const current = loadWorkflow(database, workflow.id);
             return { delivered, found: true, state: current?.state ?? workflow.state, workflowId: workflow.id };
         }
@@ -581,12 +581,12 @@ function verdictContext(database, workflow, role) {
         role,
     };
 }
-function deliveryMessage(database, workflow, candidateId) {
+function deliveryMessage(database, workflow, candidateId, capabilityEnforcement) {
     const request = loadRequest(database, workflow.id)?.originalText ?? "deliver approved candidate";
     const manifest = manifestWithEvidence(database, candidateId);
     if (manifest === null)
         throw new WorkflowError("candidate manifest not found");
-    return commitMessage(request, manifest, workflow.id);
+    return commitMessage(request, manifest, workflow.id, capabilityEnforcement);
 }
 function rememberIfBlocked(database, workflow, candidateId, now) {
     if (workflow.state !== "blocked" || candidateId === null)

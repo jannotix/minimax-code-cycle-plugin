@@ -156,7 +156,7 @@ export async function commitCandidate(root, manifest, message) {
         throw new DeliveryAborted("the commit did not produce a revision");
     return { committed: true, revision: head.trim() };
 }
-export function commitMessage(request, manifest, workflowId) {
+export function commitMessage(request, manifest, workflowId, capabilityEnforcement) {
     const subject = request.trim().split(/\r?\n/u)[0]?.trim() ?? "deliver approved candidate";
     return [
         subject.length > 72 ? `${subject.slice(0, 69)}...` : subject,
@@ -167,6 +167,9 @@ export function commitMessage(request, manifest, workflowId) {
         `Base-revision: ${manifest.baseRevision}`,
         `Candidate-digest: ${manifest.candidateDigest}`,
         `Cycle-workflow: ${workflowId}`,
+        ...(capabilityEnforcement === undefined
+            ? []
+            : [`Cycle-capability-enforcement: ${capabilityEnforcement}`]),
     ].join("\n");
 }
 async function git(root, args) {

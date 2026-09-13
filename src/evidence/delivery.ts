@@ -273,8 +273,20 @@ export async function commitCandidate(
   return { committed: true, revision: head.trim() }
 }
 
-/** What the commit says. The user's own words first, because those are what was judged. */
-export function commitMessage(request: string, manifest: CandidateManifest, workflowId: string): string {
+/**
+ * What the commit says. The user's own words first, because those are what was judged.
+ *
+ * The capability trailer is written whenever the delivering caller proved which it was, and it is
+ * written even — especially — when the answer is that nobody checked. A commit is the part of this
+ * record that outlives the workflow and gets read by someone who was not here, so the one thing it
+ * must not do is imply a boundary was enforced when no one could see whether it was.
+ */
+export function commitMessage(
+  request: string,
+  manifest: CandidateManifest,
+  workflowId: string,
+  capabilityEnforcement?: "verified" | "unverified-on-host",
+): string {
   const subject = request.trim().split(/\r?\n/u)[0]?.trim() ?? "deliver approved candidate"
   return [
     subject.length > 72 ? `${subject.slice(0, 69)}...` : subject,
@@ -285,6 +297,9 @@ export function commitMessage(request: string, manifest: CandidateManifest, work
     `Base-revision: ${manifest.baseRevision}`,
     `Candidate-digest: ${manifest.candidateDigest}`,
     `Cycle-workflow: ${workflowId}`,
+    ...(capabilityEnforcement === undefined
+      ? []
+      : [`Cycle-capability-enforcement: ${capabilityEnforcement}`]),
   ].join("\n")
 }
 

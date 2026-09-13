@@ -5,9 +5,10 @@ export function nextCoordinatorAction(input) {
             state: input.workflow.state,
             workflowId: input.workflow.id,
         },
+        capabilityEnforcement: input.capabilityEnforcement,
     };
-    if (!input.setupReady) {
-        return stopped(base, "error", "native Cycle setup is not ready", "setup or live capability-profile verification is missing");
+    if (!input.setupInstalled) {
+        return stopped(base, "error", "native Cycle setup is not installed", "run setup: the five capability profiles are absent, stale, or unconfirmed");
     }
     if (!input.nativeMavis || !input.nativeTask) {
         return stopped(base, "error", "native MiniMax orchestration is unavailable", "mavis and task tools are both required");
@@ -76,7 +77,7 @@ function reviews(base, input) {
             ...base,
             action: { blind: true, kind: "dispatch_reviews", roles: missing },
             next_actions: ["dispatch both reviewers in separate background sessions", "withhold each verdict from the other"],
-            status: "success",
+            status: reported(base, "success"),
             summary: "dispatch both independent reviewers blind to one another",
         };
     }
@@ -94,7 +95,7 @@ function role(base, input, roleName, taskKey, summary) {
             existing === null ? `create a separate ${roleName} task session` : `resume ${existing}`,
             "submit only schema-valid output to the control plane",
         ],
-        status: "success",
+        status: reported(base, "success"),
         summary,
     };
 }
@@ -109,16 +110,21 @@ function control(base, operation, summary) {
         ...base,
         action: { kind: "control_plane", operation },
         next_actions: [`call cycle_workflow ${operation}`, "read the returned state before continuing"],
-        status: "success",
+        status: reported(base, "success"),
         summary,
     };
+}
+function reported(base, status) {
+    if (status !== "success")
+        return status;
+    return base.capabilityEnforcement === "verified" ? "success" : "warning";
 }
 function stopped(base, status, summary, reason) {
     return {
         ...base,
         action: { kind: "stop", reason },
         next_actions: [reason],
-        status,
+        status: reported(base, status),
         summary,
     };
 }

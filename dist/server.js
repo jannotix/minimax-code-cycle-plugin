@@ -111,6 +111,7 @@ const tools = [
             workflow_id: stringSchema("Workflow identifier for non-start operations."),
             request: stringSchema("Exact original user request for start."),
             preference: enumSchema(["auto", "full", "quick"]),
+            setup_receipt: { description: "Validated setup receipt, object or JSON text. Supplied to deliver so the commit records whether the capability boundary was ever checked.", type: ["object", "string"] },
             affected_paths: arraySchema("Known project-relative paths for routing."),
             amendment: stringSchema("Exact user amendment."),
             control_operation: enumSchema(["pause", "resume", "retry", "cancel"]),
@@ -370,7 +371,8 @@ function coordinatorOperation(args) {
         nativeTask: requiredBoolean(args, "native_task"),
         reviews: view.reviews,
         roleSessions: view.roleSessions,
-        setupReady: receipt.status === "ready",
+        capabilityEnforcement: receipt.status === "ready" ? "verified" : "unverified-on-host",
+        setupInstalled: receipt.status === "ready" || receipt.status === "installed_unverified",
         tasks: view.tasks,
         workflow: view.workflow,
     });
@@ -430,9 +432,9 @@ async function workflowOperation(args) {
         case "arbitrate":
             return arbitrateWorkflow(runtime, root, requiredString(args, "workflow_id"), requiredRecord(args, "verdict"), requiredBoundedString(args, "role_session_id", 128));
         case "deliver":
-            return await deliverWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"));
+            return await deliverWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"), setupEnforcement(args));
         case "reconcile":
-            return await reconcileWorkflow(runtime, root, optionalString(args, "workflow_id"));
+            return await reconcileWorkflow(runtime, root, optionalString(args, "workflow_id"), setupEnforcement(args));
         default:
             throw new Error(`unknown workflow operation: ${operation}`);
     }
@@ -666,6 +668,12 @@ function optionalBoundedString(args, key, maximumBytes) {
         throw new Error(`${key} exceeds the ${maximumBytes}-byte limit`);
     }
     return value;
+}
+function setupEnforcement(args) {
+    if (args["setup_receipt"] === undefined)
+        return undefined;
+    const receipt = validateSetupReceipt(receiptArgument(args, "setup_receipt"), VERSION);
+    return receipt.status === "ready" ? "verified" : "unverified-on-host";
 }
 function receiptArgument(args, key) {
     const value = args[key];

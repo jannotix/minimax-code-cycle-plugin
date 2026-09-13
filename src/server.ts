@@ -179,6 +179,7 @@ const tools: readonly ToolDefinition[] = [
         workflow_id: stringSchema("Workflow identifier for non-start operations."),
         request: stringSchema("Exact original user request for start."),
         preference: enumSchema(["auto", "full", "quick"]),
+        setup_receipt: { description: "Validated setup receipt, object or JSON text. Supplied to deliver so the commit records whether the capability boundary was ever checked.", type: ["object", "string"] },
         affected_paths: arraySchema("Known project-relative paths for routing."),
         amendment: stringSchema("Exact user amendment."),
         control_operation: enumSchema(["pause", "resume", "retry", "cancel"]),
@@ -484,7 +485,10 @@ function coordinatorOperation(args: Record<string, unknown>): unknown {
     nativeTask: requiredBoolean(args, "native_task"),
     reviews: view.reviews,
     roleSessions: view.roleSessions,
-    setupReady: receipt.status === "ready",
+    // Dispatch needs the profiles installed and confirmed; the probe that this host cannot run
+    // decides what the answer is allowed to claim, not whether work may proceed.
+    capabilityEnforcement: receipt.status === "ready" ? "verified" : "unverified-on-host",
+    setupInstalled: receipt.status === "ready" || receipt.status === "installed_unverified",
     tasks: view.tasks,
     workflow: view.workflow,
   })
@@ -596,9 +600,19 @@ async function workflowOperation(args: Record<string, unknown>): Promise<unknown
         requiredBoundedString(args, "role_session_id", 128),
       )
     case "deliver":
-      return await deliverWorkflowCandidate(runtime, root, requiredString(args, "workflow_id"))
+      return await deliverWorkflowCandidate(
+        runtime,
+        root,
+        requiredString(args, "workflow_id"),
+        setupEnforcement(args),
+      )
     case "reconcile":
-      return await reconcileWorkflow(runtime, root, optionalString(args, "workflow_id"))
+      return await reconcileWorkflow(
+        runtime,
+        root,
+        optionalString(args, "workflow_id"),
+        setupEnforcement(args),
+      )
     default:
       throw new Error(`unknown workflow operation: ${operation}`)
   }
@@ -897,6 +911,22 @@ function optionalBoundedString(
  * The validator itself is untouched: whatever shape arrives is judged exactly as before, and a
  * string that is not JSON is refused here rather than being half-parsed into something plausible.
  */
+/**
+ * What the delivering caller can show about the capability boundary, if anything.
+ *
+ * Read from the same validated receipt the coordinator answers from, so a commit trailer states
+ * something that passed the schema rather than a sentence the caller composed. Absent when no
+ * receipt was supplied: the commit then says nothing about enforcement, which is honest, rather
+ * than defaulting to the reassuring answer.
+ */
+function setupEnforcement(
+  args: Record<string, unknown>,
+): "verified" | "unverified-on-host" | undefined {
+  if (args["setup_receipt"] === undefined) return undefined
+  const receipt = validateSetupReceipt(receiptArgument(args, "setup_receipt"), VERSION)
+  return receipt.status === "ready" ? "verified" : "unverified-on-host"
+}
+
 function receiptArgument(args: Record<string, unknown>, key: string): Record<string, unknown> {
   const value = args[key]
   if (typeof value !== "string") return requiredRecord(args, key)

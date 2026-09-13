@@ -45,18 +45,19 @@ const input = (state: WorkflowState, overrides: Partial<CoordinatorInput> = {}):
   browserRequired: false,
   nativeMavis: true,
   nativeTask: true,
+  capabilityEnforcement: "verified",
   reviews: [],
   roleSessions: [],
-  setupReady: true,
+  setupInstalled: true,
   tasks: [],
   workflow: workflow(state),
   ...overrides,
 })
 
 test("coordinator preflight fails closed on setup, native tools, and required browser", () => {
-  const setup = nextCoordinatorAction(input("architecture", { setupReady: false }))
+  const setup = nextCoordinatorAction(input("architecture", { setupInstalled: false }))
   assert.equal(setup.action.kind, "stop")
-  assert.match(setup.next_actions[0]!, /capability-profile/u)
+  assert.match(setup.next_actions[0]!, /capability profiles are absent/u)
   assert.equal(nextCoordinatorAction(input("architecture", { nativeTask: false })).status, "error")
   assert.match(
     nextCoordinatorAction(input("execution", { browser: "unknown", browserRequired: true })).summary,
@@ -160,4 +161,35 @@ test("verification, arbitration, repair, delivery and terminal states return one
   for (const state of ["paused", "blocked", "completed", "cancelled"] as const) {
     assert.equal(nextCoordinatorAction(input(state)).action.kind, "stop", state)
   }
+})
+
+
+test("an unprovable capability probe does not stop the work, and never reports plain success", () => {
+  // Requiring a live probe before dispatch sounded like rigour and was a deadlock: MiniMax Desktop
+  // exposes no record of the tools a child session ran with, so the probe cannot be obtained at
+  // all, and the rule stopped the ten behavioural gates that need no such proof.
+  const unproven = nextCoordinatorAction(
+    input("architecture", { capabilityEnforcement: "unverified-on-host" }),
+  )
+  assert.equal(unproven.action.kind, "dispatch_role", "installed profiles are enough to dispatch")
+  assert.equal(unproven.capabilityEnforcement, "unverified-on-host")
+  assert.equal(unproven.status, "warning", "an unproven boundary never reports success")
+
+  // The same decision, once a probe has actually passed.
+  const proven = nextCoordinatorAction(input("architecture", { capabilityEnforcement: "verified" }))
+  assert.equal(proven.action.kind, "dispatch_role")
+  assert.equal(proven.status, "success")
+
+  // The fact rides on every answer, including the ones that stop.
+  const paused = nextCoordinatorAction(
+    input("paused", { capabilityEnforcement: "unverified-on-host" }),
+  )
+  assert.equal(paused.capabilityEnforcement, "unverified-on-host")
+
+  // Absent profiles still fail closed — this change loosened the probe, not the installation.
+  const absent = nextCoordinatorAction(
+    input("architecture", { capabilityEnforcement: "unverified-on-host", setupInstalled: false }),
+  )
+  assert.equal(absent.action.kind, "stop")
+  assert.equal(absent.status, "error")
 })
